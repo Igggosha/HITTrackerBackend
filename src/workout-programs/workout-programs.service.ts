@@ -1,21 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import {Muscle} from "./entities/muscle.entity";
-import {InjectRepository} from "@nestjs/typeorm";
-import {Repository} from "typeorm";
+import { count } from 'drizzle-orm';
+import { db } from '../db/drizzle';
+import { muscles } from '../db/schema';
 
 @Injectable()
 export class WorkoutProgramsService {
-
-    constructor(
-        @InjectRepository(Muscle)
-        private readonly musclesRepo: Repository<Muscle>,
-    ) {}
-
-    async getHello(): Promise<string> {
-        let count = await this.musclesRepo.count()
-        return count.toString();
-        // return 'Hello World!';
-    }
-
-
+  async getHello(): Promise<string> {
+    const result = await db.select({ count: count() }).from(muscles);
+    return String(result[0]?.count ?? 0);
+  }
 }
