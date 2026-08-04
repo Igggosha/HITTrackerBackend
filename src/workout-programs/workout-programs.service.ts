@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {Muscle} from "./entities/muscle.entity";
+// import {Muscle} from "./entities/muscle.entity";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 
@@ -7,14 +7,14 @@ import {Repository} from "typeorm";
 export class WorkoutProgramsService {
 
     constructor(
-        @InjectRepository(Muscle)
-        private readonly musclesRepo: Repository<Muscle>,
+        // @InjectRepository(Muscle)
+        // private readonly musclesRepo: Repository<Muscle>,
     ) {}
 
     async getHello(): Promise<string> {
-        let count = await this.musclesRepo.count()
-        return count.toString();
-        // return 'Hello World!';
+        // let count = await this.musclesRepo.count()
+        // return count.toString();
+        return 'Hello World!';
     }
 
 
