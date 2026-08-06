@@ -1,29 +1,19 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// import { TypeOrmModule } from '@nestjs/typeorm';
-// import { DataSource } from 'typeorm';
-import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
 import { AuthModule } from './auth/auth.module';
+import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
+import { WorkoutsModule } from './workouts/workouts.module';
+import { ExercisesModule } from './exercises/exercises.module';
 
 @Module({
   imports: [
-      // TypeOrmModule.forRoot({
-      //     type: 'mysql',
-      //     host: 'localhost',
-      //     port: 3306,
-      //     username: 'root',
-      //     password: 'root',
-      //     database: 'test',
-      //     entities: [],
-      //     synchronize: true,
-      // }),
-      WorkoutProgramsModule,
-      AuthModule,
+    AuthModule,
+    WorkoutProgramsModule,
+    WorkoutsModule,
+    ExercisesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-    constructor() {}
-}
+export class AppModule {}

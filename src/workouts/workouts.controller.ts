@@ -1,0 +1,56 @@
+import { 
+  Body, 
+  Controller, 
+  Delete, 
+  Get, 
+  Param, 
+  ParseIntPipe, 
+  Post, 
+  Req, 
+  UseGuards 
+} from '@nestjs/common';
+import { WorkoutsService } from './workouts.service';
+import { StartWorkoutDto, RecordSetDto, FinishWorkoutDto } from './dto/workout.dto';
+import { JwtGuard } from '../auth/jwt.guard';
+
+@UseGuards(JwtGuard)
+@Controller('workouts')
+export class WorkoutsController {
+  constructor(private readonly workoutsService: WorkoutsService) {}
+
+  @Post('start')
+  async startWorkout(@Req() req, @Body() dto: StartWorkoutDto) {
+    return this.workoutsService.startWorkout(req.user.id, dto);
+  }
+
+  @Post(':id/sets')
+  async recordSet(
+    @Req() req, 
+    @Param('id', ParseIntPipe) workoutId: number, 
+    @Body() dto: RecordSetDto
+  ) {
+    return this.workoutsService.recordSet(workoutId, req.user.id, dto);
+  }
+
+  @Post(':id/finish')
+  async finishWorkout(
+    @Req() req, 
+    @Param('id', ParseIntPipe) workoutId: number, 
+    @Body() dto: FinishWorkoutDto
+  ) {
+    return this.workoutsService.finishWorkout(workoutId, req.user.id, dto);
+  }
+
+  @Get('history')
+  async getHistory(@Req() req) {
+    return this.workoutsService.getUserHistory(req.user.id);
+  }
+
+  @Delete(':id')
+  async deleteWorkout(
+    @Req() req,
+    @Param('id', ParseIntPipe) workoutId: number,
+  ) {
+    return this.workoutsService.deleteWorkout(workoutId, req.user.id);
+  }
+}

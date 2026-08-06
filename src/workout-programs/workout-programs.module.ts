@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-// import {TypeOrmModule} from "@nestjs/typeorm";
-// import {Muscle} from "./entities/muscle.entity";
+import { WorkoutProgramsController } from './workout-programs.controller';
+import { WorkoutProgramsService } from './workout-programs.service';
 
 @Module({
-    imports: [
-        // TypeOrmModule.forFeature([
-        //     Muscle
-        // ]),
-    ],
-    
+  controllers: [WorkoutProgramsController],
+  providers: [WorkoutProgramsService],
+  exports: [WorkoutProgramsService],
 })
 export class WorkoutProgramsModule {}

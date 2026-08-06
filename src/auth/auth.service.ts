@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
@@ -18,7 +18,7 @@ export class AuthService {
       .limit(1);
 
     if (existingUser) {
-      throw new BadRequestException('User already exists');
+      throw new ConflictException('User already exists');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -50,11 +50,14 @@ export class AuthService {
       .where(eq(users.email, email))
       .limit(1);
 
+    // ЯКЩО ПОШТИ НЕМАЄ В БАЗІ -> кидаємо 404 (NotFoundException)
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new NotFoundException('User not found');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
+    
+    // ЯКЩО ПАРОЛЬ НЕВІРНИЙ -> залишаємо 401 (UnauthorizedException)
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
