@@ -1,4 +1,12 @@
+<<<<<<< Updated upstream
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+=======
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+>>>>>>> Stashed changes
 import { JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';

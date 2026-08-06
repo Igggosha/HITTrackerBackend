@@ -8,12 +8,33 @@ import { ExercisesModule } from './exercises/exercises.module';
 
 @Module({
   imports: [
+<<<<<<< Updated upstream
     AuthModule,
     WorkoutProgramsModule,
     WorkoutsModule,
     ExercisesModule,
+=======
+    // TypeOrmModule.forRoot({
+    //     type: 'mysql',
+    //     host: 'localhost',
+    //     port: 3306,
+    //     username: 'root',
+    //     password: 'root',
+    //     database: 'test',
+    //     entities: [],
+    //     synchronize: true,
+    // }),
+    WorkoutProgramsModule,
+    AuthModule,
+>>>>>>> Stashed changes
   ],
   controllers: [AppController],
   providers: [AppService],
 })
+<<<<<<< Updated upstream
 export class AppModule {}
+=======
+export class AppModule {
+  constructor() {}
+}
+>>>>>>> Stashed changes

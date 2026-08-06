@@ -18,9 +18,13 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+<<<<<<< Updated upstream
     "db:push": "drizzle-kit push",
     "db:seed": "Get-Content seed.sql | docker exec -i postgres-db psql -U postgres -d nestdb",
     "db:studio": "drizzle-kit studio"
+=======
+    "db:seed": "ts-node src/db/seed.ts"
+>>>>>>> Stashed changes
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

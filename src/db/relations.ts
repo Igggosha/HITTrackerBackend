@@ -1,7 +1,8 @@
-import { defineRelations } from "drizzle-orm";
-import * as schema from "./schema";
+import { defineRelations } from 'drizzle-orm';
+import * as schema from './schema';
 
 export const relations = defineRelations(schema, (r) => ({
+<<<<<<< Updated upstream
     users: {
         // Programs created by this user
         createdWorkoutPrograms: r.many.workoutPrograms(),
@@ -9,21 +10,25 @@ export const relations = defineRelations(schema, (r) => ({
         // Programs this user is using
         usersWorkoutPrograms: r.many.usersWorkoutPrograms(),
     },
+=======
+  users: {},
+>>>>>>> Stashed changes
 
-    muscles: {
-        exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
-    },
+  muscles: {
+    exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
+  },
 
-    exercises: {
-        exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
-    },
+  exercises: {
+    exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
+  },
 
-    exercisesTrainMuscles: {
-        muscle: r.one.muscles({
-            from: r.exercisesTrainMuscles.muscleId,
-            to: r.muscles.id,
-        }),
+  exercisesTrainMuscles: {
+    muscle: r.one.muscles({
+      from: r.exercisesTrainMuscles.muscleId,
+      to: r.muscles.id,
+    }),
 
+<<<<<<< Updated upstream
         exercise: r.one.exercises({
             from: r.exercisesTrainMuscles.exerciseId,
             to: r.exercises.id,
@@ -53,3 +58,11 @@ export const relations = defineRelations(schema, (r) => ({
         }),
     },
 }));
+=======
+    exercise: r.one.exercises({
+      from: r.exercisesTrainMuscles.exerciseId,
+      to: r.exercises.id,
+    }),
+  },
+}));
+>>>>>>> Stashed changes
