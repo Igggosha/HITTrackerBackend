@@ -70,6 +70,10 @@ export const exercises = pgTable("exercises", {
     name: text("name")
         .notNull()
         .unique(),
+
+    description: text("description"), // 👈 Опис та поради з техніки вправи
+
+    videoUrl: text("video_url"), // 👈 Посилання на YouTube / відео інструкцію
 });
 
 
