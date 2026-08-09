@@ -25,6 +25,11 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Google OAuth
+
+Детальне налаштування Google Cloud Console, змінних середовища, міграції та
+фронтенду: [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md).
+
 ## Project setup
 
 ```bash
