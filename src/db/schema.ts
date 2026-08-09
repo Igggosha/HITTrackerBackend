@@ -1,5 +1,4 @@
 import {
-<<<<<<< Updated upstream
     boolean,
     integer,
     pgTable,
@@ -12,21 +11,9 @@ import {
 
 
 // ================= USERS =================
-=======
-  boolean,
-  integer,
-  pgTable,
-  primaryKey,
-  real,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
->>>>>>> Stashed changes
 
-// === ПОЛЬЗОВАТЕЛИ И ПРОФИЛЬ ===
-
-<<<<<<< Updated upstream
+export const users = pgTable("users", {
+    id: serial("id").primaryKey(),
     email: text("email").notNull().unique(),
     username: text("username").notNull().unique(),
     passwordHash: text("password_hash").notNull(),
@@ -287,88 +274,3 @@ export const sets = pgTable(
         rpe: integer("rpe"),
     }
 );
-=======
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  username: text('username').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-
-  // Данные профиля
-  age: integer('age'),
-  gender: text('gender'), // "male" | "female" | "other"
-  height: real('height'), // Рост в см
-  goal: text('goal'), // "fat_loss" | "muscle_gain" | "maintain"
-
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-// Динамические замеры тела (отслеживание веса, % жира и мышечной массы)
-export const userBodyMetrics = pgTable('user_body_metrics', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  weight: real('weight').notNull(), // Вес в кг
-  bodyFatPercentage: real('body_fat_pct'), // Процент жира (опционально)
-  muscleMass: real('muscle_mass'), // Мышечная масса в кг (опционально)
-  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
-});
-
-// === КАТАЛОГ УПРАЖНЕНИЙ И МЫШЦ ===
-
-export const muscles = pgTable('muscles', {
-  id: serial('id').primaryKey(),
-  commonName: text('commonName').notNull().unique(),
-  scientificName: text('scientificName'),
-});
-
-export const exercises = pgTable('exercises', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull().unique(),
-});
-
-export const exercisesTrainMuscles = pgTable(
-  'exercisesTrainMuscles',
-  {
-    muscleId: integer('muscle_id')
-      .notNull()
-      .references(() => muscles.id, { onDelete: 'cascade' }),
-    exerciseId: integer('exercise_id')
-      .notNull()
-      .references(() => exercises.id, { onDelete: 'cascade' }),
-  },
-  (table) => ({
-    pk: primaryKey({
-      columns: [table.muscleId, table.exerciseId],
-    }),
-  }),
-);
-
-// === ТРЕНИРОВКИ И МЕТРИКИ HIT ===
-
-export const workouts = pgTable('workouts', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  type: text('type').notNull(), // Push, Pull, Legs, Full Body
-  notes: text('notes'), // Заметки о самочувствии/технике
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const sets = pgTable('sets', {
-  id: serial('id').primaryKey(),
-  workoutId: integer('workout_id')
-    .notNull()
-    .references(() => workouts.id, { onDelete: 'cascade' }),
-  exerciseId: integer('exercise_id')
-    .notNull()
-    .references(() => exercises.id, { onDelete: 'cascade' }),
-  weight: real('weight').notNull(), // Рабочий вес
-  reps: integer('reps').notNull(), // Повторения
-  isFailure: boolean('is_failure').default(false).notNull(), // Подход "до отказа"
-  isDropSet: boolean('is_drop_set').default(false).notNull(), // Дроп-сет
-  rpe: integer('rpe'), // Шкала усилия RPE (1-10)
-});
->>>>>>> Stashed changes
