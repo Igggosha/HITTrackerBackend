@@ -1,13 +1,19 @@
-<<<<<<< HEAD
 import { Inject, Injectable, ConflictException, Optional } from '@nestjs/common';
-import { eq, ilike } from 'drizzle-orm';
+import { and, desc, eq, ilike } from 'drizzle-orm';
 import { db as defaultDb } from '../db/db';
-import { exercises, muscles, exercisesTrainMuscles } from '../db/schema';
+import {
+  exercises,
+  muscles,
+  exercisesTrainMuscles,
+  exerciseInPrograms,
+  usersWorkoutPrograms,
+  programContent,
+} from '../db/schema';
 
 @Injectable()
 export class ExercisesService {
   constructor(
-    @Optional() @Inject('DRIZZLE_DB') private readonly injectedDb?: any
+    @Optional() @Inject('DRIZZLE_DB') private readonly injectedDb?: any,
   ) {}
 
   // Гнучке використання БД (через NestJS DI або прямий імпорт)
@@ -16,95 +22,82 @@ export class ExercisesService {
   }
 
   /**
+   * Отримати вправи для конкретного користувача на основі його програми (метод колеги)
+   */
+  async getExercisesForUser(
+    userId: number,
+    weekDay: number,
+    week?: number,
+  ) {
+    if (week === undefined) {
+      const latestWeek = await this.db
+        .select({
+          week: programContent.week,
+        })
+        .from(usersWorkoutPrograms)
+        .innerJoin(
+          programContent,
+          eq(
+            programContent.programId,
+            usersWorkoutPrograms.programId,
+          ),
+        )
+        .where(
+          eq(usersWorkoutPrograms.userId, userId),
+        )
+        .orderBy(desc(programContent.week))
+        .limit(1);
+
+      week = latestWeek[0]?.week;
+    }
+
+    // User has no program / program has no content
+    if (week === undefined) {
+      return [];
+    }
+
+    return this.db
+      .select({
+        id: exercises.id,
+        name: exercises.name,
+        sets: exerciseInPrograms.sets,
+        reps: exerciseInPrograms.firstSetRepCount,
+        weight: exerciseInPrograms.weight,
+      })
+      .from(usersWorkoutPrograms)
+      .innerJoin(
+        programContent,
+        eq(
+          programContent.programId,
+          usersWorkoutPrograms.programId,
+        ),
+      )
+      .innerJoin(
+        exerciseInPrograms,
+        eq(
+          exerciseInPrograms.programContentId,
+          programContent.id,
+        ),
+      )
+      .innerJoin(
+        exercises,
+        eq(
+          exercises.id,
+          exerciseInPrograms.exerciseId,
+        ),
+      )
+      .where(
+        and(
+          eq(usersWorkoutPrograms.userId, userId),
+          eq(programContent.week, week),
+          eq(exerciseInPrograms.weekDay, weekDay),
+        ),
+      );
+  }
+
+  /**
    * Отримати всі вправи з прив'язаними м'язами
    */
-=======
-import { Injectable, ConflictException } from '@nestjs/common';
-import {and, desc, eq} from 'drizzle-orm';
-import { db } from '../db/db';
-import {
-    exercises,
-    muscles,
-    exercisesTrainMuscles,
-    exerciseInPrograms,
-    usersWorkoutPrograms,
-    programContent
-} from '../db/schema';
-
-@Injectable()
-export class ExercisesService {
-
-    async getExercisesForUser(
-        userId: number,
-        weekDay: number,
-        week?: number,
-    ) {
-        if (week === undefined) {
-            const latestWeek = await db
-                .select({
-                    week: programContent.week,
-                })
-                .from(usersWorkoutPrograms)
-                .innerJoin(
-                    programContent,
-                    eq(
-                        programContent.programId,
-                        usersWorkoutPrograms.programId,
-                    ),
-                )
-                .where(
-                    eq(usersWorkoutPrograms.userId, userId),
-                )
-                .orderBy(desc(programContent.week))
-                .limit(1);
-
-            week = latestWeek[0]?.week;
-        }
-
-        // User has no program / program has no content
-        if (week === undefined) {
-            return [];
-        }
-
-        return db
-            .select({
-                id: exercises.id,
-                name: exercises.name,
-                sets: exerciseInPrograms.sets,
-                reps: exerciseInPrograms.firstSetRepCount,
-                weight: exerciseInPrograms.weight,
-            })
-            .from(usersWorkoutPrograms)
-            .innerJoin(
-                programContent,
-                eq(
-                    programContent.programId,
-                    usersWorkoutPrograms.programId,
-                ),
-            )
-            .innerJoin(
-                exerciseInPrograms,
-                eq(
-                    exerciseInPrograms.programContentId,
-                    programContent.id,
-                ),
-            )
-            .innerJoin(
-                exercises,
-                eq(
-                    exercises.id,
-                    exerciseInPrograms.exerciseId,
-                ),
-            )
-            .where(
-                and(
-                    eq(usersWorkoutPrograms.userId, userId),
-                    eq(programContent.week, week),
-                    eq(exerciseInPrograms.weekDay, weekDay),
-                ),
-            );
-    }
->>>>>>> c3cd6e0d58e9b4724135de8074b3a3d802e3d0f2
   async getAllExercises() {
     const rawData = await this.db
       .select({
