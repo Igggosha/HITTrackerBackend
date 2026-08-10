@@ -19,6 +19,10 @@ export const users = pgTable("users", {
     passwordHash: text("password_hash"),
     googleId: text("google_id").unique(),
 
+    // Password Reset
+    resetPasswordToken: text("reset_password_token"),
+    resetPasswordExpires: timestamp("reset_password_expires"),
+
     // Profile
     age: integer("age"),
     gender: text("gender"),
@@ -27,7 +31,6 @@ export const users = pgTable("users", {
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-
 
 // ================= BODY TRACKING =================
 
