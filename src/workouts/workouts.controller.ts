@@ -10,7 +10,6 @@ import {
   UseGuards 
 } from '@nestjs/common';
 import { WorkoutsService } from './workouts.service';
-import { StartWorkoutDto, RecordSetDto, FinishWorkoutDto } from './dto/workout.dto';
 import { JwtGuard } from '../auth/jwt.guard';
 
 @UseGuards(JwtGuard)
@@ -19,26 +18,31 @@ export class WorkoutsController {
   constructor(private readonly workoutsService: WorkoutsService) {}
 
   @Post('start')
-  async startWorkout(@Req() req, @Body() dto: StartWorkoutDto) {
-    return this.workoutsService.startWorkout(req.user.id, dto);
+  async startWorkout(@Req() req, @Body() body: any) {
+    return this.workoutsService.startWorkout(req.user.id, body);
+  }
+
+  @Get('active')
+  async getActiveWorkout(@Req() req) {
+    return this.workoutsService.getActiveWorkout(req.user.id);
   }
 
   @Post(':id/sets')
   async recordSet(
     @Req() req, 
     @Param('id', ParseIntPipe) workoutId: number, 
-    @Body() dto: RecordSetDto
+    @Body() body: any
   ) {
-    return this.workoutsService.recordSet(workoutId, req.user.id, dto);
+    return this.workoutsService.recordSet(workoutId, req.user.id, body);
   }
 
   @Post(':id/finish')
   async finishWorkout(
     @Req() req, 
     @Param('id', ParseIntPipe) workoutId: number, 
-    @Body() dto: FinishWorkoutDto
+    @Body() body: any
   ) {
-    return this.workoutsService.finishWorkout(workoutId, req.user.id, dto);
+    return this.workoutsService.finishWorkout(workoutId, req.user.id, body);
   }
 
   @Get('history')

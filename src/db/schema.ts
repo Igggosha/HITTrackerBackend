@@ -232,6 +232,8 @@ export const workouts = pgTable(
 
         notes: text("notes"),
 
+        durationSeconds: integer("duration_seconds"), // Тривалість тренування в секундах
+        finishedAt: timestamp("finished_at"),
 
         createdAt: timestamp("created_at")
             .defaultNow()
