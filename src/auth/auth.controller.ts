@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService, GoogleUser } from './auth.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto/auth.dto';
 import { GoogleAuthGuard } from './google-auth.guard';
 
 @Controller('auth')
@@ -24,6 +24,16 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get('google')

@@ -1,15 +1,19 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { eq } from 'drizzle-orm';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { and, eq, gt } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { db } from '../db/db';
 import { users } from '../db/schema';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto/auth.dto';
 
 export type GoogleUser = {
   email: string;
@@ -18,7 +22,11 @@ export type GoogleUser = {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async register(dto: RegisterDto) {
     const [existingUser] = await db
@@ -52,7 +60,6 @@ export class AuthService {
       .where(eq(users.email, email))
       .limit(1);
 
-    // ЯКЩО ПОШТИ НЕМАЄ В БАЗІ -> кидаємо 404 (NotFoundException)
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -62,8 +69,7 @@ export class AuthService {
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    
-    // ЯКЩО ПАРОЛЬ НЕВІРНИЙ -> залишаємо 401 (UnauthorizedException)
+
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -108,13 +114,83 @@ export class AuthService {
       .insert(users)
       .values({
         email: googleUser.email,
-        // An email is unique and avoids collisions between equal Google display names.
         username: googleUser.email,
         googleId: googleUser.googleId,
       })
       .returning();
 
     return this.createAuthResponse('Google registration successful', newUser);
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, dto.email))
+      .limit(1);
+
+    if (!user) {
+      return { message: 'If this email exists, a reset link has been sent.' };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 хвилин
+
+    await db
+      .update(users)
+      .set({
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: expires,
+      })
+      .where(eq(users.id, user.id));
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:8081';
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Reset your password - HitTracker',
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Password Reset Request</h2>
+          <p>Click the link below to set a new password:</p>
+          <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #000; text-decoration: none; border-radius: 6px;">Reset Password</a>
+          <p style="margin-top: 20px; color: #666; font-size: 12px;">This link will expire in 15 minutes.</p>
+        </div>
+      `,
+    });
+
+    return { message: 'If this email exists, a reset link has been sent.' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.resetPasswordToken, dto.token),
+          gt(users.resetPasswordExpires, new Date()),
+        ),
+      )
+      .limit(1);
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired password reset token.');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+
+    await db
+      .update(users)
+      .set({
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      })
+      .where(eq(users.id, user.id));
+
+    return { message: 'Password successfully updated.' };
   }
 
   private createAuthResponse(
