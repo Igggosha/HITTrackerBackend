@@ -47,7 +47,13 @@ export class AuthController {
     @Res() response: Response,
   ) {
     const result = await this.authService.loginWithGoogle(request.user as GoogleUser);
-    const redirectUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL;
+    
+
+    const isMobile = request.query.state === 'mobile';
+
+    const redirectUrl = isMobile
+      ? 'hit-tracker-mobile://login'
+      : process.env.OAUTH_SUCCESS_REDIRECT_URL;
 
     if (!redirectUrl) {
       return response.json(result);

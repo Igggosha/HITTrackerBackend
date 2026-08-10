@@ -1,12 +1,112 @@
-import { Injectable, ConflictException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-import { db } from '../db/db';
+<<<<<<< HEAD
+import { Inject, Injectable, ConflictException, Optional } from '@nestjs/common';
+import { eq, ilike } from 'drizzle-orm';
+import { db as defaultDb } from '../db/db';
 import { exercises, muscles, exercisesTrainMuscles } from '../db/schema';
 
 @Injectable()
 export class ExercisesService {
+  constructor(
+    @Optional() @Inject('DRIZZLE_DB') private readonly injectedDb?: any
+  ) {}
+
+  // Гнучке використання БД (через NestJS DI або прямий імпорт)
+  private get db() {
+    return this.injectedDb || defaultDb;
+  }
+
+  /**
+   * Отримати всі вправи з прив'язаними м'язами
+   */
+=======
+import { Injectable, ConflictException } from '@nestjs/common';
+import {and, desc, eq} from 'drizzle-orm';
+import { db } from '../db/db';
+import {
+    exercises,
+    muscles,
+    exercisesTrainMuscles,
+    exerciseInPrograms,
+    usersWorkoutPrograms,
+    programContent
+} from '../db/schema';
+
+@Injectable()
+export class ExercisesService {
+
+    async getExercisesForUser(
+        userId: number,
+        weekDay: number,
+        week?: number,
+    ) {
+        if (week === undefined) {
+            const latestWeek = await db
+                .select({
+                    week: programContent.week,
+                })
+                .from(usersWorkoutPrograms)
+                .innerJoin(
+                    programContent,
+                    eq(
+                        programContent.programId,
+                        usersWorkoutPrograms.programId,
+                    ),
+                )
+                .where(
+                    eq(usersWorkoutPrograms.userId, userId),
+                )
+                .orderBy(desc(programContent.week))
+                .limit(1);
+
+            week = latestWeek[0]?.week;
+        }
+
+        // User has no program / program has no content
+        if (week === undefined) {
+            return [];
+        }
+
+        return db
+            .select({
+                id: exercises.id,
+                name: exercises.name,
+                sets: exerciseInPrograms.sets,
+                reps: exerciseInPrograms.firstSetRepCount,
+                weight: exerciseInPrograms.weight,
+            })
+            .from(usersWorkoutPrograms)
+            .innerJoin(
+                programContent,
+                eq(
+                    programContent.programId,
+                    usersWorkoutPrograms.programId,
+                ),
+            )
+            .innerJoin(
+                exerciseInPrograms,
+                eq(
+                    exerciseInPrograms.programContentId,
+                    programContent.id,
+                ),
+            )
+            .innerJoin(
+                exercises,
+                eq(
+                    exercises.id,
+                    exerciseInPrograms.exerciseId,
+                ),
+            )
+            .where(
+                and(
+                    eq(usersWorkoutPrograms.userId, userId),
+                    eq(programContent.week, week),
+                    eq(exerciseInPrograms.weekDay, weekDay),
+                ),
+            );
+    }
+>>>>>>> c3cd6e0d58e9b4724135de8074b3a3d802e3d0f2
   async getAllExercises() {
-    const rawData = await db
+    const rawData = await this.db
       .select({
         id: exercises.id,
         name: exercises.name,
@@ -20,9 +120,9 @@ export class ExercisesService {
       .leftJoin(exercisesTrainMuscles, eq(exercises.id, exercisesTrainMuscles.exerciseId))
       .leftJoin(muscles, eq(exercisesTrainMuscles.muscleId, muscles.id));
 
-    const map = new Map();
+    const map = new Map<number, any>();
 
-    rawData.forEach((row) => {
+    for (const row of rawData) {
       if (!map.has(row.id)) {
         map.set(row.id, {
           id: row.id,
@@ -32,26 +132,34 @@ export class ExercisesService {
           muscles: [],
         });
       }
+
+      const currentExercise = map.get(row.id);
+
       if (row.muscleId) {
-        const currentMuscleId = row.muscleId;
-        const exists = map.get(row.id).muscles.some((m) => m.id === currentMuscleId);
-        if (!exists) {
-          map.get(row.id).muscles.push({
+        const alreadyAdded = currentExercise.muscles.some((m: any) => m.id === row.muscleId);
+        if (!alreadyAdded) {
+          currentExercise.muscles.push({
             id: row.muscleId,
             commonName: row.commonName,
             scientificName: row.scientificName,
           });
         }
       }
-    });
+    }
 
     return Array.from(map.values());
   }
 
+  /**
+   * Отримати список усіх м'язів
+   */
   async getAllMuscles() {
-    return db.select().from(muscles);
+    return this.db.select().from(muscles);
   }
 
+  /**
+   * Створення вправи з прив'язкою м'язів
+   */
   async createExercise(data: {
     name: string;
     description?: string;
@@ -60,19 +168,19 @@ export class ExercisesService {
   }) {
     const trimmedName = data.name.trim();
 
-    // 1. Перевіряємо, чи існує вже така вправа в базі даних
-    const existing = await db
+    // 1. Перевірка на існування (ігноруємо регістр слів за допомогою ilike)
+    const existing = await this.db
       .select({ id: exercises.id })
       .from(exercises)
-      .where(eq(exercises.name, trimmedName))
+      .where(ilike(exercises.name, trimmedName))
       .limit(1);
 
     if (existing.length > 0) {
       throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
     }
 
-    // 2. Якщо вправи немає — створюємо новий запис
-    return await db.transaction(async (tx) => {
+    // 2. Транзакція для створення вправи та її зв'язків
+    return await this.db.transaction(async (tx: any) => {
       const [newExercise] = await tx
         .insert(exercises)
         .values({
@@ -83,7 +191,10 @@ export class ExercisesService {
         .returning();
 
       if (data.muscleIds && data.muscleIds.length > 0) {
-        const relations = data.muscleIds.map((muscleId) => ({
+        // Очищаємо від можливих дублікатів у масиві (наприклад, [1, 1, 2] -> [1, 2])
+        const uniqueMuscleIds = Array.from(new Set(data.muscleIds));
+
+        const relations = uniqueMuscleIds.map((muscleId) => ({
           exerciseId: newExercise.id,
           muscleId: muscleId,
         }));
@@ -91,7 +202,10 @@ export class ExercisesService {
         await tx.insert(exercisesTrainMuscles).values(relations);
       }
 
-      return newExercise;
+      return {
+        ...newExercise,
+        muscleIds: data.muscleIds || [],
+      };
     });
   }
 }
