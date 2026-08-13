@@ -199,6 +199,10 @@ export const usersWorkoutPrograms = pgTable(
             .references(() => workoutPrograms.id, {
                 onDelete: "cascade",
             }),
+
+        dayInProgram: integer("day_in_program")
+            .notNull()
+            .default(0)
     }
 );
 
