@@ -124,7 +124,11 @@ export class ExercisesService {
     return this.db.select().from(muscles);
   }
 
-  /**
+    async getAllExercises() {
+        return this.db.select().from(exercises);
+    }
+
+    /**
    * Створення вправи з прив'язкою м'язів
    */
   async createExercise(data: {
