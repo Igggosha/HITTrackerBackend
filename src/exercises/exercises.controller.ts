@@ -23,12 +23,12 @@ export class ExercisesController {
     @UseGuards(AuthGuard("jwt"))
     async getExercisesForUser(
         @Req() req: Request,
-        @Query("weekDay", ParseIntPipe) weekDay: number,
+        @Query("weekDay") weekDay?: string,
         @Query("week") week?: string,
     ) {
         return this.exercisesService.getExercisesForUser(
             req.user?.id!,
-            weekDay,
+            weekDay !== undefined ? Number(weekDay) : undefined,
             week !== undefined ? Number(week) : undefined,
         );
     }
