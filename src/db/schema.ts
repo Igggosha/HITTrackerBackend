@@ -75,10 +75,29 @@ export const exercises = pgTable("exercises", {
         .notNull()
         .unique(),
 
-    description: text("description"), // 👈 Опис та поради з техніки вправи
+    description: text("description"),
 
-    videoUrl: text("video_url"), // 👈 Посилання на YouTube / відео інструкцію
+    videoUrl: text("video_url"),
+    difficulty: integer("difficulty").default(1).notNull(),
 });
+
+export const exerciseLikes = pgTable(
+    "exercise_likes",
+    {
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        exerciseId: integer("exercise_id")
+            .notNull()
+            .references(() => exercises.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => ({
+        pk: primaryKey({
+            columns: [table.userId, table.exerciseId],
+        }),
+    })
+);
 
 
 export const exercisesTrainMuscles = pgTable(

@@ -1,5 +1,5 @@
 import { Inject, Injectable, ConflictException, Optional } from '@nestjs/common';
-import { and, desc, eq, ilike } from 'drizzle-orm';
+import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { db as defaultDb } from '../db/db';
 import {
   exercises,
@@ -8,6 +8,7 @@ import {
   exerciseInPrograms,
   usersWorkoutPrograms,
   programContent,
+  exerciseLikes,
 } from '../db/schema';
 
 @Injectable()
@@ -16,7 +17,6 @@ export class ExercisesService {
     @Optional() @Inject('DRIZZLE_DB') private readonly injectedDb?: any,
   ) {}
 
-  // Гнучке використання БД (через NestJS DI або прямий імпорт)
   private get db() {
     return this.injectedDb || defaultDb;
   }
@@ -24,11 +24,7 @@ export class ExercisesService {
   /**
    * Отримати вправи для конкретного користувача на основі його програми
    */
-  async getExercisesForUser(
-    userId: number,
-    weekDay?: number,
-    week?: number,
-  ) {
+  async getExercisesForUser(userId: number, weekDay?: number, week?: number) {
     const userProgram = await this.db
       .select({
         programId: usersWorkoutPrograms.programId,
@@ -48,9 +44,7 @@ export class ExercisesService {
 
     if (targetWeek === undefined) {
       const latestWeek = await this.db
-        .select({
-          week: programContent.week,
-        })
+        .select({ week: programContent.week })
         .from(programContent)
         .where(eq(programContent.programId, programId))
         .orderBy(desc(programContent.week))
@@ -59,7 +53,6 @@ export class ExercisesService {
       if (latestWeek.length === 0) {
         return [];
       }
-
       targetWeek = latestWeek[0].week;
     }
 
@@ -72,14 +65,8 @@ export class ExercisesService {
         weight: exerciseInPrograms.weight,
       })
       .from(exerciseInPrograms)
-      .innerJoin(
-        programContent,
-        eq(programContent.id, exerciseInPrograms.programContentId),
-      )
-      .innerJoin(
-        exercises,
-        eq(exercises.id, exerciseInPrograms.exerciseId),
-      )
+      .innerJoin(programContent, eq(programContent.id, exerciseInPrograms.programContentId))
+      .innerJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
       .where(
         and(
           eq(programContent.programId, programId),
@@ -97,25 +84,55 @@ export class ExercisesService {
   }
 
   /**
-   * Отримати всі вправи разом з їхніми прив'язаними м'язами (Виправлено для фільтрації)
+   * Отримати всі вправи (з кількістю лайків, статусом та назвами м'язів)
    */
-  async getAllExercises() {
-    // Використовуємо leftJoin, щоб отримати вправи та id пов'язаних м'язів із проміжної таблиці
+  async getAllExercises(currentUserId?: number) {
+    // 1. Отримуємо всі вправи разом з м'язами через JOIN таблиць
     const rows = await this.db
       .select({
         id: exercises.id,
         name: exercises.name,
         description: exercises.description,
         videoUrl: exercises.videoUrl,
-        muscleId: exercisesTrainMuscles.muscleId,
+        difficulty: exercises.difficulty,
+        muscleId: muscles.id,
+        muscleCommonName: muscles.commonName,
+        scientificName: muscles.scientificName,
       })
       .from(exercises)
       .leftJoin(
         exercisesTrainMuscles,
         eq(exercises.id, exercisesTrainMuscles.exerciseId),
+      )
+      .leftJoin(
+        muscles,
+        eq(exercisesTrainMuscles.muscleId, muscles.id),
       );
 
-    // Групуємо результати за ID вправи, щоб зібрати всі зв'язані м'язи в один масив
+    // 2. Отримуємо кількість лайків для кожної вправи
+    const likesData = await this.db
+      .select({
+        exerciseId: exerciseLikes.exerciseId,
+        likesCount: sql<number>`count(${exerciseLikes.userId})::int`,
+      })
+      .from(exerciseLikes)
+      .groupBy(exerciseLikes.exerciseId);
+
+    const likesMap = new Map<number, number>();
+    likesData.forEach((row) => likesMap.set(row.exerciseId, row.likesCount));
+
+    // 3. Отримуємо лайки поточного користувача
+    const userLikesSet = new Set<number>();
+    if (currentUserId) {
+      const userLikesData = await this.db
+        .select({ exerciseId: exerciseLikes.exerciseId })
+        .from(exerciseLikes)
+        .where(eq(exerciseLikes.userId, currentUserId));
+      
+      userLikesData.forEach((row) => userLikesSet.add(row.exerciseId));
+    }
+
+    // 4. Формуємо фінальний результат з масивом `muscles`
     const exercisesMap = new Map<number, any>();
 
     for (const row of rows) {
@@ -125,15 +142,25 @@ export class ExercisesService {
           name: row.name,
           description: row.description,
           videoUrl: row.videoUrl,
-          exercisesTrainMuscles: [],
+          difficulty: row.difficulty, 
+          likesCount: likesMap.get(row.id) || 0,
+          isLiked: userLikesSet.has(row.id),
+          muscles: [], // Масив об'єктів м'язів, який очікує фронтенд
         });
       }
 
-      // Якщо до вправи прив'язаний м'яз, додаємо його в масив
       if (row.muscleId !== null) {
-        exercisesMap.get(row.id).exercisesTrainMuscles.push({
-          muscleId: row.muscleId,
-        });
+        const currentMuscles = exercisesMap.get(row.id).muscles;
+        const exists = currentMuscles.some((m: any) => m.id === row.muscleId);
+        
+        if (!exists) {
+          currentMuscles.push({
+            id: row.muscleId,
+            name: row.muscleName,
+            commonName: row.muscleCommonName,
+            scientificName: row.scientificName,
+          });
+        }
       }
     }
 
@@ -141,17 +168,17 @@ export class ExercisesService {
   }
 
   /**
-   * Створення вправи з прив'язкою м'язів
+   * Створення вправи
    */
   async createExercise(data: {
     name: string;
     description?: string;
     videoUrl?: string;
+    difficulty?: number;
     muscleIds?: number[];
   }) {
     const trimmedName = data.name.trim();
 
-    // 1. Перевірка на існування (ігноруємо регістр слів за допомогою ilike)
     const existing = await this.db
       .select({ id: exercises.id })
       .from(exercises)
@@ -162,7 +189,6 @@ export class ExercisesService {
       throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
     }
 
-    // 2. Транзакція для створення вправи та її зв'язків
     return await this.db.transaction(async (tx: any) => {
       const [newExercise] = await tx
         .insert(exercises)
@@ -170,17 +196,16 @@ export class ExercisesService {
           name: trimmedName,
           description: data.description?.trim() || null,
           videoUrl: data.videoUrl?.trim() || null,
+          difficulty: data.difficulty || 1,
         })
         .returning();
 
       if (data.muscleIds && data.muscleIds.length > 0) {
         const uniqueMuscleIds = Array.from(new Set(data.muscleIds));
-
         const relations = uniqueMuscleIds.map((muscleId) => ({
           exerciseId: newExercise.id,
           muscleId: muscleId,
         }));
-
         await tx.insert(exercisesTrainMuscles).values(relations);
       }
 
@@ -189,5 +214,39 @@ export class ExercisesService {
         muscleIds: data.muscleIds || [],
       };
     });
+  }
+
+  /**
+   * Поставити або прибрати лайк
+   */
+  async toggleLike(userId: number, exerciseId: number) {
+    const existingLike = await this.db
+      .select()
+      .from(exerciseLikes)
+      .where(
+        and(
+          eq(exerciseLikes.userId, userId),
+          eq(exerciseLikes.exerciseId, exerciseId)
+        )
+      )
+      .limit(1);
+
+    if (existingLike.length > 0) {
+      await this.db
+        .delete(exerciseLikes)
+        .where(
+          and(
+            eq(exerciseLikes.userId, userId),
+            eq(exerciseLikes.exerciseId, exerciseId)
+          )
+        );
+      return { isLiked: false };
+    } else {
+      await this.db.insert(exerciseLikes).values({
+        userId,
+        exerciseId,
+      });
+      return { isLiked: true };
+    }
   }
 }
