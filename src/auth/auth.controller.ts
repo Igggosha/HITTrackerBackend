@@ -46,6 +46,10 @@ export class AuthController {
     @Req() request: Request,
     @Res() response: Response,
   ) {
+    if ((request.user as { cancelled?: boolean })?.cancelled) {
+      return this.redirectGoogleError(response, 'access_denied');
+    }
+
     const result = await this.authService.loginWithGoogle(request.user as GoogleUser);
     
 
@@ -65,6 +69,15 @@ export class AuthController {
     } else {
       url.searchParams.set('accessToken', result.accessToken);
     }
+    return response.redirect(url.toString());
+  }
+
+  private redirectGoogleError(response: Response, error: string) {
+    const redirectUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL;
+    if (!redirectUrl) return response.status(401).json({ error });
+
+    const url = new URL(redirectUrl);
+    url.searchParams.set('error', error);
     return response.redirect(url.toString());
   }
 }
