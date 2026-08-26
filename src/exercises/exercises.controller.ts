@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 import { JwtGuard } from '../auth/jwt.guard';
-import { AuthGuard } from "@nestjs/passport";
 import type { Request } from "express";
 
 @UseGuards(JwtGuard)
@@ -21,7 +20,6 @@ export class ExercisesController {
   }
 
   @Get("foruser")
-  @UseGuards(AuthGuard("jwt"))
   async getExercisesForUser(
     @Req() req: Request,
     @Query("weekDay") weekDay?: string,
