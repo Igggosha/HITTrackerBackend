@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { WorkoutsService } from './workouts.service';
 import { JwtGuard } from '../auth/jwt.guard';
+import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
 
 @UseGuards(JwtGuard)
 @Controller('workouts')
@@ -18,7 +19,7 @@ export class WorkoutsController {
   constructor(private readonly workoutsService: WorkoutsService) {}
 
   @Post('start')
-  async startWorkout(@Req() req, @Body() body: any) {
+  async startWorkout(@Req() req, @Body() body: StartWorkoutDto) {
     return this.workoutsService.startWorkout(req.user.id, body);
   }
 
@@ -31,7 +32,7 @@ export class WorkoutsController {
   async recordSet(
     @Req() req, 
     @Param('id', ParseIntPipe) workoutId: number, 
-    @Body() body: any
+    @Body() body: RecordSetDto
   ) {
     return this.workoutsService.recordSet(workoutId, req.user.id, body);
   }
@@ -40,7 +41,7 @@ export class WorkoutsController {
   async finishWorkout(
     @Req() req, 
     @Param('id', ParseIntPipe) workoutId: number, 
-    @Body() body: any
+    @Body() body: FinishWorkoutDto
   ) {
     return this.workoutsService.finishWorkout(workoutId, req.user.id, body);
   }

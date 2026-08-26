@@ -1,6 +1,6 @@
-import { Inject, Injectable, ConflictException, Optional } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { and, desc, eq, ilike, sql } from 'drizzle-orm';
-import { db as defaultDb } from '../db/db';
+import { db } from '../db/db';
 import {
   exercises,
   muscles,
@@ -13,19 +13,11 @@ import {
 
 @Injectable()
 export class ExercisesService {
-  constructor(
-    @Optional() @Inject('DRIZZLE_DB') private readonly injectedDb?: any,
-  ) {}
-
-  private get db() {
-    return this.injectedDb || defaultDb;
-  }
-
   /**
    * Отримати вправи для конкретного користувача на основі його програми
    */
   async getExercisesForUser(userId: number, weekDay?: number, week?: number) {
-    const userProgram = await this.db
+    const userProgram = await db
       .select({
         programId: usersWorkoutPrograms.programId,
         dayInProgram: usersWorkoutPrograms.dayInProgram,
@@ -43,7 +35,7 @@ export class ExercisesService {
     let targetWeek = week!;
 
     if (targetWeek === undefined) {
-      const latestWeek = await this.db
+      const latestWeek = await db
         .select({ week: programContent.week })
         .from(programContent)
         .where(eq(programContent.programId, programId))
@@ -56,7 +48,7 @@ export class ExercisesService {
       targetWeek = latestWeek[0].week;
     }
 
-    return this.db
+    return db
       .select({
         id: exercises.id,
         name: exercises.name,
@@ -80,7 +72,7 @@ export class ExercisesService {
    * Отримати список усіх м'язів
    */
   async getAllMuscles() {
-    return this.db.select().from(muscles);
+    return db.select().from(muscles);
   }
 
   /**
@@ -88,7 +80,7 @@ export class ExercisesService {
    */
   async getAllExercises(currentUserId?: number) {
     // 1. Отримуємо всі вправи разом з м'язами через JOIN таблиць
-    const rows = await this.db
+    const rows = await db
       .select({
         id: exercises.id,
         name: exercises.name,
@@ -110,7 +102,7 @@ export class ExercisesService {
       );
 
     // 2. Отримуємо кількість лайків для кожної вправи
-    const likesData = await this.db
+    const likesData = await db
       .select({
         exerciseId: exerciseLikes.exerciseId,
         likesCount: sql<number>`count(${exerciseLikes.userId})::int`,
@@ -124,7 +116,7 @@ export class ExercisesService {
     // 3. Отримуємо лайки поточного користувача
     const userLikesSet = new Set<number>();
     if (currentUserId) {
-      const userLikesData = await this.db
+      const userLikesData = await db
         .select({ exerciseId: exerciseLikes.exerciseId })
         .from(exerciseLikes)
         .where(eq(exerciseLikes.userId, currentUserId));
@@ -156,7 +148,7 @@ export class ExercisesService {
         if (!exists) {
           currentMuscles.push({
             id: row.muscleId,
-            name: row.muscleName,
+            name: row.muscleCommonName,
             commonName: row.muscleCommonName,
             scientificName: row.scientificName,
           });
@@ -179,7 +171,7 @@ export class ExercisesService {
   }) {
     const trimmedName = data.name.trim();
 
-    const existing = await this.db
+    const existing = await db
       .select({ id: exercises.id })
       .from(exercises)
       .where(ilike(exercises.name, trimmedName))
@@ -189,7 +181,7 @@ export class ExercisesService {
       throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
     }
 
-    return await this.db.transaction(async (tx: any) => {
+    return db.transaction(async (tx: any) => {
       const [newExercise] = await tx
         .insert(exercises)
         .values({
@@ -220,7 +212,7 @@ export class ExercisesService {
    * Поставити або прибрати лайк
    */
   async toggleLike(userId: number, exerciseId: number) {
-    const existingLike = await this.db
+    const existingLike = await db
       .select()
       .from(exerciseLikes)
       .where(
@@ -232,7 +224,7 @@ export class ExercisesService {
       .limit(1);
 
     if (existingLike.length > 0) {
-      await this.db
+      await db
         .delete(exerciseLikes)
         .where(
           and(
@@ -242,7 +234,7 @@ export class ExercisesService {
         );
       return { isLiked: false };
     } else {
-      await this.db.insert(exerciseLikes).values({
+      await db.insert(exerciseLikes).values({
         userId,
         exerciseId,
       });
