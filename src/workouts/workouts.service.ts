@@ -2,13 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { eq, and, desc, isNull, isNotNull } from 'drizzle-orm';
 import { db } from '../db/db';
 import { workouts, sets, exercises } from '../db/schema';
+import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
 
 @Injectable()
 export class WorkoutsService {
   /**
    * 1. Запуск нового тренування
    */
-  async startWorkout(userId: number, body: any) {
+  async startWorkout(userId: number, body: StartWorkoutDto) {
     const [existingWorkout] = await db
       .select()
       .from(workouts)
@@ -89,7 +90,7 @@ export class WorkoutsService {
   /**
    * 3. Запис підходу (сету)
    */
-  async recordSet(workoutId: number, userId: number, body: any) {
+  async recordSet(workoutId: number, userId: number, body: RecordSetDto) {
     const [workout] = await db
       .select()
       .from(workouts)
@@ -128,7 +129,7 @@ export class WorkoutsService {
   /**
    * 4. Завершення тренування
    */
-  async finishWorkout(workoutId: number, userId: number, body: any) {
+  async finishWorkout(workoutId: number, userId: number, body: FinishWorkoutDto) {
     const [workout] = await db
       .select()
       .from(workouts)
