@@ -19,6 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:push": "drizzle-kit push",
+    "db:baseline": "tsx scripts/baseline-drizzle.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:seed": "Get-Content seed.sql | docker exec -i postgres-db psql -U postgres -d nestdb",
     "db:studio": "drizzle-kit studio"
   },

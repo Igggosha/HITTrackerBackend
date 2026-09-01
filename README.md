@@ -49,8 +49,19 @@ the host on port `3000` by default.
 
 The PostgreSQL volume persists between restarts. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
-first time. Use `docker compose logs -f api` or `docker compose logs -f postgres`
-to inspect startup problems.
+first time. The `migrate` service records the SQL-dump baseline and then runs
+the versioned Drizzle migrations before the API starts, including for an
+existing volume. Use `docker compose logs -f api`, `docker compose logs -f
+postgres`, or `docker compose logs migrate` to inspect startup problems.
+
+### Database workflow for the team
+
+Commit every schema change as a new Drizzle migration. Change
+`src/db/schema.ts`, generate and review the migration, then commit both files.
+After pulling the branch, each developer runs `docker compose up --build`; the
+`migrate` service brings their local schema up to date. Migrations change
+schema only. Shared starter data belongs in the versioned seed/dump; personal
+users, workouts, and other local test data are not copied through Git.
 
 ## Google OAuth
 
