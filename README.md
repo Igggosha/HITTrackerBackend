@@ -25,6 +25,33 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Run the backend and PostgreSQL with Docker
+
+Docker Compose starts the API and PostgreSQL together. The containers use the
+internal `hit-tracker-network`; the API connects to PostgreSQL through the
+service name `postgres`, not through a host port. Only the API is published to
+the host on port `3000` by default.
+
+1. Copy `.env.example` to `.env` and fill in the required secrets. Keep
+   `DB_USERNAME`, `DB_PASSWORD`, and `DB_NAME` are used by both containers.
+   `PORT` controls the API port exposed on your computer (default: `3000`).
+   Docker Compose builds the API's internal connection URL with the hostname
+   `postgres`; it overrides the localhost `DATABASE_URL` only inside the API
+   container.
+2. Start the stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Check the API at `http://localhost:3000/` and stop the stack with
+   `docker compose down`.
+
+The PostgreSQL volume persists between restarts. The initial UTF-16 SQL dump is
+converted to UTF-8 and loaded only when Docker creates that volume for the
+first time. Use `docker compose logs -f api` or `docker compose logs -f postgres`
+to inspect startup problems.
+
 ## Google OAuth
 
 Детальне налаштування Google Cloud Console, змінних середовища, міграції та
