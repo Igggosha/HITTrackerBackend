@@ -19,11 +19,27 @@ services:
     networks:
       - hit-tracker-network
 
+  migrate:
+    build:
+      context: .
+      target: migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+    command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
+    restart: "no"
+    networks:
+      - hit-tracker-network
+
   api:
     build: .
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "${PORT:-3000}:3000"
     env_file:
