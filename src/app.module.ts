@@ -6,8 +6,10 @@ import { WorkoutProgramsModule } from './workout-programs/workout-programs.modul
 import { WorkoutsModule } from './workouts/workouts.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { UsersModule } from './users/users.module';
+import { AppController } from './app.controller';
 
 @Module({
+  controllers: [AppController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MailerModule.forRootAsync({
