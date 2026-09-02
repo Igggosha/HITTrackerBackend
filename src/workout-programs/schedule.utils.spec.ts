@@ -1,4 +1,4 @@
-import { expandScheduleDates, scheduleStatus } from './schedule.utils';
+import { expandScheduleDates, scheduleStatus, weeklyDatesInRange } from './schedule.utils';
 
 describe('program schedule', () => {
   it('keeps a one-time assignment as one date', () => {
@@ -8,6 +8,12 @@ describe('program schedule', () => {
   it('materializes weekly repetitions as independent dates', () => {
     expect(expandScheduleDates('2026-09-02', 'weekly', '2026-09-23')).toEqual([
       '2026-09-02', '2026-09-09', '2026-09-16', '2026-09-23',
+    ]);
+  });
+
+  it('finds weekly dates in the requested calendar range', () => {
+    expect(weeklyDatesInRange('2026-09-07', '2026-09-15', '2026-10-01')).toEqual([
+      '2026-09-21', '2026-09-28',
     ]);
   });
 

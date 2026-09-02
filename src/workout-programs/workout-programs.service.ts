@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, gte, lte, or } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lte, or } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   exerciseInPrograms,
@@ -7,6 +7,7 @@ import {
   programContent,
   users,
   userProgramSchedule,
+  userProgramScheduleSeries,
   workoutPrograms,
   type UserRole,
 } from '../db/schema';
@@ -14,7 +15,7 @@ import { hasMinimumRole } from '../auth/roles';
 import { CreateWorkoutProgramDto, ProgramExerciseDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
-import { expandScheduleDates, scheduleStatus } from './schedule.utils';
+import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -40,16 +41,31 @@ export class WorkoutProgramsService {
 
   async scheduleProgram(userId: number, role: UserRole, dto: ScheduleProgramDto) {
     await this.getProgramById(dto.programId, userId, role);
-    const dates = expandScheduleDates(dto.scheduledFor, dto.repeat, dto.repeatUntil);
-    const assignments = await db
-      .insert(userProgramSchedule)
-      .values(dates.map((scheduledFor) => ({ userId, programId: dto.programId, scheduledFor })))
-      .onConflictDoNothing()
-      .returning();
-    return assignments;
+    if (dto.repeat !== 'weekly') {
+      return db.insert(userProgramSchedule)
+        .values({ userId, programId: dto.programId, scheduledFor: dto.scheduledFor })
+        .onConflictDoNothing()
+        .returning();
+    }
+
+    return db.transaction(async (tx: any) => {
+      const [series] = await tx.insert(userProgramScheduleSeries).values({
+        userId,
+        programId: dto.programId,
+        startsOn: dto.scheduledFor,
+        endsOn: dto.repeatUntil ?? null,
+      }).returning();
+      return tx.insert(userProgramSchedule).values({
+        userId,
+        programId: dto.programId,
+        scheduledFor: dto.scheduledFor,
+        seriesId: series.id,
+      }).onConflictDoNothing().returning();
+    });
   }
 
   async getCalendar(userId: number, { from, to }: ListScheduleDto) {
+    await this.materializeWeeklyAssignments(userId, from, to);
     const today = new Date().toISOString().slice(0, 10);
     const assignments = await db
       .select({
@@ -60,6 +76,7 @@ export class WorkoutProgramsService {
         programName: workoutPrograms.name,
         programDescription: workoutPrograms.description,
         isPersonal: workoutPrograms.isPersonal,
+        seriesId: userProgramSchedule.seriesId,
       })
       .from(userProgramSchedule)
       .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
@@ -74,6 +91,20 @@ export class WorkoutProgramsService {
       ...assignment,
       status: scheduleStatus(storedStatus, assignment.scheduledFor, today),
     }));
+  }
+
+  async removeScheduledProgram(userId: number, id: number) {
+    const [assignment] = await db.select({ seriesId: userProgramSchedule.seriesId })
+      .from(userProgramSchedule)
+      .where(and(eq(userProgramSchedule.id, id), eq(userProgramSchedule.userId, userId)))
+      .limit(1);
+    if (!assignment) throw new NotFoundException('Scheduled workout not found');
+
+    if (assignment.seriesId) {
+      await db.delete(userProgramScheduleSeries).where(eq(userProgramScheduleSeries.id, assignment.seriesId));
+    } else {
+      await db.delete(userProgramSchedule).where(eq(userProgramSchedule.id, id));
+    }
   }
 
   async updateProgram(userId: number, role: UserRole, id: number, dto: UpdateWorkoutProgramDto) {
@@ -241,5 +272,24 @@ export class WorkoutProgramsService {
       .leftJoin(exerciseInPrograms, eq(programContent.id, exerciseInPrograms.programContentId))
       .leftJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
       .where(eq(programContent.programId, programId));
+  }
+
+  private async materializeWeeklyAssignments(userId: number, from: string, to: string) {
+    const series = await db.select().from(userProgramScheduleSeries).where(and(
+      eq(userProgramScheduleSeries.userId, userId),
+      lte(userProgramScheduleSeries.startsOn, to),
+      or(isNull(userProgramScheduleSeries.endsOn), gte(userProgramScheduleSeries.endsOn, from)),
+    ));
+    const assignments = series.flatMap((item) => weeklyDatesInRange(
+      item.startsOn,
+      from,
+      item.endsOn && item.endsOn < to ? item.endsOn : to,
+    ).map((scheduledFor) => ({
+      userId,
+      programId: item.programId,
+      scheduledFor,
+      seriesId: item.id,
+    })));
+    if (assignments.length) await db.insert(userProgramSchedule).values(assignments).onConflictDoNothing();
   }
 }

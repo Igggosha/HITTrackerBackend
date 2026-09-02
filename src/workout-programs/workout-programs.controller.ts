@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -43,6 +43,11 @@ export class WorkoutProgramsController {
   @Post('schedule')
   async schedule(@Req() request: Request, @Body() dto: ScheduleProgramDto) {
     return this.workoutProgramsService.scheduleProgram(request.user!.id!, request.user!.role!, dto);
+  }
+
+  @Delete('schedule/:id')
+  async removeSchedule(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
+    await this.workoutProgramsService.removeScheduledProgram(request.user!.id!, id);
   }
 
   @Post(':id/copy')
