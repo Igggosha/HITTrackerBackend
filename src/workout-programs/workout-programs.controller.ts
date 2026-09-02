@@ -8,29 +8,34 @@ import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import type { Request } from 'express';
 
 @UseGuards(JwtGuard, RolesGuard)
+@MinimumRole('user')
 @Controller('workout-programs')
 export class WorkoutProgramsController {
   constructor(private readonly workoutProgramsService: WorkoutProgramsService) {}
 
   @Get()
-  async getAll() {
-    return this.workoutProgramsService.getAllPrograms();
+  async getAll(@Req() request: Request) {
+    return this.workoutProgramsService.getAllPrograms(request.user!.id!, request.user!.role!);
   }
 
   @Get(':id')
-  async getById(@Param('id', ParseIntPipe) id: number) {
-    return this.workoutProgramsService.getProgramById(id);
+  async getById(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
+    return this.workoutProgramsService.getProgramById(id, request.user!.id!, request.user!.role!);
   }
 
   @Post()
-  @MinimumRole('moderator')
   async create(@Req() request: Request, @Body() dto: CreateWorkoutProgramDto) {
-    return this.workoutProgramsService.createProgram(request.user!.id!, dto);
+    return this.workoutProgramsService.createPersonalProgram(request.user!.id!, dto);
+  }
+
+  @Post('official')
+  @MinimumRole('moderator')
+  async createOfficial(@Req() request: Request, @Body() dto: CreateWorkoutProgramDto) {
+    return this.workoutProgramsService.createOfficialProgram(request.user!.id!, dto);
   }
 
   @Patch(':id')
-  @MinimumRole('moderator')
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWorkoutProgramDto) {
-    return this.workoutProgramsService.updateProgram(id, dto);
+  async update(@Req() request: Request, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWorkoutProgramDto) {
+    return this.workoutProgramsService.updateProgram(request.user!.id!, request.user!.role!, id, dto);
   }
 }
