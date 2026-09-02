@@ -144,13 +144,26 @@ export const workoutPrograms = pgTable(
         id: serial("id").primaryKey(),
 
         name: text("name")
+            .notNull(),
+
+        description: text("description"),
+
+        isPersonal: boolean("is_personal")
             .notNull()
-            .unique(),
+            .default(false),
+
+        isActive: boolean("is_active")
+            .notNull()
+            .default(true),
 
         createdById: integer("created_by_id")
             .references(() => users.id, {
                 onDelete: "set null",
             }),
+
+        createdAt: timestamp("created_at")
+            .defaultNow()
+            .notNull(),
     }
 );
 
