@@ -40,6 +40,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      seed:
+        condition: service_completed_successfully
     ports:
       - "${PORT:-3000}:3000"
     env_file:
@@ -55,6 +57,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    networks:
+      - hit-tracker-network
+
+  seed:
+    image: postgres:17
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - ./seed.sql:/seed.sql:ro
+    command: ["sh", "-c", "psql -h postgres -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -f /seed.sql"]
+    restart: "no"
     networks:
       - hit-tracker-network
 

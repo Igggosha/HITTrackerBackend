@@ -51,8 +51,13 @@ The PostgreSQL volume persists between restarts. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
 first time. The `migrate` service records the SQL-dump baseline and then runs
 the versioned Drizzle migrations before the API starts, including for an
-existing volume. Use `docker compose logs -f api`, `docker compose logs -f
-postgres`, or `docker compose logs migrate` to inspect startup problems.
+existing volume. The `seed` service then idempotently adds the shared exercise
+library and starter programs; it never deletes personal data. Use `docker
+compose logs -f api`, `docker compose logs -f postgres`, `docker compose logs
+migrate`, or `docker compose logs seed` to inspect startup problems.
+
+To add the shared starter library again without resetting users or workouts,
+run `npm run db:seed` from this folder.
 
 ### Database workflow for the team
 
