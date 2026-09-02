@@ -1,5 +1,6 @@
 import {
     boolean,
+    date,
     integer,
     pgTable,
     primaryKey,
@@ -246,6 +247,24 @@ export const usersWorkoutPrograms = pgTable(
             .notNull()
             .default(0)
     }
+);
+
+// A personal calendar assignment. One user can plan one program per date.
+export const userProgramSchedule = pgTable(
+    "user_program_schedule",
+    {
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        scheduledFor: date("scheduled_for").notNull(),
+        programId: integer("program_id")
+            .notNull()
+            .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => ({
+        pk: primaryKey({ columns: [table.userId, table.scheduledFor] }),
+    }),
 );
 
 

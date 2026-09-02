@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
 import { CreateWorkoutProgramDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
+import { ScheduleProgramDto } from './dto/schedule-program.dto';
 import type { Request } from 'express';
 
 @UseGuards(JwtGuard, RolesGuard)
@@ -32,6 +33,20 @@ export class WorkoutProgramsController {
   @MinimumRole('moderator')
   async createOfficial(@Req() request: Request, @Body() dto: CreateWorkoutProgramDto) {
     return this.workoutProgramsService.createOfficialProgram(request.user!.id!, dto);
+  }
+
+  @Post('schedule')
+  async schedule(@Req() request: Request, @Body() dto: ScheduleProgramDto) {
+    return this.workoutProgramsService.scheduleProgram(request.user!.id!, request.user!.role!, dto);
+  }
+
+  @Post(':id/copy')
+  async copy(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateWorkoutProgramDto,
+  ) {
+    return this.workoutProgramsService.copyAsPersonalProgram(request.user!.id!, request.user!.role!, id, dto);
   }
 
   @Patch(':id')

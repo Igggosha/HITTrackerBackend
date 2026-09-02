@@ -6,12 +6,14 @@ import {
   exercises,
   programContent,
   users,
+  userProgramSchedule,
   workoutPrograms,
   type UserRole,
 } from '../db/schema';
 import { hasMinimumRole } from '../auth/roles';
 import { CreateWorkoutProgramDto, ProgramExerciseDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
+import { ScheduleProgramDto } from './dto/schedule-program.dto';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -21,6 +23,31 @@ export class WorkoutProgramsService {
 
   async createOfficialProgram(userId: number, dto: CreateWorkoutProgramDto) {
     return this.createProgram(userId, false, dto);
+  }
+
+  async copyAsPersonalProgram(userId: number, role: UserRole, sourceId: number, dto: CreateWorkoutProgramDto) {
+    const [source] = await db.select().from(workoutPrograms).where(eq(workoutPrograms.id, sourceId)).limit(1);
+    if (!source) throw new NotFoundException('Workout program not found');
+    if (source.isPersonal && source.createdById !== userId) {
+      throw new ForbiddenException('Personal programs cannot be copied');
+    }
+    if (!source.isPersonal && !source.isActive && !hasMinimumRole(role, 'moderator')) {
+      throw new NotFoundException('Workout program not found');
+    }
+    return this.createPersonalProgram(userId, dto);
+  }
+
+  async scheduleProgram(userId: number, role: UserRole, dto: ScheduleProgramDto) {
+    await this.getProgramById(dto.programId, userId, role);
+    const [assignment] = await db
+      .insert(userProgramSchedule)
+      .values({ userId, programId: dto.programId, scheduledFor: dto.scheduledFor })
+      .onConflictDoUpdate({
+        target: [userProgramSchedule.userId, userProgramSchedule.scheduledFor],
+        set: { programId: dto.programId },
+      })
+      .returning();
+    return assignment;
   }
 
   async updateProgram(userId: number, role: UserRole, id: number, dto: UpdateWorkoutProgramDto) {
