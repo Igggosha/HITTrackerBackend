@@ -249,6 +249,23 @@ export const usersWorkoutPrograms = pgTable(
     }
 );
 
+// A weekly program plan. Calendar entries are materialized only for dates the user views.
+export const userProgramScheduleSeries = pgTable(
+    "user_program_schedule_series",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        programId: integer("program_id")
+            .notNull()
+            .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+        startsOn: date("starts_on").notNull(),
+        endsOn: date("ends_on"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+);
+
 // A personal calendar assignment. One user can plan multiple programs per date.
 export const userProgramSchedule = pgTable(
     "user_program_schedule",
@@ -261,6 +278,8 @@ export const userProgramSchedule = pgTable(
         programId: integer("program_id")
             .notNull()
             .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+        seriesId: integer("series_id")
+            .references(() => userProgramScheduleSeries.id, { onDelete: "cascade" }),
         status: text("status").notNull().default("planned"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },

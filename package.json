@@ -21,7 +21,7 @@
     "db:push": "drizzle-kit push",
     "db:baseline": "tsx scripts/baseline-drizzle.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
-    "db:seed": "Get-Content seed.sql | docker exec -i postgres-db psql -U postgres -d nestdb",
+    "db:seed": "docker compose run --rm seed",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
