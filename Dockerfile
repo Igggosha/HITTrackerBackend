@@ -10,6 +10,12 @@ FROM dependencies AS build
 COPY . .
 RUN npm run build
 
+FROM dependencies AS migration
+
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY scripts ./scripts
+
 FROM node:24 AS production
 
 WORKDIR /app

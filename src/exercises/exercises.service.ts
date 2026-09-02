@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
@@ -10,6 +10,8 @@ import {
   programContent,
   exerciseLikes,
 } from '../db/schema';
+import { CreateExerciseDto } from './dto/create-exercise.dto';
+import { UpdateExerciseDto } from './dto/update-exercise.dto';
 
 @Injectable()
 export class ExercisesService {
@@ -162,13 +164,7 @@ export class ExercisesService {
   /**
    * Створення вправи
    */
-  async createExercise(data: {
-    name: string;
-    description?: string;
-    videoUrl?: string;
-    difficulty?: number;
-    muscleIds?: number[];
-  }) {
+  async createExercise(data: CreateExerciseDto) {
     const trimmedName = data.name.trim();
 
     const existing = await db
@@ -206,6 +202,48 @@ export class ExercisesService {
         muscleIds: data.muscleIds || [],
       };
     });
+  }
+
+  async updateExercise(id: number, data: UpdateExerciseDto) {
+    const { muscleIds, ...exercise } = data;
+    const changes = {
+      ...(exercise.name !== undefined ? { name: exercise.name.trim() } : {}),
+      ...(exercise.description !== undefined ? { description: exercise.description.trim() || null } : {}),
+      ...(exercise.videoUrl !== undefined ? { videoUrl: exercise.videoUrl.trim() || null } : {}),
+      ...(exercise.difficulty !== undefined ? { difficulty: exercise.difficulty } : {}),
+    };
+
+    try {
+      return await db.transaction(async (tx: any) => {
+        let updated;
+        if (Object.keys(changes).length) {
+          [updated] = await tx
+            .update(exercises)
+            .set(changes)
+            .where(eq(exercises.id, id))
+            .returning();
+        } else {
+          [updated] = await tx.select().from(exercises).where(eq(exercises.id, id)).limit(1);
+        }
+        if (!updated) throw new NotFoundException('Exercise not found');
+
+        if (muscleIds !== undefined) {
+          await tx.delete(exercisesTrainMuscles).where(eq(exercisesTrainMuscles.exerciseId, id));
+          if (muscleIds.length) {
+            await tx.insert(exercisesTrainMuscles).values(
+              muscleIds.map((muscleId) => ({ exerciseId: id, muscleId })),
+            );
+          }
+        }
+
+        return { ...updated, muscleIds: muscleIds ?? undefined };
+      });
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(`Exercise "${changes.name}" already exists in the database.`);
+      }
+      throw error;
+    }
   }
 
   /**
