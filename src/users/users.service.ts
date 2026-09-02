@@ -12,6 +12,7 @@ export class UsersService {
         id: users.id,
         email: users.email,
         username: users.username,
+        role: users.role,
         age: users.age,
         gender: users.gender,
         height: users.height,
