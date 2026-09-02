@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import type { Request } from "express";
+import { RolesGuard } from '../auth/roles.guard';
+import { MinimumRole } from '../auth/minimum-role.decorator';
+import { CreateExerciseDto } from './dto/create-exercise.dto';
+import { UpdateExerciseDto } from './dto/update-exercise.dto';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('exercises')
 export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) {}
@@ -34,10 +38,20 @@ export class ExercisesController {
   }
 
   @Post()
+  @MinimumRole('moderator')
   async createExercise(
-    @Body() body: { name: string; description?: string; videoUrl?: string; difficulty?: number; muscleIds?: number[] },
+    @Body() body: CreateExerciseDto,
   ) {
     return this.exercisesService.createExercise(body);
+  }
+
+  @Patch(':id')
+  @MinimumRole('moderator')
+  async updateExercise(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateExerciseDto,
+  ) {
+    return this.exercisesService.updateExercise(id, body);
   }
 
   /**
