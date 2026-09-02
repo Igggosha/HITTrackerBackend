@@ -9,6 +9,15 @@ import {
     timestamp,
 } from "drizzle-orm/pg-core";
 
+export const userRoles = [
+    "user",
+    "helper",
+    "moderator",
+    "admin",
+    "super_admin",
+] as const;
+
+export type UserRole = (typeof userRoles)[number];
 
 // ================= USERS =================
 
@@ -18,6 +27,7 @@ export const users = pgTable("users", {
     username: text("username").notNull().unique(),
     passwordHash: text("password_hash"),
     googleId: text("google_id").unique(),
+    role: text("role").$type<UserRole>().notNull().default("user"),
 
     // Password Reset
     resetPasswordToken: text("reset_password_token"),
