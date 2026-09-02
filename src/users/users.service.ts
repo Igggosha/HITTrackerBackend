@@ -58,6 +58,29 @@ export class UsersService {
     return { user: updated };
   }
 
+  async deleteUser(actorUserId: number, targetUserId: number) {
+    const [[actor], [target]] = await Promise.all([
+      db.select({ role: users.role }).from(users).where(eq(users.id, actorUserId)).limit(1),
+      db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, targetUserId)).limit(1),
+    ]);
+
+    if (!actor) throw new ForbiddenException('Your account no longer has access');
+    if (!target) throw new NotFoundException('User not found');
+    if (actorUserId === targetUserId) throw new ForbiddenException('You cannot delete your own account');
+    if (!hasMinimumRole(actor.role, 'admin')) throw new ForbiddenException('Insufficient permissions');
+    if (actor.role !== 'super_admin' && target.role === 'super_admin') {
+      throw new ForbiddenException('Only a super admin can manage super admins');
+    }
+
+    const [deleted] = await db
+      .delete(users)
+      .where(eq(users.id, targetUserId))
+      .returning({ id: users.id, email: users.email, username: users.username, role: users.role });
+    if (!deleted) throw new NotFoundException('User not found');
+
+    return { user: deleted };
+  }
+
   async getProfile(userId: number) {
     const [user] = await db
       .select({
