@@ -47,17 +47,11 @@ export class AuthController {
     @Res() response: Response,
   ) {
     if ((request.user as { cancelled?: boolean })?.cancelled) {
-      return this.redirectGoogleError(response, 'access_denied');
+      return this.redirectGoogleError(request, response, 'access_denied');
     }
 
     const result = await this.authService.loginWithGoogle(request.user as GoogleUser);
-    
-
-    const isMobile = request.query.state === 'mobile';
-
-    const redirectUrl = isMobile
-      ? 'hit-tracker-mobile://login'
-      : process.env.OAUTH_SUCCESS_REDIRECT_URL;
+    const redirectUrl = this.getOAuthRedirectUrl(request);
 
     if (!redirectUrl) {
       return response.json(result);
@@ -72,12 +66,21 @@ export class AuthController {
     return response.redirect(url.toString());
   }
 
-  private redirectGoogleError(response: Response, error: string) {
-    const redirectUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL;
+  private redirectGoogleError(request: Request, response: Response, error: string) {
+    const redirectUrl = this.getOAuthRedirectUrl(request);
     if (!redirectUrl) return response.status(401).json({ error });
 
     const url = new URL(redirectUrl);
     url.searchParams.set('error', error);
     return response.redirect(url.toString());
+  }
+
+  private getOAuthRedirectUrl(request: Request) {
+    const isMobile = request.session.oauthPlatform === 'mobile';
+    delete request.session.oauthPlatform;
+
+    return isMobile
+      ? (process.env.OAUTH_MOBILE_REDIRECT_URL ?? 'hit-tracker-mobile://auth/google/callback')
+      : process.env.OAUTH_SUCCESS_REDIRECT_URL;
   }
 }
