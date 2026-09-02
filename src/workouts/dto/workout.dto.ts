@@ -16,6 +16,11 @@ export class StartWorkoutDto {
   @IsOptional()
   @IsNumber()
   programContentId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  scheduleId?: number;
 }
 
 export class RecordSetDto {

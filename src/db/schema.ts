@@ -1,5 +1,6 @@
 import {
     boolean,
+    date,
     integer,
     pgTable,
     primaryKey,
@@ -144,13 +145,26 @@ export const workoutPrograms = pgTable(
         id: serial("id").primaryKey(),
 
         name: text("name")
+            .notNull(),
+
+        description: text("description"),
+
+        isPersonal: boolean("is_personal")
             .notNull()
-            .unique(),
+            .default(false),
+
+        isActive: boolean("is_active")
+            .notNull()
+            .default(true),
 
         createdById: integer("created_by_id")
             .references(() => users.id, {
                 onDelete: "set null",
             }),
+
+        createdAt: timestamp("created_at")
+            .defaultNow()
+            .notNull(),
     }
 );
 
@@ -235,6 +249,23 @@ export const usersWorkoutPrograms = pgTable(
     }
 );
 
+// A personal calendar assignment. One user can plan multiple programs per date.
+export const userProgramSchedule = pgTable(
+    "user_program_schedule",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        scheduledFor: date("scheduled_for").notNull(),
+        programId: integer("program_id")
+            .notNull()
+            .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+        status: text("status").notNull().default("planned"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+);
+
 
 // ================= COMPLETED WORKOUT HISTORY =================
 
@@ -267,6 +298,8 @@ export const workouts = pgTable(
 
         durationSeconds: integer("duration_seconds"), // Тривалість тренування в секундах
         finishedAt: timestamp("finished_at"),
+        scheduleId: integer("schedule_id")
+            .references(() => userProgramSchedule.id, { onDelete: "set null" }),
 
         createdAt: timestamp("created_at")
             .defaultNow()
