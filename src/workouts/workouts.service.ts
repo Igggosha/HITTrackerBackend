@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { eq, and, desc, isNull, isNotNull } from 'drizzle-orm';
 import { db } from '../db/db';
-import { workouts, sets, exercises } from '../db/schema';
+import { workouts, sets, exercises, userProgramSchedule } from '../db/schema';
 import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
 
 @Injectable()
@@ -29,12 +29,22 @@ export class WorkoutsService {
 
     const now = new Date();
 
+    if (body?.scheduleId) {
+      const [assignment] = await db
+        .select({ id: userProgramSchedule.id })
+        .from(userProgramSchedule)
+        .where(and(eq(userProgramSchedule.id, body.scheduleId), eq(userProgramSchedule.userId, userId)))
+        .limit(1);
+      if (!assignment) throw new NotFoundException('Scheduled workout not found');
+    }
+
     const [newWorkout] = await db
       .insert(workouts)
       .values({
         userId,
         type: body?.type || 'HIT Session',
         programContentId: body?.programContentId ?? null,
+        scheduleId: body?.scheduleId ?? null,
         createdAt: now,
       })
       .returning();
@@ -166,6 +176,13 @@ export class WorkoutsService {
       })
       .where(eq(workouts.id, workoutId))
       .returning();
+
+    if (workout.scheduleId) {
+      await db
+        .update(userProgramSchedule)
+        .set({ status: 'completed' })
+        .where(and(eq(userProgramSchedule.id, workout.scheduleId), eq(userProgramSchedule.userId, userId)));
+    }
 
     return {
       message: 'Workout finished successfully',

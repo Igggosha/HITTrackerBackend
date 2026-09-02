@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
 import { CreateWorkoutProgramDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
-import { ScheduleProgramDto } from './dto/schedule-program.dto';
+import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import type { Request } from 'express';
 
 @UseGuards(JwtGuard, RolesGuard)
@@ -17,6 +17,11 @@ export class WorkoutProgramsController {
   @Get()
   async getAll(@Req() request: Request) {
     return this.workoutProgramsService.getAllPrograms(request.user!.id!, request.user!.role!);
+  }
+
+  @Get('schedule')
+  async getSchedule(@Req() request: Request, @Query() query: ListScheduleDto) {
+    return this.workoutProgramsService.getCalendar(request.user!.id!, query);
   }
 
   @Get(':id')

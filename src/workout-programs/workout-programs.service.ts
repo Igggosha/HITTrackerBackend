@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, or } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, or } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   exerciseInPrograms,
@@ -13,7 +13,8 @@ import {
 import { hasMinimumRole } from '../auth/roles';
 import { CreateWorkoutProgramDto, ProgramExerciseDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
-import { ScheduleProgramDto } from './dto/schedule-program.dto';
+import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
+import { expandScheduleDates, scheduleStatus } from './schedule.utils';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -39,15 +40,40 @@ export class WorkoutProgramsService {
 
   async scheduleProgram(userId: number, role: UserRole, dto: ScheduleProgramDto) {
     await this.getProgramById(dto.programId, userId, role);
-    const [assignment] = await db
+    const dates = expandScheduleDates(dto.scheduledFor, dto.repeat, dto.repeatUntil);
+    const assignments = await db
       .insert(userProgramSchedule)
-      .values({ userId, programId: dto.programId, scheduledFor: dto.scheduledFor })
-      .onConflictDoUpdate({
-        target: [userProgramSchedule.userId, userProgramSchedule.scheduledFor],
-        set: { programId: dto.programId },
-      })
+      .values(dates.map((scheduledFor) => ({ userId, programId: dto.programId, scheduledFor })))
+      .onConflictDoNothing()
       .returning();
-    return assignment;
+    return assignments;
+  }
+
+  async getCalendar(userId: number, { from, to }: ListScheduleDto) {
+    const today = new Date().toISOString().slice(0, 10);
+    const assignments = await db
+      .select({
+        id: userProgramSchedule.id,
+        scheduledFor: userProgramSchedule.scheduledFor,
+        storedStatus: userProgramSchedule.status,
+        programId: workoutPrograms.id,
+        programName: workoutPrograms.name,
+        programDescription: workoutPrograms.description,
+        isPersonal: workoutPrograms.isPersonal,
+      })
+      .from(userProgramSchedule)
+      .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
+      .where(and(
+        eq(userProgramSchedule.userId, userId),
+        gte(userProgramSchedule.scheduledFor, from),
+        lte(userProgramSchedule.scheduledFor, to),
+      ))
+      .orderBy(asc(userProgramSchedule.scheduledFor), asc(userProgramSchedule.id));
+
+    return assignments.map(({ storedStatus, ...assignment }) => ({
+      ...assignment,
+      status: scheduleStatus(storedStatus, assignment.scheduledFor, today),
+    }));
   }
 
   async updateProgram(userId: number, role: UserRole, id: number, dto: UpdateWorkoutProgramDto) {

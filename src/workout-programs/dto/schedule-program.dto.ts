@@ -1,4 +1,4 @@
-import { IsDateString, IsInt, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsOptional, Min } from 'class-validator';
 
 export class ScheduleProgramDto {
   @IsInt()
@@ -7,4 +7,20 @@ export class ScheduleProgramDto {
 
   @IsDateString()
   scheduledFor: string;
+
+  @IsOptional()
+  @IsIn(['none', 'weekly'])
+  repeat?: 'none' | 'weekly';
+
+  @IsOptional()
+  @IsDateString()
+  repeatUntil?: string;
+}
+
+export class ListScheduleDto {
+  @IsDateString()
+  from: string;
+
+  @IsDateString()
+  to: string;
 }

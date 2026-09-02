@@ -249,10 +249,11 @@ export const usersWorkoutPrograms = pgTable(
     }
 );
 
-// A personal calendar assignment. One user can plan one program per date.
+// A personal calendar assignment. One user can plan multiple programs per date.
 export const userProgramSchedule = pgTable(
     "user_program_schedule",
     {
+        id: serial("id").primaryKey(),
         userId: integer("user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
@@ -260,11 +261,9 @@ export const userProgramSchedule = pgTable(
         programId: integer("program_id")
             .notNull()
             .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+        status: text("status").notNull().default("planned"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
-    (table) => ({
-        pk: primaryKey({ columns: [table.userId, table.scheduledFor] }),
-    }),
 );
 
 
@@ -299,6 +298,8 @@ export const workouts = pgTable(
 
         durationSeconds: integer("duration_seconds"), // Тривалість тренування в секундах
         finishedAt: timestamp("finished_at"),
+        scheduleId: integer("schedule_id")
+            .references(() => userProgramSchedule.id, { onDelete: "set null" }),
 
         createdAt: timestamp("created_at")
             .defaultNow()
