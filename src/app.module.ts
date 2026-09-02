@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
 import { WorkoutsModule } from './workouts/workouts.module';
@@ -35,6 +34,5 @@ import { UsersModule } from './users/users.module';
     ExercisesModule,
     UsersModule,
   ],
-  controllers: [AppController],
 })
 export class AppModule {}
