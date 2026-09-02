@@ -12,7 +12,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { db } from '../db/db';
-import { users } from '../db/schema';
+import { users, type UserRole } from '../db/schema';
 import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto/auth.dto';
 
 export type GoogleUser = {
@@ -195,15 +195,16 @@ export class AuthService {
 
   private createAuthResponse(
     message: string,
-    user: { id: number; email: string; username: string },
+    user: { id: number; email: string; username: string; role: UserRole },
   ) {
     return {
       message,
-      accessToken: this.jwtService.sign({ sub: user.id, email: user.email }),
+      accessToken: this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }),
       user: {
         id: user.id,
         email: user.email,
         username: user.username,
+        role: user.role,
       },
     };
   }
