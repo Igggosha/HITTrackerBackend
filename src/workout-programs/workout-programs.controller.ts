@@ -59,6 +59,11 @@ export class WorkoutProgramsController {
     return this.workoutProgramsService.copyAsPersonalProgram(request.user!.id!, request.user!.role!, id, dto);
   }
 
+  @Post(':id/like')
+  async like(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
+    return this.workoutProgramsService.toggleLike(request.user!.id!, request.user!.role!, id);
+  }
+
   @Patch(':id')
   async update(@Req() request: Request, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWorkoutProgramDto) {
     return this.workoutProgramsService.updateProgram(request.user!.id!, request.user!.role!, id, dto);

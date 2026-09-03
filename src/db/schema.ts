@@ -170,6 +170,16 @@ export const workoutPrograms = pgTable(
 
 
 // A replicated weekly snapshot of a program
+export const programLikes = pgTable('program_likes', {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    programId: integer('program_id').notNull().references(() => workoutPrograms.id, { onDelete: 'cascade' }),
+}, (table) => ({ pk: primaryKey({ columns: [table.userId, table.programId] }) }));
+
+export const exerciseBookmarks = pgTable('exercise_bookmarks', {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    exerciseId: integer('exercise_id').notNull().references(() => exercises.id, { onDelete: 'cascade' }),
+}, (table) => ({ pk: primaryKey({ columns: [table.userId, table.exerciseId] }) }));
+
 export const programContent = pgTable(
     "program_content",
     {
@@ -312,6 +322,11 @@ export const workouts = pgTable(
 
         type: text("type")
             .notNull(),
+
+        // A workout is kept after cancellation so it never appears as completed history.
+        status: text("status").notNull().default("active"),
+        pausedAt: timestamp("paused_at"),
+        pausedSeconds: integer("paused_seconds").notNull().default(0),
 
         notes: text("notes"),
 
