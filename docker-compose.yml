@@ -17,7 +17,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - hit-tracker-network
+      - private
 
   migrate:
     build:
@@ -31,7 +31,7 @@ services:
     command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
     restart: "no"
     networks:
-      - hit-tracker-network
+      - private
 
   api:
     build: .
@@ -43,7 +43,8 @@ services:
       seed:
         condition: service_completed_successfully
     ports:
-      - "${PORT:-3000}:3000"
+      # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
+      - "127.0.0.1:${PORT:-3000}:3000"
     env_file:
       - .env
     environment:
@@ -58,7 +59,32 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - hit-tracker-network
+      - private
+      - edge
+
+  frontend:
+    build:
+      context: ../hit-tracker-mobile
+      args:
+        EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
+    restart: unless-stopped
+    networks:
+      - edge
+
+  # Background outbound-only connector. It is opt-in and has no access to the
+  # internal PostgreSQL network or any published inbound ports.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    restart: unless-stopped
+    networks:
+      - edge
 
   seed:
     image: postgres:17
@@ -72,7 +98,7 @@ services:
     command: ["sh", "-c", "psql -h postgres -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -f /seed.sql"]
     restart: "no"
     networks:
-      - hit-tracker-network
+      - private
 
   studio:
     build:
@@ -90,11 +116,15 @@ services:
     ports:
       - "127.0.0.1:4983:4983"
     networks:
-      - hit-tracker-network
+      - private
 
 volumes:
   postgres_data:
 
 networks:
-  hit-tracker-network:
+  # Database services cannot be reached from the host or an Internet-facing tunnel.
+  private:
+    internal: true
+  # Reserved for the API and a future HTTPS tunnel/reverse proxy.
+  edge:
     driver: bridge
