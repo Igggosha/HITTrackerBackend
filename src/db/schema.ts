@@ -43,6 +43,26 @@ export const users = pgTable("users", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const oauthLoginCodes = pgTable("oauth_login_codes", {
+    id: serial("id").primaryKey(),
+    codeHash: text("code_hash").notNull().unique(),
+    codeChallenge: text("code_challenge").notNull(),
+    userId: integer("user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+});
+
+// A password is never turned into an account until the email owner proves access.
+export const pendingRegistrations = pgTable("pending_registrations", {
+    email: text("email").primaryKey(),
+    passwordHash: text("password_hash").notNull(),
+    verificationCodeHash: text("verification_code_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    lockedUntil: timestamp("locked_until"),
+});
+
 // ================= BODY TRACKING =================
 
 export const userBodyMetrics = pgTable("user_body_metrics", {
