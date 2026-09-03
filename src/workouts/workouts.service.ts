@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, desc, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, isNotNull, inArray } from 'drizzle-orm';
 import { db } from '../db/db';
 import { workouts, sets, exercises, userProgramSchedule } from '../db/schema';
 import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
+import { openWorkoutStatuses } from './workout-status.utils';
 
 @Injectable()
 export class WorkoutsService {
@@ -13,7 +14,7 @@ export class WorkoutsService {
     const [existingWorkout] = await db
       .select()
       .from(workouts)
-      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt)))
+      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
       .limit(1);
 
     if (existingWorkout) {
@@ -45,6 +46,7 @@ export class WorkoutsService {
         type: body?.type || 'HIT Session',
         programContentId: body?.programContentId ?? null,
         scheduleId: body?.scheduleId ?? null,
+        status: 'active',
         createdAt: now,
       })
       .returning();
@@ -68,11 +70,13 @@ export class WorkoutsService {
         workout: workouts,
         set: sets,
         exercise: exercises,
+        programId: userProgramSchedule.programId,
       })
       .from(workouts)
       .leftJoin(sets, eq(workouts.id, sets.workoutId))
       .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
-      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt)));
+      .leftJoin(userProgramSchedule, eq(workouts.scheduleId, userProgramSchedule.id))
+      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])));
 
     if (rows.length === 0) {
       return { workout: null, sets: [] };
@@ -80,6 +84,7 @@ export class WorkoutsService {
 
     const activeWorkout = {
       ...rows[0].workout,
+      programId: rows[0].programId,
       // Форматуємо createdAt для запобігання помилкам часу
       createdAt: new Date(rows[0].workout.createdAt).toISOString(),
     };
@@ -108,7 +113,8 @@ export class WorkoutsService {
         and(
           eq(workouts.id, workoutId), 
           eq(workouts.userId, userId),
-          isNull(workouts.finishedAt)
+          isNull(workouts.finishedAt),
+          inArray(workouts.status, [...openWorkoutStatuses])
         )
       )
       .limit(1);
@@ -173,6 +179,8 @@ export class WorkoutsService {
         notes: body?.notes || '',
         durationSeconds: Number(durationSeconds),
         finishedAt,
+        status: 'completed',
+        pausedAt: null,
       })
       .where(eq(workouts.id, workoutId))
       .returning();
@@ -206,7 +214,8 @@ export class WorkoutsService {
       .where(
         and(
           eq(workouts.userId, userId),
-          isNotNull(workouts.finishedAt)
+          isNotNull(workouts.finishedAt),
+          eq(workouts.status, 'completed')
         )
       )
       .orderBy(desc(workouts.finishedAt));
@@ -232,6 +241,34 @@ export class WorkoutsService {
     }
 
     return Array.from(historyMap.values());
+  }
+
+  async togglePause(workoutId: number, userId: number) {
+    const [workout] = await db.select().from(workouts)
+      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
+      .limit(1);
+    if (!workout) throw new NotFoundException('Open workout not found');
+
+    const now = new Date();
+    const isPausing = workout.status === 'active';
+    const pausedSeconds = isPausing
+      ? workout.pausedSeconds
+      : workout.pausedSeconds + Math.max(0, Math.floor((now.getTime() - new Date(workout.pausedAt!).getTime()) / 1000));
+    const [updatedWorkout] = await db.update(workouts).set({
+      status: isPausing ? 'paused' : 'active',
+      pausedAt: isPausing ? now : null,
+      pausedSeconds,
+    }).where(eq(workouts.id, workoutId)).returning();
+    return { workout: updatedWorkout };
+  }
+
+  async cancelWorkout(workoutId: number, userId: number) {
+    const [workout] = await db.select().from(workouts)
+      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
+      .limit(1);
+    if (!workout) throw new NotFoundException('Open workout not found');
+    const [updatedWorkout] = await db.update(workouts).set({ status: 'cancelled', pausedAt: null }).where(eq(workouts.id, workoutId)).returning();
+    return { workout: updatedWorkout };
   }
 
   /**

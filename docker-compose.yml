@@ -74,6 +74,24 @@ services:
     networks:
       - hit-tracker-network
 
+  studio:
+    build:
+      context: .
+      target: migration
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+    command: ["npm", "run", "db:studio", "--", "--host", "0.0.0.0", "--port", "4983"]
+    ports:
+      - "127.0.0.1:4983:4983"
+    networks:
+      - hit-tracker-network
+
 volumes:
   postgres_data:
 

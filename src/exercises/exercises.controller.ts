@@ -65,4 +65,9 @@ export class ExercisesController {
     const userId = (req.user as any)?.id || (req.user as any)?.userId;
     return this.exercisesService.toggleLike(userId, id);
   }
+
+  @Post(':id/bookmark')
+  async bookmark(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    return this.exercisesService.toggleBookmark(req.user!.id!, id);
+  }
 }
