@@ -9,6 +9,7 @@ import {
   usersWorkoutPrograms,
   programContent,
   exerciseLikes,
+  exerciseBookmarks,
 } from '../db/schema';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
@@ -117,6 +118,9 @@ export class ExercisesService {
 
     // 3. Отримуємо лайки поточного користувача
     const userLikesSet = new Set<number>();
+    const bookmarked = currentUserId ? await db.select({ exerciseId: exerciseBookmarks.exerciseId })
+      .from(exerciseBookmarks).where(eq(exerciseBookmarks.userId, currentUserId)) : [];
+    const bookmarks = new Set(bookmarked.map((row) => row.exerciseId));
     if (currentUserId) {
       const userLikesData = await db
         .select({ exerciseId: exerciseLikes.exerciseId })
@@ -139,6 +143,7 @@ export class ExercisesService {
           difficulty: row.difficulty, 
           likesCount: likesMap.get(row.id) || 0,
           isLiked: userLikesSet.has(row.id),
+          isBookmarked: bookmarks.has(row.id),
           muscles: [], // Масив об'єктів м'язів, який очікує фронтенд
         });
       }
@@ -246,37 +251,28 @@ export class ExercisesService {
     }
   }
 
+  async toggleBookmark(userId: number, exerciseId: number) {
+    const [exercise] = await db.select({ id: exercises.id }).from(exercises).where(eq(exercises.id, exerciseId)).limit(1);
+    if (!exercise) throw new NotFoundException('Exercise not found');
+    const removed = await db.delete(exerciseBookmarks).where(and(
+      eq(exerciseBookmarks.userId, userId), eq(exerciseBookmarks.exerciseId, exerciseId),
+    )).returning();
+    if (!removed.length) await db.insert(exerciseBookmarks).values({ userId, exerciseId }).onConflictDoNothing();
+    return { isBookmarked: !removed.length };
+  }
+
   /**
    * Поставити або прибрати лайк
    */
   async toggleLike(userId: number, exerciseId: number) {
-    const existingLike = await db
-      .select()
-      .from(exerciseLikes)
-      .where(
-        and(
-          eq(exerciseLikes.userId, userId),
-          eq(exerciseLikes.exerciseId, exerciseId)
-        )
-      )
-      .limit(1);
-
-    if (existingLike.length > 0) {
-      await db
-        .delete(exerciseLikes)
-        .where(
-          and(
-            eq(exerciseLikes.userId, userId),
-            eq(exerciseLikes.exerciseId, exerciseId)
-          )
-        );
-      return { isLiked: false };
-    } else {
-      await db.insert(exerciseLikes).values({
-        userId,
-        exerciseId,
-      });
-      return { isLiked: true };
+    const condition = and(
+      eq(exerciseLikes.userId, userId),
+      eq(exerciseLikes.exerciseId, exerciseId),
+    );
+    const removed = await db.delete(exerciseLikes).where(condition).returning();
+    if (!removed.length) {
+      await db.insert(exerciseLikes).values({ userId, exerciseId }).onConflictDoNothing();
     }
+    return { isLiked: !removed.length };
   }
 }

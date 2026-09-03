@@ -46,6 +46,16 @@ export class WorkoutsController {
     return this.workoutsService.finishWorkout(workoutId, req.user.id, body);
   }
 
+  @Post(':id/pause')
+  async togglePause(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.togglePause(workoutId, req.user.id);
+  }
+
+  @Post(':id/cancel')
+  async cancelWorkout(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.cancelWorkout(workoutId, req.user.id);
+  }
+
   @Get('history')
   async getHistory(@Req() req) {
     return this.workoutsService.getUserHistory(req.user.id);

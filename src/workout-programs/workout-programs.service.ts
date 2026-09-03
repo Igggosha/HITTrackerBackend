@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, gte, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   exerciseInPrograms,
@@ -9,6 +9,7 @@ import {
   userProgramSchedule,
   userProgramScheduleSeries,
   workoutPrograms,
+  programLikes,
   type UserRole,
 } from '../db/schema';
 import { hasMinimumRole } from '../auth/roles';
@@ -132,7 +133,7 @@ export class WorkoutProgramsService {
         and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)),
       );
 
-    return db
+    const programs = await db
       .select({
         id: workoutPrograms.id,
         name: workoutPrograms.name,
@@ -140,11 +141,44 @@ export class WorkoutProgramsService {
         isPersonal: workoutPrograms.isPersonal,
         createdAt: workoutPrograms.createdAt,
         ownerUsername: users.username,
+        createdById: workoutPrograms.createdById,
+        likesCount: sql<number>`(select count(*)::int from program_likes where program_id = ${workoutPrograms.id})`,
+        isLiked: sql<boolean>`exists(select 1 from program_likes where program_id = ${workoutPrograms.id} and user_id = ${userId})`,
+        isScheduled: sql<boolean>`exists(select 1 from ${userProgramSchedule} where ${userProgramSchedule.userId} = ${userId} and ${userProgramSchedule.programId} = ${workoutPrograms.id}) or exists(select 1 from ${userProgramScheduleSeries} where ${userProgramScheduleSeries.userId} = ${userId} and ${userProgramScheduleSeries.programId} = ${workoutPrograms.id})`,
       })
       .from(workoutPrograms)
       .leftJoin(users, eq(workoutPrograms.createdById, users.id))
       .where(visibility)
       .orderBy(asc(workoutPrograms.isPersonal), asc(workoutPrograms.name));
+
+    if (!programs.length) return [];
+    const rows = await db.select({
+      programId: programContent.programId,
+      week: programContent.week,
+      weekDay: exerciseInPrograms.weekDay,
+      setsCount: exerciseInPrograms.sets,
+      targetReps: exerciseInPrograms.firstSetRepCount,
+      plannedWeight: exerciseInPrograms.weight,
+      exercise: { id: exercises.id, name: exercises.name },
+    }).from(programContent)
+      .innerJoin(exerciseInPrograms, eq(exerciseInPrograms.programContentId, programContent.id))
+      .innerJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
+      .where(inArray(programContent.programId, programs.map((program) => program.id)))
+      .orderBy(asc(programContent.week), asc(exerciseInPrograms.weekDay), asc(exerciseInPrograms.id));
+    const schedules = new Map<number, typeof rows>();
+    for (const row of rows) {
+      if (!schedules.has(row.programId)) schedules.set(row.programId, []);
+      schedules.get(row.programId)!.push(row);
+    }
+    return programs.map((program) => ({ ...program, schedule: schedules.get(program.id) || [] }));
+  }
+
+  async toggleLike(userId: number, role: UserRole, programId: number) {
+    await this.getProgramById(programId, userId, role);
+    const condition = and(eq(programLikes.userId, userId), eq(programLikes.programId, programId));
+    const removed = await db.delete(programLikes).where(condition).returning();
+    if (!removed.length) await db.insert(programLikes).values({ userId, programId }).onConflictDoNothing();
+    return { isLiked: !removed.length };
   }
 
   async getProgramById(id: number, userId: number, role: UserRole) {
@@ -155,7 +189,9 @@ export class WorkoutProgramsService {
       throw new ForbiddenException('This personal program is private');
     }
     if (!program.isPersonal && !program.isActive && !hasMinimumRole(role, 'moderator')) {
-      throw new NotFoundException('Workout program not found');
+      const [assignment] = await db.select({ id: userProgramSchedule.id }).from(userProgramSchedule)
+        .where(and(eq(userProgramSchedule.userId, userId), eq(userProgramSchedule.programId, id))).limit(1);
+      if (!assignment) throw new NotFoundException('Workout program not found');
     }
 
     return { ...program, schedule: await this.getSchedule(id) };
@@ -254,7 +290,8 @@ export class WorkoutProgramsService {
       })
       .from(exerciseInPrograms)
       .innerJoin(programContent, eq(programContent.id, exerciseInPrograms.programContentId))
-      .where(eq(programContent.programId, programId));
+      .where(eq(programContent.programId, programId))
+      .orderBy(asc(programContent.week), asc(exerciseInPrograms.weekDay), asc(exerciseInPrograms.id));
   }
 
   private async getSchedule(programId: number) {
@@ -271,7 +308,8 @@ export class WorkoutProgramsService {
       .from(programContent)
       .leftJoin(exerciseInPrograms, eq(programContent.id, exerciseInPrograms.programContentId))
       .leftJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
-      .where(eq(programContent.programId, programId));
+      .where(eq(programContent.programId, programId))
+      .orderBy(asc(programContent.week), asc(exerciseInPrograms.weekDay), asc(exerciseInPrograms.id));
   }
 
   private async materializeWeeklyAssignments(userId: number, from: string, to: string) {
