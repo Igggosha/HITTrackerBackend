@@ -15,6 +15,7 @@ FROM dependencies AS migration
 COPY drizzle.config.ts ./
 COPY drizzle ./drizzle
 COPY scripts ./scripts
+COPY src/db ./src/db
 
 FROM node:24 AS production
 
