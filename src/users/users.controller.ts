@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -17,5 +17,10 @@ export class UsersController {
   @Patch('me')
   updateMe(@Req() request: Request, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(request.user!.id!, dto);
+  }
+
+  @Post('me/presence')
+  updatePresence(@Req() request: Request) {
+    return this.usersService.touchPresence(request.user!.id!);
   }
 }
