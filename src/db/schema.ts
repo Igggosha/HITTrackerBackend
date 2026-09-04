@@ -40,6 +40,8 @@ export const users = pgTable("users", {
     height: real("height"),
     goal: text("goal"),
 
+    lastSeenAt: timestamp("last_seen_at"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
