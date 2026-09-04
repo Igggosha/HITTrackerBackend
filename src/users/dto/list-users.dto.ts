@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class ListUsersDto {
   @IsOptional()
@@ -19,4 +19,8 @@ export class ListUsersDto {
   @Min(1)
   @Max(100)
   limit = 25;
+
+  @IsOptional()
+  @IsIn(['true'])
+  online?: 'true';
 }

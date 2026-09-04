@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, or } from 'drizzle-orm';
 import { db } from '../db/db';
 import { userBodyMetrics, users, type UserRole } from '../db/schema';
 import { hasMinimumRole } from '../auth/roles';
@@ -8,16 +8,18 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
-  async listUsers({ search, page, limit }: ListUsersDto) {
-    const filter = search?.trim()
+  async listUsers({ search, page, limit, online }: ListUsersDto) {
+    const searchFilter = search?.trim()
       ? or(ilike(users.email, `%${search.trim()}%`), ilike(users.username, `%${search.trim()}%`))
       : undefined;
+    const filter = online ? and(searchFilter, gte(users.lastSeenAt, new Date(Date.now() - 90_000))) : searchFilter;
     const offset = (page - 1) * limit;
     const fields = {
       id: users.id,
       email: users.email,
       username: users.username,
       role: users.role,
+      online: gte(users.lastSeenAt, new Date(Date.now() - 90_000)),
       createdAt: users.createdAt,
     };
 
@@ -27,6 +29,10 @@ export class UsersService {
     ]);
 
     return { items, page, limit, total };
+  }
+
+  async touchPresence(userId: number) {
+    await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, userId));
   }
 
   async updateUserRole(actorUserId: number, targetUserId: number, role: UserRole) {
