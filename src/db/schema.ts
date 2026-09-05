@@ -58,6 +58,7 @@ export const oauthLoginCodes = pgTable("oauth_login_codes", {
 // A password is never turned into an account until the email owner proves access.
 export const pendingRegistrations = pgTable("pending_registrations", {
     email: text("email").primaryKey(),
+    username: text("username").notNull(),
     passwordHash: text("password_hash").notNull(),
     verificationCodeHash: text("verification_code_hash").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
