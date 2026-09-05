@@ -16,6 +16,7 @@ export const users = pgTable("users", {
     id: serial("id").primaryKey(),
     email: text("email").notNull().unique(),
     username: text("username").notNull().unique(),
+    fullName: text("full_name"),
     passwordHash: text("password_hash"),
     googleId: text("google_id").unique(),
 
@@ -29,6 +30,16 @@ export const users = pgTable("users", {
     height: real("height"),
     goal: text("goal"),
 
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const pendingRegistrations = pgTable("pending_registrations", {
+    email: text("email").primaryKey(),
+    fullName: text("full_name").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    verificationCodeHash: text("verification_code_hash").notNull(),
+    verificationCodeExpires: timestamp("verification_code_expires").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

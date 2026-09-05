@@ -1,6 +1,9 @@
 import {
   BadRequestException,
   ConflictException,
+  GoneException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -12,8 +15,11 @@ import { and, eq, gt } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { db } from '../db/db';
-import { users } from '../db/schema';
-import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto/auth.dto';
+import { pendingRegistrations, users } from '../db/schema';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto, VerifyRegistrationDto } from './dto/auth.dto';
+
+const VERIFICATION_CODE_TTL_MS = 15 * 60 * 1000;
+const MAX_VERIFICATION_ATTEMPTS = 5;
 
 export type GoogleUser = {
   email: string;
@@ -29,10 +35,11 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, dto.email))
+      .where(eq(users.email, email))
       .limit(1);
 
     if (existingUser) {
@@ -40,17 +47,88 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const verificationCode = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const verificationCodeHash = await bcrypt.hash(verificationCode, 10);
+    const verificationCodeExpires = new Date(Date.now() + VERIFICATION_CODE_TTL_MS);
+
+    await db
+      .insert(pendingRegistrations)
+      .values({
+        email,
+        fullName: dto.fullName.trim(),
+        passwordHash,
+        verificationCodeHash,
+        verificationCodeExpires,
+      })
+      .onConflictDoUpdate({
+        target: pendingRegistrations.email,
+        set: {
+          fullName: dto.fullName.trim(),
+          passwordHash,
+          verificationCodeHash,
+          verificationCodeExpires,
+          attempts: 0,
+          createdAt: new Date(),
+        },
+      });
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Confirm your HitTracker email',
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Confirm your email</h2>
+          <p>Your verification code is:</p>
+          <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px;">${verificationCode}</p>
+          <p style="margin-top: 20px; color: #666; font-size: 12px;">This code expires in 15 minutes.</p>
+        </div>
+      `,
+    });
+
+    return { message: 'Verification code sent' };
+  }
+
+  async verifyRegistration(dto: VerifyRegistrationDto) {
+    const email = dto.email.trim().toLowerCase();
+    const [pendingRegistration] = await db
+      .select()
+      .from(pendingRegistrations)
+      .where(eq(pendingRegistrations.email, email))
+      .limit(1);
+
+    if (!pendingRegistration || pendingRegistration.verificationCodeExpires <= new Date()) {
+      if (pendingRegistration) {
+        await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
+      }
+      throw new GoneException({ code: 'CODE_EXPIRED', message: 'Verification code has expired. Please register again.' });
+    }
+
+    if (pendingRegistration.attempts >= MAX_VERIFICATION_ATTEMPTS) {
+      throw new HttpException('Too many incorrect codes. Please register again to get a new code.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    const isValidCode = await bcrypt.compare(dto.code, pendingRegistration.verificationCodeHash);
+    if (!isValidCode) {
+      await db
+        .update(pendingRegistrations)
+        .set({ attempts: pendingRegistration.attempts + 1 })
+        .where(eq(pendingRegistrations.email, email));
+      throw new BadRequestException({ code: 'INVALID_CODE', message: 'Incorrect verification code.' });
+    }
 
     const [user] = await db
       .insert(users)
       .values({
-        email: dto.email,
-        username: dto.email.split('@')[0],
-        passwordHash,
+        email,
+        username: email,
+        fullName: pendingRegistration.fullName,
+        passwordHash: pendingRegistration.passwordHash,
       })
       .returning();
 
-    return this.createAuthResponse('Registration successful', user);
+    await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
+
+    return { message: 'Email verified. Account created.', user: { id: user.id, email: user.email } };
   }
 
   async validateUser(email: string, password: string) {
@@ -78,7 +156,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.validateUser(dto.email, dto.password);
+    const user = await this.validateUser(dto.email.trim().toLowerCase(), dto.password);
 
     return this.createAuthResponse('Login successful', user);
   }
