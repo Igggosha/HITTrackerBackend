@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  GoneException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -34,20 +35,34 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
+    const username = dto.fullName.trim();
+    if (!username) throw new BadRequestException('Full name is required');
+
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, dto.email))
+      .where(eq(users.email, email))
       .limit(1);
 
     if (existingUser) {
       throw new ConflictException('User already exists');
     }
 
+    const [existingUsername] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    if (existingUsername) {
+      throw new ConflictException('Name is already in use');
+    }
+
     const [pending] = await db
       .select()
       .from(pendingRegistrations)
-      .where(eq(pendingRegistrations.email, dto.email))
+      .where(eq(pendingRegistrations.email, email))
       .limit(1);
     const now = new Date();
     if (pending?.lockedUntil && pending.lockedUntil > now) {
@@ -57,7 +72,7 @@ export class AuthService {
       }, HttpStatus.TOO_MANY_REQUESTS);
     }
     if (pending?.lockedUntil || (pending && pending.expiresAt <= now)) {
-      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
+      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -68,7 +83,8 @@ export class AuthService {
     await db
       .insert(pendingRegistrations)
       .values({
-        email: dto.email,
+        email,
+        username,
         passwordHash,
         verificationCodeHash,
         expiresAt,
@@ -77,6 +93,7 @@ export class AuthService {
       .onConflictDoUpdate({
         target: pendingRegistrations.email,
         set: {
+          username,
           passwordHash,
           verificationCodeHash,
           expiresAt,
@@ -86,7 +103,7 @@ export class AuthService {
       });
 
     await this.mailerService.sendMail({
-      to: dto.email,
+      to: email,
       subject: 'Confirm your HitTracker account',
       html: `<p>Your confirmation code is <strong>${code}</strong>.</p><p>It expires in 15 minutes.</p>`,
     });
@@ -95,15 +112,19 @@ export class AuthService {
   }
 
   async verifyRegistration(dto: VerifyRegistrationDto) {
+    const email = dto.email.trim().toLowerCase();
     const [pending] = await db
       .select()
       .from(pendingRegistrations)
-      .where(eq(pendingRegistrations.email, dto.email))
+      .where(eq(pendingRegistrations.email, email))
       .limit(1);
 
     const now = new Date();
     if (!pending) {
-      throw new BadRequestException('Invalid or expired verification code.');
+      throw new BadRequestException({
+        message: 'Registration request not found or expired.',
+        code: 'REGISTRATION_NOT_FOUND',
+      });
     }
 
     if (pending.lockedUntil && pending.lockedUntil > now) {
@@ -114,8 +135,11 @@ export class AuthService {
     }
 
     if (pending.lockedUntil || pending.expiresAt <= now) {
-      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
-      throw new BadRequestException('Invalid or expired verification code.');
+      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
+      throw new GoneException({
+        message: 'Verification code has expired.',
+        code: 'VERIFICATION_CODE_EXPIRED',
+      });
     }
 
     const validCode = await bcrypt.compare(dto.code, pending.verificationCodeHash);
@@ -126,7 +150,7 @@ export class AuthService {
         await db
           .update(pendingRegistrations)
           .set({ attempts, lockedUntil, verificationCodeHash: '' })
-          .where(eq(pendingRegistrations.email, dto.email));
+          .where(eq(pendingRegistrations.email, email));
         throw new HttpException({
           message: 'Too many invalid codes. Please try again later.',
           retryAfterSeconds: 30 * 60,
@@ -135,39 +159,41 @@ export class AuthService {
         await db
           .update(pendingRegistrations)
           .set({ attempts })
-          .where(eq(pendingRegistrations.email, dto.email));
+          .where(eq(pendingRegistrations.email, email));
       }
       throw new BadRequestException({
-        message: 'Invalid or expired verification code.',
+        message: 'Invalid verification code.',
+        code: 'INVALID_VERIFICATION_CODE',
         ...(attempts >= 2 ? { attemptsRemaining: 5 - attempts } : {}),
       });
     }
 
-    const user = await db.transaction(async (tx) => {
-      const [existingUser] = await tx.select().from(users).where(eq(users.email, dto.email)).limit(1);
+    await db.transaction(async (tx) => {
+      const [existingUser] = await tx.select().from(users).where(eq(users.email, email)).limit(1);
       if (existingUser) throw new ConflictException('User already exists');
 
       const [newUser] = await tx
         .insert(users)
         .values({
-          email: dto.email,
-          username: dto.email.split('@')[0],
+          email,
+          username: pending.username,
           passwordHash: pending.passwordHash,
         })
         .returning();
 
-      await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
+      await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
       return newUser;
     });
 
-    return this.createAuthResponse('Registration successful', user);
+    return { message: 'Registration successful' };
   }
 
   async validateUser(email: string, password: string) {
+    const normalizedEmail = email.trim().toLowerCase();
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (!user) {
