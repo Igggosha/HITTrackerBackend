@@ -4,9 +4,9 @@ UPDATE "users" SET "display_name" = "username" WHERE "display_name" IS NULL;
 --> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "display_name" SET NOT NULL;
 --> statement-breakpoint
-UPDATE "users" SET "username" = NULL;
---> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "username" DROP NOT NULL;
+--> statement-breakpoint
+UPDATE "users" SET "username" = NULL;
 --> statement-breakpoint
 ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "users_username_key";
 --> statement-breakpoint
