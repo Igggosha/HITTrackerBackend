@@ -68,6 +68,52 @@ After pulling the branch, each developer runs `docker compose up --build`; the
 schema only. Shared starter data belongs in the versioned seed/dump; personal
 users, workouts, and other local test data are not copied through Git.
 
+### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
+
+For a deployment outside Docker Compose, run the versioned migrations after
+installing dependencies and before starting the new API build. Do not start or
+restart the API when the migration command fails.
+
+Для розгортання поза Docker Compose запустіть версійні міграції після
+встановлення залежностей і до запуску нової збірки API. Не запускайте й не
+перезапускайте API, якщо команда міграції завершилася помилкою.
+
+```bash
+npm ci
+npm run build
+npm run db:migrate
+npm run start:prod
+```
+
+In automated deployments, make `npm run db:migrate` a required release step
+that must complete successfully before any new API instance receives traffic.
+
+В автоматизованому розгортанні зробіть `npm run db:migrate` обов'язковим кроком
+релізу, який має успішно завершитися до того, як новий екземпляр API почне
+приймати трафік.
+
+### Profile identity compatibility / Сумісність ідентифікації профілю
+
+Current clients send `X-Profile-Contract: v2` when reading or editing the
+profile. In v2, `displayName` is the visible non-unique name and `username` is
+the optional unique public handle. Username availability is checked through
+`GET /users/me/username-availability`, and the final atomic change uses
+`PATCH /users/me/username`.
+
+Поточні клієнти надсилають `X-Profile-Contract: v2` під час читання або
+редагування профілю. У v2 `displayName` — це видиме неунікальне ім'я, а
+`username` — необов'язковий унікальний публічний ідентифікатор. Доступність
+імені користувача перевіряється через `GET /users/me/username-availability`, а
+остаточна атомарна зміна виконується через `PATCH /users/me/username`.
+
+For installed legacy clients without this header, the historical profile
+field `username` continues to read and update the display name. This fallback
+can be removed only after those client versions are retired.
+
+Для встановлених старих клієнтів без цього заголовка історичне поле профілю
+`username` і надалі читає та оновлює видиме ім'я. Цей сумісний режим можна
+видалити лише після припинення підтримки таких версій клієнта.
+
 ## Google OAuth
 
 Детальне налаштування Google Cloud Console, змінних середовища, міграції та

@@ -39,7 +39,8 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => callback(null, isCorsOriginAllowed(origin)),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With, ngrok-skip-browser-warning',
+    allowedHeaders:
+      'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, ngrok-skip-browser-warning',
     exposeHeaders: 'Retry-After',
     credentials: true,
   });
