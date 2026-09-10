@@ -71,3 +71,13 @@ export class ExercisesController {
     return this.exercisesService.toggleBookmark(req.user!.id!, id);
   }
 }
+
+@Controller('shared/exercises')
+export class SharedExercisesController {
+  constructor(private readonly exercisesService: ExercisesService) {}
+
+  @Get(':id')
+  getById(@Param('id', ParseIntPipe) id: number) {
+    return this.exercisesService.getSharedExerciseById(id);
+  }
+}

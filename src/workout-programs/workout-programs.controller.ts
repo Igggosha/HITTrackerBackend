@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -59,6 +59,11 @@ export class WorkoutProgramsController {
     return this.workoutProgramsService.copyAsPersonalProgram(request.user!.id!, request.user!.role!, id, dto);
   }
 
+  @Post(':id/share')
+  async share(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
+    return this.workoutProgramsService.createShareToken(request.user!.id!, request.user!.role!, id);
+  }
+
   @Post(':id/like')
   async like(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
     return this.workoutProgramsService.toggleLike(request.user!.id!, request.user!.role!, id);
@@ -67,5 +72,22 @@ export class WorkoutProgramsController {
   @Patch(':id')
   async update(@Req() request: Request, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWorkoutProgramDto) {
     return this.workoutProgramsService.updateProgram(request.user!.id!, request.user!.role!, id, dto);
+  }
+}
+
+@Controller('shared/programs')
+export class SharedWorkoutProgramsController {
+  constructor(private readonly workoutProgramsService: WorkoutProgramsService) {}
+
+  @Get(':token')
+  getByToken(@Param('token', ParseUUIDPipe) token: string) {
+    return this.workoutProgramsService.getSharedProgram(token);
+  }
+
+  @Post(':token/import')
+  @UseGuards(JwtGuard, RolesGuard)
+  @MinimumRole('user')
+  import(@Req() request: Request, @Param('token', ParseUUIDPipe) token: string) {
+    return this.workoutProgramsService.importSharedProgram(request.user!.id!, token);
   }
 }

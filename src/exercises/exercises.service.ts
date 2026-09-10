@@ -166,6 +166,40 @@ export class ExercisesService {
     return Array.from(exercisesMap.values());
   }
 
+  async getSharedExerciseById(id: number) {
+    const rows = await db
+      .select({
+        id: exercises.id,
+        name: exercises.name,
+        description: exercises.description,
+        videoUrl: exercises.videoUrl,
+        difficulty: exercises.difficulty,
+        muscleId: muscles.id,
+        muscleCommonName: muscles.commonName,
+        scientificName: muscles.scientificName,
+      })
+      .from(exercises)
+      .leftJoin(exercisesTrainMuscles, eq(exercises.id, exercisesTrainMuscles.exerciseId))
+      .leftJoin(muscles, eq(exercisesTrainMuscles.muscleId, muscles.id))
+      .where(eq(exercises.id, id));
+
+    if (!rows.length) throw new NotFoundException('Exercise not found');
+    const exercise = rows[0];
+    return {
+      id: exercise.id,
+      name: exercise.name,
+      description: exercise.description,
+      videoUrl: exercise.videoUrl,
+      difficulty: exercise.difficulty,
+      muscles: rows.flatMap((row) => row.muscleId === null ? [] : [{
+        id: row.muscleId,
+        name: row.muscleCommonName,
+        commonName: row.muscleCommonName,
+        scientificName: row.scientificName,
+      }]),
+    };
+  }
+
   /**
    * Створення вправи
    */
