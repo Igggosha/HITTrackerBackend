@@ -64,7 +64,8 @@ export class WorkoutProgramsService {
       .from(workoutPrograms)
       .where(eq(workoutPrograms.id, programId))
       .limit(1);
-    return { token: current.shareToken! };
+    if (!current?.shareToken) throw new NotFoundException('Workout program not found');
+    return { token: current.shareToken };
   }
 
   async getSharedProgram(token: string) {
