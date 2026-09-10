@@ -17,7 +17,11 @@ import {
 import { hasMinimumRole } from '../auth/roles';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { isValidUsername, normalizeUsername } from './username';
+import {
+  isReservedUsername,
+  isValidUsername,
+  normalizeUsername,
+} from './username';
 
 @Injectable()
 export class UsersService {
@@ -379,6 +383,12 @@ export class UsersService {
       throw new BadRequestException({
         message: 'Username format is invalid',
         code: 'INVALID_USERNAME',
+      });
+    }
+    if (isReservedUsername(username)) {
+      throw new BadRequestException({
+        message: 'Username is reserved',
+        code: 'USERNAME_RESERVED',
       });
     }
     return username;
