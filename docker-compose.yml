@@ -6,12 +6,14 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
       POSTGRES_DB: ${DB_NAME:-nestdb}
+    ports:
+      - "5432:5432"
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql.utf16:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,29 +21,29 @@ services:
     networks:
       - private
 
-  migrate:
-    build:
-      context: .
-      target: migration
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
-    command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
-    restart: "no"
-    networks:
-      - private
+#  migrate:
+#    build:
+#      context: .
+#      target: migration
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    environment:
+#      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+#    command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
+#    restart: "no"
+#    networks:
+#      - private
 
   api:
     build: .
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      seed:
-        condition: service_completed_successfully
+#      migrate:
+#        condition: service_completed_successfully
+#      seed:
+#        condition: service_completed_successfully
     ports:
       # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
       - "127.0.0.1:${PORT:-3000}:3000"
@@ -62,36 +64,35 @@ services:
       - private
       - edge
 
-  frontend:
-    build:
-      context: ../hit-tracker-mobile
-      dockerfile: Dockerfile
-      args:
-        EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
-    restart: unless-stopped
-    networks:
-      - edge
+#  frontend:
+#    build:
+#      context: ../hit-tracker-mobile
+#      args:
+#        EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
+#    restart: unless-stopped
+#    networks:
+#      - edge
 
   # Background outbound-only connector. It is opt-in and has no access to the
   # internal PostgreSQL network or any published inbound ports.
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    profiles: ["tunnel"]
-    depends_on:
-      api:
-        condition: service_healthy
-      frontend:
-        condition: service_started
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
-    restart: unless-stopped
-    networks:
-      - edge
+#  cloudflared:
+#    image: cloudflare/cloudflared:latest
+#    profiles: ["tunnel"]
+#    depends_on:
+#      api:
+#        condition: service_healthy
+#      frontend:
+#        condition: service_started
+#    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+#    restart: unless-stopped
+#    networks:
+#      - edge
 
   seed:
     image: postgres:17
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
+    # depends_on:
+      # migrate:
+      #   condition: service_completed_successfully
     environment:
       PGPASSWORD: ${DB_PASSWORD:-password}
     volumes:
@@ -109,8 +110,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+      # migrate:
+      #   condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
     command: ["npm", "run", "db:studio", "--", "--host", "0.0.0.0", "--port", "4983"]
@@ -125,7 +126,7 @@ volumes:
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
   private:
-    internal: true
+#    internal: true
   # Reserved for the API and a future HTTPS tunnel/reverse proxy.
   edge:
     driver: bridge

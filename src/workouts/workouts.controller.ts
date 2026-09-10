@@ -56,6 +56,20 @@ export class WorkoutsController {
     return this.workoutsService.cancelWorkout(workoutId, req.user.id);
   }
 
+  @Get('exercise/:exerciseId/sets')
+  async getUserSetsByExercise(
+    @Req() req,
+    @Param('exerciseId', ParseIntPipe) exerciseId: number,
+  ) {
+    return this.workoutsService.getUserSetsByExercise(req.user.id, exerciseId);
+  }
+
+  @Get('exercise-ids')
+  async getUniqueExerciseIds(@Req() req) {
+    console.log('req exercise ids')
+    return this.workoutsService.getUniqueExerciseIds(req.user.id);
+  }
+
   @Get('history')
   async getHistory(@Req() req) {
     return this.workoutsService.getUserHistory(req.user.id);

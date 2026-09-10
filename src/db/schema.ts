@@ -30,7 +30,7 @@ export const users = pgTable(
         id: serial("id").primaryKey(),
         email: text("email").notNull().unique(),
         username: text("username"),
-        displayName: text("display_name").notNull(),
+        displayName: text("display_name").default(""),
         passwordHash: text("password_hash"),
         googleId: text("google_id").unique(),
         role: text("role").$type<UserRole>().notNull().default("user"),
