@@ -100,11 +100,24 @@ the optional unique public handle. Username availability is checked through
 `GET /users/me/username-availability`, and the final atomic change uses
 `PATCH /users/me/username`.
 
+A username contains 3–24 lowercase Latin letters, digits, or underscores.
+It is normalized to lowercase before the availability check and save.
+Exact system names such as `admin`, `moderator`, `support`, and `official` are
+reserved. Modified names such as `bohdan_admin123` and `firma_official` remain
+available when they are unique.
+
 Поточні клієнти надсилають `X-Profile-Contract: v2` під час читання або
 редагування профілю. У v2 `displayName` — це видиме неунікальне ім'я, а
 `username` — необов'язковий унікальний публічний ідентифікатор. Доступність
 імені користувача перевіряється через `GET /users/me/username-availability`, а
 остаточна атомарна зміна виконується через `PATCH /users/me/username`.
+
+Ім'я користувача містить 3–24 малі латинські літери, цифри або символи
+нижнього підкреслення. Перед перевіркою доступності та збереженням воно
+нормалізується до нижнього регістру.
+Точні системні імена на кшталт `admin`, `moderator`, `support` та `official`
+зарезервовані. Змінені імена на кшталт `bohdan_admin123` і `firma_official`
+залишаються доступними, якщо вони унікальні.
 
 For installed legacy clients without this header, the historical profile
 field `username` continues to read and update the display name. This fallback

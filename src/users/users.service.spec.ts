@@ -64,6 +64,14 @@ describe('UsersService profile identity', () => {
 
   afterEach(() => jest.useRealTimers());
 
+  it('PROFILE-USERNAME-012 rejects an exact reserved username before database access', async () => {
+    await expect(service.getUsernameAvailability(1, 'admin')).rejects.toMatchObject({
+      response: { code: 'USERNAME_RESERVED' },
+      status: 400,
+    });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
   it('PROFILE-USERNAME-002 hides active reservations while allowing the owner', async () => {
     mockDbLimit
       .mockResolvedValueOnce([])
