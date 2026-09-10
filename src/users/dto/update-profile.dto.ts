@@ -15,8 +15,13 @@ import {
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
-  @MinLength(2)
+  @MinLength(1)
   @MaxLength(50)
+  displayName?: string;
+
+  // Installed clients use this field for the non-unique profile display name.
+  @IsOptional()
+  @IsString()
   username?: string;
 
   @IsOptional()

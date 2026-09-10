@@ -65,6 +65,7 @@ services:
   frontend:
     build:
       context: ../hit-tracker-mobile
+      dockerfile: Dockerfile
       args:
         EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
     restart: unless-stopped

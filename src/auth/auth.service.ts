@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
+  GoneException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -14,8 +16,20 @@ import { and, eq, gt } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { db } from '../db/db';
-import { oauthLoginCodes, pendingRegistrations, users, type UserRole } from '../db/schema';
-import { ExchangeOAuthCodeDto, ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto, VerifyRegistrationDto } from './dto/auth.dto';
+import {
+  oauthLoginCodes,
+  pendingRegistrations,
+  users,
+  type UserRole,
+} from '../db/schema';
+import {
+  ExchangeOAuthCodeDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyRegistrationDto,
+} from './dto/auth.dto';
 import { createEmailVerificationCode } from './email-verification-code';
 import { hashOAuthCode, verifyPkce } from './oauth-pkce';
 import { hashPasswordResetToken } from './password-reset-token';
@@ -34,30 +48,44 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
+    const displayName =
+      dto.displayName?.trim() || dto.fullName?.trim() || email.split('@', 1)[0];
+
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, dto.email))
+      .where(eq(users.email, email))
       .limit(1);
 
     if (existingUser) {
-      throw new ConflictException('User already exists');
+      throw new ConflictException({
+        message: 'User already exists',
+        code: 'USER_ALREADY_EXISTS',
+      });
     }
 
     const [pending] = await db
       .select()
       .from(pendingRegistrations)
-      .where(eq(pendingRegistrations.email, dto.email))
+      .where(eq(pendingRegistrations.email, email))
       .limit(1);
     const now = new Date();
     if (pending?.lockedUntil && pending.lockedUntil > now) {
-      throw new HttpException({
-        message: 'Too many invalid codes. Please try again later.',
-        retryAfterSeconds: Math.ceil((pending.lockedUntil.getTime() - now.getTime()) / 1000),
-      }, HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        {
+          message: 'Too many invalid codes. Please try again later.',
+          retryAfterSeconds: Math.ceil(
+            (pending.lockedUntil.getTime() - now.getTime()) / 1000,
+          ),
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     if (pending?.lockedUntil || (pending && pending.expiresAt <= now)) {
-      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
+      await db
+        .delete(pendingRegistrations)
+        .where(eq(pendingRegistrations.email, email));
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -68,7 +96,8 @@ export class AuthService {
     await db
       .insert(pendingRegistrations)
       .values({
-        email: dto.email,
+        email,
+        displayName,
         passwordHash,
         verificationCodeHash,
         expiresAt,
@@ -77,6 +106,7 @@ export class AuthService {
       .onConflictDoUpdate({
         target: pendingRegistrations.email,
         set: {
+          displayName,
           passwordHash,
           verificationCodeHash,
           expiresAt,
@@ -86,7 +116,7 @@ export class AuthService {
       });
 
     await this.mailerService.sendMail({
-      to: dto.email,
+      to: email,
       subject: 'Confirm your HitTracker account',
       html: `<p>Your confirmation code is <strong>${code}</strong>.</p><p>It expires in 15 minutes.</p>`,
     });
@@ -95,30 +125,47 @@ export class AuthService {
   }
 
   async verifyRegistration(dto: VerifyRegistrationDto) {
+    const email = dto.email.trim().toLowerCase();
     const [pending] = await db
       .select()
       .from(pendingRegistrations)
-      .where(eq(pendingRegistrations.email, dto.email))
+      .where(eq(pendingRegistrations.email, email))
       .limit(1);
 
     const now = new Date();
     if (!pending) {
-      throw new BadRequestException('Invalid or expired verification code.');
+      throw new BadRequestException({
+        message: 'Registration request not found or expired.',
+        code: 'REGISTRATION_NOT_FOUND',
+      });
     }
 
     if (pending.lockedUntil && pending.lockedUntil > now) {
-      throw new HttpException({
-        message: 'Too many invalid codes. Please try again later.',
-        retryAfterSeconds: Math.ceil((pending.lockedUntil.getTime() - now.getTime()) / 1000),
-      }, HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        {
+          message: 'Too many invalid codes. Please try again later.',
+          retryAfterSeconds: Math.ceil(
+            (pending.lockedUntil.getTime() - now.getTime()) / 1000,
+          ),
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     if (pending.lockedUntil || pending.expiresAt <= now) {
-      await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
-      throw new BadRequestException('Invalid or expired verification code.');
+      await db
+        .delete(pendingRegistrations)
+        .where(eq(pendingRegistrations.email, email));
+      throw new GoneException({
+        message: 'Verification code has expired.',
+        code: 'VERIFICATION_CODE_EXPIRED',
+      });
     }
 
-    const validCode = await bcrypt.compare(dto.code, pending.verificationCodeHash);
+    const validCode = await bcrypt.compare(
+      dto.code,
+      pending.verificationCodeHash,
+    );
     if (!validCode) {
       const attempts = pending.attempts + 1;
       if (attempts >= 5) {
@@ -126,62 +173,105 @@ export class AuthService {
         await db
           .update(pendingRegistrations)
           .set({ attempts, lockedUntil, verificationCodeHash: '' })
-          .where(eq(pendingRegistrations.email, dto.email));
-        throw new HttpException({
-          message: 'Too many invalid codes. Please try again later.',
-          retryAfterSeconds: 30 * 60,
-        }, HttpStatus.TOO_MANY_REQUESTS);
+          .where(eq(pendingRegistrations.email, email));
+        throw new HttpException(
+          {
+            message: 'Too many invalid codes. Please try again later.',
+            retryAfterSeconds: 30 * 60,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
       } else {
         await db
           .update(pendingRegistrations)
           .set({ attempts })
-          .where(eq(pendingRegistrations.email, dto.email));
+          .where(eq(pendingRegistrations.email, email));
       }
       throw new BadRequestException({
-        message: 'Invalid or expired verification code.',
+        message: 'Invalid verification code.',
+        code: 'INVALID_VERIFICATION_CODE',
         ...(attempts >= 2 ? { attemptsRemaining: 5 - attempts } : {}),
       });
     }
 
-    const user = await db.transaction(async (tx) => {
-      const [existingUser] = await tx.select().from(users).where(eq(users.email, dto.email)).limit(1);
-      if (existingUser) throw new ConflictException('User already exists');
+    try {
+      await db.transaction(async (tx) => {
+        const [existingUser] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        if (existingUser) throw new ConflictException('User already exists');
 
-      const [newUser] = await tx
-        .insert(users)
-        .values({
-          email: dto.email,
-          username: dto.email.split('@')[0],
-          passwordHash: pending.passwordHash,
-        })
-        .returning();
+        const [newUser] = await tx
+          .insert(users)
+          .values({
+            email,
+            username: null,
+            displayName: pending.displayName,
+            passwordHash: pending.passwordHash,
+          })
+          .returning();
 
-      await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, dto.email));
-      return newUser;
-    });
+        await tx
+          .delete(pendingRegistrations)
+          .where(eq(pendingRegistrations.email, email));
+        return newUser;
+      });
+    } catch (error: unknown) {
+      const databaseError = error as { code?: string; constraint?: string };
+      if (databaseError.code === '23505') {
+        throw new ConflictException({
+          message: 'User already exists',
+          code: 'USER_ALREADY_EXISTS',
+        });
+      }
+      throw error;
+    }
 
-    return this.createAuthResponse('Registration successful', user);
+    return { message: 'Registration successful' };
   }
 
   async validateUser(email: string, password: string) {
+    const normalizedEmail = email.trim().toLowerCase();
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      const [pending] = await db
+        .select({ email: pendingRegistrations.email })
+        .from(pendingRegistrations)
+        .where(eq(pendingRegistrations.email, normalizedEmail))
+        .limit(1);
+      if (pending) {
+        throw new ForbiddenException({
+          message: 'Email verification is required',
+          code: 'EMAIL_NOT_VERIFIED',
+        });
+      }
+      throw new NotFoundException({
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
     }
 
     if (!user.passwordHash) {
-      throw new UnauthorizedException('This account uses Google sign-in');
+      throw new UnauthorizedException({
+        message: 'This account uses Google sign-in',
+        code: 'GOOGLE_SIGN_IN_REQUIRED',
+      });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException({
+        message: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
+      });
     }
 
     return user;
@@ -217,14 +307,18 @@ export class AuthService {
         .where(eq(users.id, userByEmail.id))
         .returning();
 
-      return this.createAuthResponse('Google account linked successfully', linkedUser);
+      return this.createAuthResponse(
+        'Google account linked successfully',
+        linkedUser,
+      );
     }
 
     const [newUser] = await db
       .insert(users)
       .values({
         email: googleUser.email,
-        username: googleUser.email,
+        username: null,
+        displayName: googleUser.email.split('@', 1)[0],
         googleId: googleUser.googleId,
       })
       .returning();
@@ -255,7 +349,8 @@ export class AuthService {
       })
       .where(eq(users.id, user.id));
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:8081';
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:8081';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     await this.mailerService.sendMail({
@@ -306,15 +401,26 @@ export class AuthService {
 
   private createAuthResponse(
     message: string,
-    user: { id: number; email: string; username: string; role: UserRole },
+    user: {
+      id: number;
+      email: string;
+      username: string | null;
+      displayName: string;
+      role: UserRole;
+    },
   ) {
     return {
       message,
-      accessToken: this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }),
+      accessToken: this.jwtService.sign({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      }),
       user: {
         id: user.id,
         email: user.email,
         username: user.username,
+        displayName: user.displayName,
         role: user.role,
       },
     };
@@ -346,10 +452,16 @@ export class AuthService {
       .returning();
 
     if (!loginCode || !verifyPkce(dto.codeVerifier, loginCode.codeChallenge)) {
-      throw new UnauthorizedException('Invalid or expired OAuth authorization code.');
+      throw new UnauthorizedException(
+        'Invalid or expired OAuth authorization code.',
+      );
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, loginCode.userId)).limit(1);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, loginCode.userId))
+      .limit(1);
     if (!user) throw new UnauthorizedException('OAuth user no longer exists.');
     return this.createAuthResponse('Google login successful', user);
   }
