@@ -1,6 +1,7 @@
 import {
     boolean,
     date,
+    foreignKey,
     integer,
     pgTable,
     primaryKey,
@@ -204,10 +205,24 @@ export const workoutPrograms = pgTable(
                 onDelete: "set null",
             }),
 
+        shareToken: text("share_token").unique(),
+
+        sourceProgramId: integer("source_program_id"),
+
         createdAt: timestamp("created_at")
             .defaultNow()
             .notNull(),
-    }
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.sourceProgramId],
+            foreignColumns: [table.id],
+            name: "workout_programs_source_program_id_fkey",
+        }).onDelete("set null"),
+        uniqueIndex("workout_programs_owner_source_unique")
+            .on(table.createdById, table.sourceProgramId)
+            .where(sql`${table.sourceProgramId} is not null`),
+    ],
 );
 
 
