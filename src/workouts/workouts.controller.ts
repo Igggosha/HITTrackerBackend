@@ -6,12 +6,19 @@ import {
   Param, 
   ParseIntPipe, 
   Post, 
+  Query,
   Req, 
   UseGuards 
 } from '@nestjs/common';
 import { WorkoutsService } from './workouts.service';
 import { JwtGuard } from '../auth/jwt.guard';
-import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
+import {
+  FinishWorkoutDto,
+  ListWorkoutHistoryDto,
+  RecordSetDto,
+  StartWorkoutDto,
+  WorkoutHistoryDatesDto,
+} from './dto/workout.dto';
 
 @UseGuards(JwtGuard)
 @Controller('workouts')
@@ -20,7 +27,7 @@ export class WorkoutsController {
 
   @Post('start')
   async startWorkout(@Req() req, @Body() body: StartWorkoutDto) {
-    return this.workoutsService.startWorkout(req.user.id, body);
+    return this.workoutsService.startWorkout(req.user.id, req.user.role, body);
   }
 
   @Get('active')
@@ -57,8 +64,18 @@ export class WorkoutsController {
   }
 
   @Get('history')
-  async getHistory(@Req() req) {
-    return this.workoutsService.getUserHistory(req.user.id);
+  async getHistory(@Req() req, @Query() query: ListWorkoutHistoryDto) {
+    return this.workoutsService.getUserHistory(req.user.id, query);
+  }
+
+  @Get('history/dates')
+  async getHistoryDates(@Req() req, @Query() query: WorkoutHistoryDatesDto) {
+    return this.workoutsService.getHistoryDates(req.user.id, query);
+  }
+
+  @Get('history/:id')
+  async getHistoryDetails(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.getHistoryDetails(req.user.id, req.user.role, workoutId);
   }
 
   @Delete(':id')

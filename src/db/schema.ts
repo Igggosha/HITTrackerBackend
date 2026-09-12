@@ -3,6 +3,7 @@ import {
     date,
     foreignKey,
     integer,
+    jsonb,
     pgTable,
     primaryKey,
     real,
@@ -355,6 +356,21 @@ export const userProgramSchedule = pgTable(
 
 // ================= COMPLETED WORKOUT HISTORY =================
 
+export type WorkoutHistoryPlanItem = {
+    exerciseId: number;
+    name: string;
+    sets: number;
+    reps: number | null;
+    weight: number | null;
+};
+
+export type WorkoutHistorySnapshot = {
+    programId: number | null;
+    programName: string | null;
+    scheduledFor: string | null;
+    plan: WorkoutHistoryPlanItem[];
+};
+
 
 export const workouts = pgTable(
     "workouts",
@@ -391,6 +407,9 @@ export const workouts = pgTable(
         finishedAt: timestamp("finished_at"),
         scheduleId: integer("schedule_id")
             .references(() => userProgramSchedule.id, { onDelete: "set null" }),
+
+        // Immutable source plan used by completed-workout history.
+        historySnapshot: jsonb("history_snapshot").$type<WorkoutHistorySnapshot>(),
 
         createdAt: timestamp("created_at")
             .defaultNow()

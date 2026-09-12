@@ -26,9 +26,30 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
     command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
+    restart: "no"
+    networks:
+      - private
+
+  bootstrap:
+    image: postgres:17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+    volumes:
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql.utf16:ro
+    command: ["/bin/sh", "/docker-entrypoint-initdb.d/00-init-db.sh"]
     restart: "no"
     networks:
       - private
@@ -64,7 +85,7 @@ services:
 
   frontend:
     build:
-      context: ../hit-tracker-mobile
+      context: ../../hit-tracker-front/hit-tracker-mobile
       dockerfile: Dockerfile
       args:
         EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
