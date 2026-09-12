@@ -1,6 +1,26 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  @IsOptional()
+  fullName?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  @IsOptional()
+  displayName?: string;
+
   @IsEmail()
   @IsNotEmpty()
   email!: string;

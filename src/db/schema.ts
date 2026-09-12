@@ -1,6 +1,7 @@
 import {
     boolean,
     date,
+    foreignKey,
     integer,
     pgTable,
     primaryKey,
@@ -8,7 +9,9 @@ import {
     serial,
     text,
     timestamp,
+    uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const userRoles = [
     "user",
@@ -22,27 +25,44 @@ export type UserRole = (typeof userRoles)[number];
 
 // ================= USERS =================
 
-export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
-    email: text("email").notNull().unique(),
-    username: text("username").notNull().unique(),
-    passwordHash: text("password_hash"),
-    googleId: text("google_id").unique(),
-    role: text("role").$type<UserRole>().notNull().default("user"),
+export const users = pgTable(
+    "users",
+    {
+        id: serial("id").primaryKey(),
+        email: text("email").notNull().unique(),
+        username: text("username"),
+        displayName: text("display_name").notNull(),
+        passwordHash: text("password_hash"),
+        googleId: text("google_id").unique(),
+        role: text("role").$type<UserRole>().notNull().default("user"),
 
-    // Password Reset
-    resetPasswordToken: text("reset_password_token"),
-    resetPasswordExpires: timestamp("reset_password_expires"),
+        // Password Reset
+        resetPasswordToken: text("reset_password_token"),
+        resetPasswordExpires: timestamp("reset_password_expires"),
 
-    // Profile
-    age: integer("age"),
-    gender: text("gender"),
-    height: real("height"),
-    goal: text("goal"),
+        // Profile
+        age: integer("age"),
+        gender: text("gender"),
+        height: real("height"),
+        goal: text("goal"),
 
-    lastSeenAt: timestamp("last_seen_at"),
+        lastSeenAt: timestamp("last_seen_at"),
 
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex("users_username_lower_unique")
+            .on(sql`lower(${table.username})`)
+            .where(sql`${table.username} is not null`),
+    ],
+);
+
+export const usernameReservations = pgTable("username_reservations", {
+    username: text("username").primaryKey(),
+    userId: integer("user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    reservedUntil: timestamp("reserved_until").notNull(),
 });
 
 export const oauthLoginCodes = pgTable("oauth_login_codes", {
@@ -58,6 +78,7 @@ export const oauthLoginCodes = pgTable("oauth_login_codes", {
 // A password is never turned into an account until the email owner proves access.
 export const pendingRegistrations = pgTable("pending_registrations", {
     email: text("email").primaryKey(),
+    displayName: text("display_name").notNull(),
     passwordHash: text("password_hash").notNull(),
     verificationCodeHash: text("verification_code_hash").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
@@ -184,10 +205,24 @@ export const workoutPrograms = pgTable(
                 onDelete: "set null",
             }),
 
+        shareToken: text("share_token").unique(),
+
+        sourceProgramId: integer("source_program_id"),
+
         createdAt: timestamp("created_at")
             .defaultNow()
             .notNull(),
-    }
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.sourceProgramId],
+            foreignColumns: [table.id],
+            name: "workout_programs_source_program_id_fkey",
+        }).onDelete("set null"),
+        uniqueIndex("workout_programs_owner_source_unique")
+            .on(table.createdById, table.sourceProgramId)
+            .where(sql`${table.sourceProgramId} is not null`),
+    ],
 );
 
 

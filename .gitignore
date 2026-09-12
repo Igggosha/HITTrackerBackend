@@ -41,11 +41,22 @@ lerna-debug.log*
 !.env.example
 !.env.sample
 
+# Local Docker Compose overrides
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yml
+compose.override.yaml
+
 # Secrets / certificates
 *.pem
 *.key
 *.crt
 *.cer
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
 secrets/
 private/
 

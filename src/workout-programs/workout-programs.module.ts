@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { WorkoutProgramsController } from './workout-programs.controller';
+import { SharedWorkoutProgramsController, WorkoutProgramsController } from './workout-programs.controller';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { RolesGuard } from '../auth/roles.guard';
 
 @Module({
-  controllers: [WorkoutProgramsController],
+  controllers: [WorkoutProgramsController, SharedWorkoutProgramsController],
   providers: [WorkoutProgramsService, RolesGuard],
   exports: [WorkoutProgramsService],
 })
