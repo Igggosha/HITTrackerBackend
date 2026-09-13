@@ -417,6 +417,7 @@ export const workouts = pgTable(
         status: text("status").notNull().default("active"),
         pausedAt: timestamp("paused_at"),
         pausedSeconds: integer("paused_seconds").notNull().default(0),
+        lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
 
         notes: text("notes"),
 
