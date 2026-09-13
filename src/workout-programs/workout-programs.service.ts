@@ -31,6 +31,15 @@ export class WorkoutProgramsService {
     return this.createProgram(userId, false, dto);
   }
 
+  async findMatchingProgramByExerciseIds(userId: number, exerciseIds: number[]) {
+    const programId = await this.findMatchingProgram(
+      userId,
+      exerciseIds.map((exerciseId) => ({ exerciseId })),
+      true,
+    );
+    return { programId };
+  }
+
   async copyAsPersonalProgram(userId: number, role: UserRole, sourceId: number, dto: CreateWorkoutProgramDto) {
     const [source] = await db.select().from(workoutPrograms).where(eq(workoutPrograms.id, sourceId)).limit(1);
     if (!source) throw new NotFoundException('Workout program not found');
@@ -418,11 +427,27 @@ export class WorkoutProgramsService {
     return program;
   }
 
-  private async findMatchingPersonalProgram(userId: number, sourceExercises: ProgramExerciseDto[]) {
+  private async findMatchingPersonalProgram(
+    userId: number,
+    sourceExercises: readonly Pick<ProgramExerciseDto, 'exerciseId'>[],
+  ) {
+    return this.findMatchingProgram(userId, sourceExercises, false);
+  }
+
+  private async findMatchingProgram(
+    userId: number,
+    sourceExercises: readonly Pick<ProgramExerciseDto, 'exerciseId'>[],
+    includeOfficial: boolean,
+  ) {
     const candidates = await db
       .select({ id: workoutPrograms.id })
       .from(workoutPrograms)
-      .where(and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)));
+      .where(includeOfficial
+        ? or(
+          and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)),
+          eq(workoutPrograms.isPersonal, false),
+        )
+        : and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)));
     if (!candidates.length) return null;
 
     const rows = await db
