@@ -19,7 +19,7 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 
 ## Authentication and external integrations
 
-- JWTs expire after one hour; `RolesGuard` re-reads the current database role for privileged operations.
+- Access JWTs expire after five minutes. Rotating 30-day refresh sessions are stored as hashes; refresh reloads the current database role. `RolesGuard` also re-reads the role for privileged operations.
 - Email registration remains pending until verification; password-reset and mobile OAuth records store hashes of one-time codes. Preserve expiry, attempt/lockout, and one-time-consumption behavior.
 - Treat Google OAuth redirect/session/PKCE as one contract across mobile and web callbacks. Recheck `GOOGLE_OAUTH_SETUP.md`, `.env.example`, CORS, and trusted-proxy assumptions.
 - SMTP, PostgreSQL, and Google are external boundaries: client errors must remain safe and failures must be diagnosable without exposing secrets.
