@@ -111,15 +111,6 @@ export class FinishWorkoutDto {
   @IsOptional()
   @IsString()
   notes?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  durationSeconds?: number;
-
-  @IsOptional()
-  @IsDateString()
-  finishedAt?: string;
 }
 
 export class ListWorkoutHistoryDto {

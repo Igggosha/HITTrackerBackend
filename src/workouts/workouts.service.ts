@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   exercises,
@@ -19,6 +19,12 @@ import {
   WorkoutHistoryDatesDto,
 } from './dto/workout.dto';
 import { openWorkoutStatuses } from './workout-status.utils';
+import {
+  activeDurationSeconds,
+  isWorkoutInactive,
+  WORKOUT_INACTIVITY_LIMIT_MS,
+  workoutAutoPauseAt,
+} from './workout-timing.utils';
 import { hasMinimumRole } from '../auth/roles';
 import {
   decodeHistoryCursor,
@@ -29,6 +35,49 @@ import {
 
 @Injectable()
 export class WorkoutsService {
+  private async autoPauseIfInactive(workout: typeof workouts.$inferSelect, now = new Date()) {
+    if (workout.status !== 'active' || !isWorkoutInactive(workout.lastActivityAt, now)) {
+      return { workout, autoPaused: false };
+    }
+
+    const staleBefore = new Date(now.getTime() - WORKOUT_INACTIVITY_LIMIT_MS);
+    const [pausedWorkout] = await db
+      .update(workouts)
+      .set({
+        status: 'paused',
+        pausedAt: workoutAutoPauseAt(workout.lastActivityAt),
+      })
+      .where(and(
+        eq(workouts.id, workout.id),
+        eq(workouts.status, 'active'),
+        lte(workouts.lastActivityAt, staleBefore),
+      ))
+      .returning();
+
+    if (pausedWorkout) return { workout: pausedWorkout, autoPaused: true };
+
+    const [currentWorkout] = await db
+      .select()
+      .from(workouts)
+      .where(eq(workouts.id, workout.id))
+      .limit(1);
+    return { workout: currentWorkout ?? workout, autoPaused: false };
+  }
+
+  private async touchActiveWorkout(workoutId: number, userId: number) {
+    const [updatedWorkout] = await db
+      .update(workouts)
+      .set({ lastActivityAt: new Date() })
+      .where(and(
+        eq(workouts.id, workoutId),
+        eq(workouts.userId, userId),
+        eq(workouts.status, 'active'),
+        isNull(workouts.finishedAt),
+      ))
+      .returning();
+    return updatedWorkout;
+  }
+
   /**
    * 1. Запуск нового тренування
    */
@@ -40,12 +89,13 @@ export class WorkoutsService {
       .limit(1);
 
     if (existingWorkout) {
+      const { workout } = await this.autoPauseIfInactive(existingWorkout);
       return {
         message: 'Active workout already in progress',
         workout: {
-          ...existingWorkout,
+          ...workout,
           // Переконуємось, що дата у строгому ISO-форматі UTC
-          createdAt: new Date(existingWorkout.createdAt).toISOString(),
+          createdAt: new Date(workout.createdAt).toISOString(),
         },
       };
     }
@@ -119,6 +169,7 @@ export class WorkoutsService {
         historySnapshot,
         status: 'active',
         createdAt: now,
+        lastActivityAt: now,
       })
       .returning();
 
@@ -136,6 +187,19 @@ export class WorkoutsService {
    * 2. Отримання поточного активного тренування з його сетами
    */
   async getActiveWorkout(userId: number) {
+    const [openWorkout] = await db
+      .select()
+      .from(workouts)
+      .where(and(
+        eq(workouts.userId, userId),
+        isNull(workouts.finishedAt),
+        inArray(workouts.status, [...openWorkoutStatuses]),
+      ))
+      .limit(1);
+
+    if (!openWorkout) return { workout: null, sets: [] };
+
+    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
     const rows = await db
       .select({
         workout: workouts,
@@ -147,7 +211,7 @@ export class WorkoutsService {
       .leftJoin(sets, eq(workouts.id, sets.workoutId))
       .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
       .leftJoin(userProgramSchedule, eq(workouts.scheduleId, userProgramSchedule.id))
-      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])));
+      .where(eq(workouts.id, workout.id));
 
     if (rows.length === 0) {
       return { workout: null, sets: [] };
@@ -170,6 +234,7 @@ export class WorkoutsService {
     return {
       workout: activeWorkout,
       sets: loggedSets,
+      autoPaused,
     };
   }
 
@@ -177,7 +242,7 @@ export class WorkoutsService {
    * 3. Запис підходу (сету)
    */
   async recordSet(workoutId: number, userId: number, body: RecordSetDto) {
-    const [workout] = await db
+    const [openWorkout] = await db
       .select()
       .from(workouts)
       .where(
@@ -190,9 +255,11 @@ export class WorkoutsService {
       )
       .limit(1);
 
-    if (!workout) {
+    if (!openWorkout) {
       throw new NotFoundException('Active workout not found or already finished');
     }
+
+    const { workout } = await this.autoPauseIfInactive(openWorkout);
 
     const [recordedSet] = await db
       .insert(sets)
@@ -207,9 +274,12 @@ export class WorkoutsService {
       })
       .returning();
 
+    const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
+
     return {
       message: 'Set recorded successfully',
       set: recordedSet,
+      workout: touchedWorkout ?? workout,
     };
   }
 
@@ -220,7 +290,7 @@ export class WorkoutsService {
     body: UpdateSetDto,
   ) {
     const [ownedSet] = await db
-      .select({ id: sets.id })
+      .select({ id: sets.id, workout: workouts })
       .from(sets)
       .innerJoin(workouts, eq(sets.workoutId, workouts.id))
       .where(
@@ -238,6 +308,8 @@ export class WorkoutsService {
       throw new NotFoundException('Active workout set not found');
     }
 
+    const { workout } = await this.autoPauseIfInactive(ownedSet.workout);
+
     const [updatedSet] = await db
       .update(sets)
       .set({
@@ -249,45 +321,41 @@ export class WorkoutsService {
       .where(eq(sets.id, setId))
       .returning();
 
-    return { message: 'Set updated successfully', set: updatedSet };
+    const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
+
+    return { message: 'Set updated successfully', set: updatedSet, workout: touchedWorkout ?? workout };
   }
 
   /**
    * 4. Завершення тренування
    */
   async finishWorkout(workoutId: number, userId: number, body: FinishWorkoutDto) {
-    const [workout] = await db
+    const [openWorkout] = await db
       .select()
       .from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
       .limit(1);
 
-    if (!workout) {
+    if (!openWorkout) {
       throw new NotFoundException('Workout not found');
     }
 
-    if (workout.finishedAt) {
+    if (openWorkout.finishedAt) {
       return {
         message: 'Workout was already finished',
-        workout,
+        workout: openWorkout,
       };
     }
 
-    // Отримуємо час завершення
-    const finishedAt = body?.finishedAt ? new Date(body.finishedAt) : new Date();
-
-    // Читаємо durationSeconds з body або вираховуємо різницю
-    let durationSeconds = body?.durationSeconds;
-    if (durationSeconds === undefined || durationSeconds === null) {
-      const startTime = new Date(workout.createdAt).getTime();
-      durationSeconds = Math.max(0, Math.floor((finishedAt.getTime() - startTime) / 1000));
-    }
+    const { workout } = await this.autoPauseIfInactive(openWorkout);
+    const finishedAt = new Date();
+    const durationSeconds = activeDurationSeconds(workout, finishedAt);
 
     const [updatedWorkout] = await db
       .update(workouts)
       .set({
         notes: body?.notes || '',
-        durationSeconds: Number(durationSeconds),
+        durationSeconds,
         finishedAt,
         status: 'completed',
         pausedAt: null,
@@ -519,10 +587,13 @@ export class WorkoutsService {
   }
 
   async togglePause(workoutId: number, userId: number) {
-    const [workout] = await db.select().from(workouts)
+    const [openWorkout] = await db.select().from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
       .limit(1);
-    if (!workout) throw new NotFoundException('Open workout not found');
+    if (!openWorkout) throw new NotFoundException('Open workout not found');
+
+    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
+    if (autoPaused) return { workout, autoPaused };
 
     const now = new Date();
     const isPausing = workout.status === 'active';
@@ -533,8 +604,31 @@ export class WorkoutsService {
       status: isPausing ? 'paused' : 'active',
       pausedAt: isPausing ? now : null,
       pausedSeconds,
+      lastActivityAt: isPausing ? workout.lastActivityAt : now,
     }).where(eq(workouts.id, workoutId)).returning();
     return { workout: updatedWorkout };
+  }
+
+  async heartbeat(workoutId: number, userId: number) {
+    const [openWorkout] = await db
+      .select()
+      .from(workouts)
+      .where(and(
+        eq(workouts.id, workoutId),
+        eq(workouts.userId, userId),
+        isNull(workouts.finishedAt),
+        inArray(workouts.status, [...openWorkoutStatuses]),
+      ))
+      .limit(1);
+    if (!openWorkout) throw new NotFoundException('Open workout not found');
+
+    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
+    if (workout.status !== 'active') return { workout, autoPaused };
+
+    return {
+      workout: await this.touchActiveWorkout(workout.id, userId),
+      autoPaused: false,
+    };
   }
 
   async cancelWorkout(workoutId: number, userId: number) {

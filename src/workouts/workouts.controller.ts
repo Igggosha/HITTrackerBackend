@@ -70,6 +70,11 @@ export class WorkoutsController {
     return this.workoutsService.togglePause(workoutId, req.user.id);
   }
 
+  @Post(':id/heartbeat')
+  async heartbeat(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.heartbeat(workoutId, req.user.id);
+  }
+
   @Post(':id/cancel')
   async cancelWorkout(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
     return this.workoutsService.cancelWorkout(workoutId, req.user.id);
