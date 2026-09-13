@@ -15,6 +15,7 @@ import {
   ListWorkoutHistoryDto,
   RecordSetDto,
   StartWorkoutDto,
+  UpdateSetDto,
   WorkoutHistoryDatesDto,
 } from './dto/workout.dto';
 import { openWorkoutStatuses } from './workout-status.utils';
@@ -210,6 +211,45 @@ export class WorkoutsService {
       message: 'Set recorded successfully',
       set: recordedSet,
     };
+  }
+
+  async updateSet(
+    workoutId: number,
+    setId: number,
+    userId: number,
+    body: UpdateSetDto,
+  ) {
+    const [ownedSet] = await db
+      .select({ id: sets.id })
+      .from(sets)
+      .innerJoin(workouts, eq(sets.workoutId, workouts.id))
+      .where(
+        and(
+          eq(sets.id, setId),
+          eq(sets.workoutId, workoutId),
+          eq(workouts.userId, userId),
+          isNull(workouts.finishedAt),
+          inArray(workouts.status, [...openWorkoutStatuses]),
+        ),
+      )
+      .limit(1);
+
+    if (!ownedSet) {
+      throw new NotFoundException('Active workout set not found');
+    }
+
+    const [updatedSet] = await db
+      .update(sets)
+      .set({
+        weight: body.weight,
+        reps: body.reps,
+        rpe: body.rpe,
+        isFailure: body.isFailure ?? false,
+      })
+      .where(eq(sets.id, setId))
+      .returning();
+
+    return { message: 'Set updated successfully', set: updatedSet };
   }
 
   /**

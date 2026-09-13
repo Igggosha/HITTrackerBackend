@@ -5,6 +5,7 @@ import {
   Get, 
   Param, 
   ParseIntPipe, 
+  Patch,
   Post, 
   Query,
   Req, 
@@ -17,6 +18,7 @@ import {
   ListWorkoutHistoryDto,
   RecordSetDto,
   StartWorkoutDto,
+  UpdateSetDto,
   WorkoutHistoryDatesDto,
 } from './dto/workout.dto';
 
@@ -42,6 +44,16 @@ export class WorkoutsController {
     @Body() body: RecordSetDto
   ) {
     return this.workoutsService.recordSet(workoutId, req.user.id, body);
+  }
+
+  @Patch(':workoutId/sets/:setId')
+  async updateSet(
+    @Req() req,
+    @Param('workoutId', ParseIntPipe) workoutId: number,
+    @Param('setId', ParseIntPipe) setId: number,
+    @Body() body: UpdateSetDto,
+  ) {
+    return this.workoutsService.updateSet(workoutId, setId, req.user.id, body);
   }
 
   @Post(':id/finish')

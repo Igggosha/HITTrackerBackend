@@ -62,15 +62,16 @@ export class StartWorkoutDto {
 }
 
 export class RecordSetDto {
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   exerciseId: number;
 
   @IsNumber()
   @Min(0)
   weight: number;
 
-  @IsNumber()
-  @Min(0)
+  @IsInt()
+  @Min(1)
   reps: number;
 
   @IsOptional()
@@ -81,9 +82,29 @@ export class RecordSetDto {
   @IsBoolean()
   isDropSet?: boolean;
 
-  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  rpe: number;
+}
+
+export class UpdateSetDto {
   @IsNumber()
-  rpe?: number;
+  @Min(0)
+  weight: number;
+
+  @IsInt()
+  @Min(1)
+  reps: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  rpe: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isFailure?: boolean;
 }
 
 export class FinishWorkoutDto {
