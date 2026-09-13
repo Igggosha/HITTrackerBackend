@@ -2,6 +2,7 @@ import {
     boolean,
     date,
     foreignKey,
+    index,
     integer,
     jsonb,
     pgTable,
@@ -75,6 +76,22 @@ export const oauthLoginCodes = pgTable("oauth_login_codes", {
         .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: timestamp("expires_at").notNull(),
 });
+
+// Refresh tokens are opaque credentials; only their SHA-256 hashes are persisted.
+export const authRefreshSessions = pgTable(
+    "auth_refresh_sessions",
+    {
+        id: serial("id").primaryKey(),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        tokenHash: text("token_hash").notNull().unique(),
+        expiresAt: timestamp("expires_at").notNull(),
+        revokedAt: timestamp("revoked_at"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [index("auth_refresh_sessions_user_id_idx").on(table.userId)],
+);
 
 // A password is never turned into an account until the email owner proves access.
 export const pendingRegistrations = pgTable("pending_registrations", {

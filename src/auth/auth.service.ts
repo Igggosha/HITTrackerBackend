@@ -12,11 +12,12 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { db } from '../db/db';
 import {
+  authRefreshSessions,
   oauthLoginCodes,
   pendingRegistrations,
   users,
@@ -33,10 +34,24 @@ import {
 import { createEmailVerificationCode } from './email-verification-code';
 import { hashOAuthCode, verifyPkce } from './oauth-pkce';
 import { hashPasswordResetToken } from './password-reset-token';
+import {
+  ACCESS_TOKEN_TTL,
+  createRefreshToken,
+  hashRefreshToken,
+  REFRESH_TOKEN_TTL_MS,
+} from './refresh-token';
 
 export type GoogleUser = {
   email: string;
   googleId: string;
+};
+
+type AuthUser = {
+  id: number;
+  email: string;
+  username: string | null;
+  displayName: string;
+  role: UserRole;
 };
 
 @Injectable()
@@ -280,7 +295,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto.email, dto.password);
 
-    return this.createAuthResponse('Login successful', user);
+    return this.createSession('Login successful', user);
   }
 
   async loginWithGoogle(googleUser: GoogleUser) {
@@ -291,7 +306,10 @@ export class AuthService {
       .limit(1);
 
     if (userByGoogleId) {
-      return this.createAuthResponse('Google login successful', userByGoogleId);
+      return {
+        message: 'Google login successful',
+        user: this.toPublicUser(userByGoogleId),
+      };
     }
 
     const [userByEmail] = await db
@@ -307,10 +325,10 @@ export class AuthService {
         .where(eq(users.id, userByEmail.id))
         .returning();
 
-      return this.createAuthResponse(
-        'Google account linked successfully',
-        linkedUser,
-      );
+      return {
+        message: 'Google account linked successfully',
+        user: this.toPublicUser(linkedUser),
+      };
     }
 
     const [newUser] = await db
@@ -323,7 +341,10 @@ export class AuthService {
       })
       .returning();
 
-    return this.createAuthResponse('Google registration successful', newUser);
+    return {
+      message: 'Google registration successful',
+      user: this.toPublicUser(newUser),
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
@@ -387,43 +408,135 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
 
-    await db
-      .update(users)
-      .set({
-        passwordHash,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-      })
-      .where(eq(users.id, user.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          passwordHash,
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+        })
+        .where(eq(users.id, user.id));
+      await tx
+        .update(authRefreshSessions)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(authRefreshSessions.userId, user.id),
+            isNull(authRefreshSessions.revokedAt),
+          ),
+        );
+    });
 
     return { message: 'Password successfully updated.' };
   }
 
+  async createSession(message: string, user: AuthUser) {
+    const refreshToken = createRefreshToken();
+    await db.insert(authRefreshSessions).values({
+      userId: user.id,
+      tokenHash: hashRefreshToken(refreshToken),
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+    });
+    return this.createAuthResponse(message, user, refreshToken);
+  }
+
+  async refreshSession(refreshToken: string | undefined) {
+    if (!refreshToken) throw this.sessionExpired();
+    const now = new Date();
+
+    return db.transaction(async (tx) => {
+      const [session] = await tx
+        .update(authRefreshSessions)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
+            isNull(authRefreshSessions.revokedAt),
+            gt(authRefreshSessions.expiresAt, now),
+          ),
+        )
+        .returning({
+          id: authRefreshSessions.id,
+          userId: authRefreshSessions.userId,
+        });
+      if (!session) throw this.sessionExpired();
+
+      const [user] = await tx
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.id, session.userId))
+        .limit(1);
+      if (!user) throw this.sessionExpired();
+
+      const nextRefreshToken = createRefreshToken();
+      await tx
+        .update(authRefreshSessions)
+        .set({
+          tokenHash: hashRefreshToken(nextRefreshToken),
+          expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+          revokedAt: null,
+        })
+        .where(eq(authRefreshSessions.id, session.id));
+
+      return this.createAuthResponse(
+        'Session refreshed',
+        user,
+        nextRefreshToken,
+      );
+    });
+  }
+
+  async revokeRefreshSession(refreshToken: string | undefined) {
+    if (!refreshToken) return;
+    await db
+      .update(authRefreshSessions)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
+          isNull(authRefreshSessions.revokedAt),
+        ),
+      );
+  }
+
   private createAuthResponse(
     message: string,
-    user: {
-      id: number;
-      email: string;
-      username: string | null;
-      displayName: string;
-      role: UserRole;
-    },
+    user: AuthUser,
+    refreshToken: string,
   ) {
     return {
       message,
-      accessToken: this.jwtService.sign({
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-      }),
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-      },
+      accessToken: this.jwtService.sign(
+        { sub: user.id, email: user.email, role: user.role },
+        { expiresIn: ACCESS_TOKEN_TTL },
+      ),
+      refreshToken,
+      user: this.toPublicUser(user),
     };
+  }
+
+  private toPublicUser(user: AuthUser): AuthUser {
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+    };
+  }
+
+  private sessionExpired() {
+    return new UnauthorizedException({
+      message: 'Session expired',
+      code: 'SESSION_EXPIRED',
+    });
   }
 
   async issueMobileOAuthCode(
@@ -463,6 +576,6 @@ export class AuthService {
       .where(eq(users.id, loginCode.userId))
       .limit(1);
     if (!user) throw new UnauthorizedException('OAuth user no longer exists.');
-    return this.createAuthResponse('Google login successful', user);
+    return this.createSession('Google login successful', user);
   }
 }

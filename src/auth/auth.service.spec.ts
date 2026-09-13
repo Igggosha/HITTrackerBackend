@@ -11,12 +11,19 @@ const mockOnConflictDoUpdate = jest.fn();
 const mockTxLimit = jest.fn();
 const mockTxReturning = jest.fn();
 const mockTxDeleteWhere = jest.fn();
+const mockTxInsertValues = jest.fn();
+const mockTxUpdateReturning = jest.fn();
 const tx = {
   select: jest.fn(() => ({
     from: () => ({ where: () => ({ limit: mockTxLimit }) }),
   })),
   insert: jest.fn(() => ({
-    values: () => ({ returning: mockTxReturning }),
+    values: mockTxInsertValues,
+  })),
+  update: jest.fn(() => ({
+    set: () => ({
+      where: () => ({ returning: mockTxUpdateReturning }),
+    }),
   })),
   delete: jest.fn(() => ({ where: mockTxDeleteWhere })),
 };
@@ -53,6 +60,9 @@ describe('AuthService registration', () => {
     mockTxLimit.mockReset();
     mockTxReturning.mockReset();
     mockTxDeleteWhere.mockReset();
+    mockTxInsertValues.mockReset();
+    mockTxInsertValues.mockReturnValue({ returning: mockTxReturning });
+    mockTxUpdateReturning.mockReset();
     (db.transaction as jest.Mock).mockImplementation((callback) =>
       callback(tx),
     );
@@ -207,14 +217,60 @@ describe('AuthService registration', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-    await expect(
-      service.login({
-        email: 'user@example.com',
-        password: 'Password1',
-      }),
-    ).resolves.toMatchObject({
+    const result = await service.login({
+      email: 'user@example.com',
+      password: 'Password1',
+    });
+
+    expect(result).toMatchObject({
       accessToken: 'access-token',
       user: { email: 'user@example.com', username: null },
+    });
+    expect(result.refreshToken).toHaveLength(64);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
+    expect(mockInsertValues.mock.calls[0][0].tokenHash).not.toBe(
+      result.refreshToken,
+    );
+    expect(jwtService.sign).toHaveBeenCalledWith(
+      { sub: 1, email: 'user@example.com', role: 'user' },
+      { expiresIn: '5m' },
+    );
+  });
+
+  it('rotates a refresh session and reloads the current database role', async () => {
+    mockTxUpdateReturning.mockResolvedValueOnce([{ id: 7, userId: 1 }]);
+    mockTxLimit.mockResolvedValueOnce([
+      {
+        id: 1,
+        email: 'user@example.com',
+        username: null,
+        displayName: 'User',
+        role: 'moderator',
+      },
+    ]);
+
+    const result = await service.refreshSession('r'.repeat(64));
+
+    expect(result.user.role).toBe('moderator');
+    expect(result.refreshToken).toHaveLength(64);
+    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(jwtService.sign).toHaveBeenCalledWith(
+      { sub: 1, email: 'user@example.com', role: 'moderator' },
+      { expiresIn: '5m' },
+    );
+  });
+
+  it('rejects an expired or already consumed refresh session', async () => {
+    mockTxUpdateReturning.mockResolvedValueOnce([]);
+
+    await expect(service.refreshSession('r'.repeat(64))).rejects.toMatchObject({
+      response: { code: 'SESSION_EXPIRED' },
+      status: 401,
     });
   });
 

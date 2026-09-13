@@ -85,7 +85,7 @@ services:
 
   frontend:
     build:
-      context: ../../hit-tracker-front/hit-tracker-mobile
+      context: ../hit-tracker-mobile
       dockerfile: Dockerfile
       args:
         EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
@@ -97,7 +97,6 @@ services:
   # internal PostgreSQL network or any published inbound ports.
   cloudflared:
     image: cloudflare/cloudflared:latest
-    profiles: ["tunnel"]
     depends_on:
       api:
         condition: service_healthy

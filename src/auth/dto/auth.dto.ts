@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -39,6 +40,17 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty()
   password!: string;
+
+  @IsOptional()
+  @IsIn(['web', 'native'])
+  client?: 'web' | 'native';
+}
+
+export class RefreshSessionDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  refreshToken?: string;
 }
 
 export class ForgotPasswordDto {
