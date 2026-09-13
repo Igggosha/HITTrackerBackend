@@ -9,6 +9,7 @@ import {
   users,
   userProgramSchedule,
   userProgramScheduleSeries,
+  workouts,
   workoutPrograms,
   programLikes,
   type UserRole,
@@ -18,6 +19,7 @@ import { CreateWorkoutProgramDto, ProgramExerciseDto } from './dto/create-workou
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
+import { hasSameExerciseMultiset } from './sharing.utils';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -95,6 +97,10 @@ export class WorkoutProgramsService {
 
     try {
       const exercises = await this.getScheduleExercises(db, source.id);
+      const matchingProgramId = await this.findMatchingPersonalProgram(userId, exercises);
+      if (matchingProgramId) {
+        return { programId: matchingProgramId, imported: false, alreadyImported: true };
+      }
       const program = await this.createProgram(userId, true, {
         name: source.name,
         description: source.description ?? undefined,
@@ -147,9 +153,11 @@ export class WorkoutProgramsService {
         programDescription: workoutPrograms.description,
         isPersonal: workoutPrograms.isPersonal,
         seriesId: userProgramSchedule.seriesId,
+        completedAt: workouts.finishedAt,
       })
       .from(userProgramSchedule)
       .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
+      .leftJoin(workouts, and(eq(workouts.scheduleId, userProgramSchedule.id), eq(workouts.status, 'completed')))
       .where(and(
         eq(userProgramSchedule.userId, userId),
         gte(userProgramSchedule.scheduledFor, from),
@@ -379,7 +387,11 @@ export class WorkoutProgramsService {
         setsCount: exerciseInPrograms.sets,
         targetReps: exerciseInPrograms.firstSetRepCount,
         plannedWeight: exerciseInPrograms.weight,
-        exercise: { id: exercises.id, name: exercises.name },
+        exercise: {
+          id: exercises.id,
+          name: exercises.name,
+          difficulty: exercises.difficulty,
+        },
       })
       .from(programContent)
       .leftJoin(exerciseInPrograms, eq(programContent.id, exerciseInPrograms.programContentId))
@@ -404,6 +416,25 @@ export class WorkoutProgramsService {
       .limit(1);
     if (!program) throw new NotFoundException('Shared workout program not found');
     return program;
+  }
+
+  private async findMatchingPersonalProgram(userId: number, sourceExercises: ProgramExerciseDto[]) {
+    const candidates = await db
+      .select({ id: workoutPrograms.id })
+      .from(workoutPrograms)
+      .where(and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)));
+    if (!candidates.length) return null;
+
+    const rows = await db
+      .select({ programId: programContent.programId, exerciseId: exerciseInPrograms.exerciseId })
+      .from(programContent)
+      .innerJoin(exerciseInPrograms, eq(exerciseInPrograms.programContentId, programContent.id))
+      .where(inArray(programContent.programId, candidates.map((candidate) => candidate.id)));
+
+    return candidates.find((candidate) => hasSameExerciseMultiset(
+      sourceExercises,
+      rows.filter((row) => row.programId === candidate.id),
+    ))?.id ?? null;
   }
 
   private async materializeWeeklyAssignments(userId: number, from: string, to: string) {
