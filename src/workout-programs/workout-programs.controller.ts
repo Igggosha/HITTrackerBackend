@@ -3,7 +3,7 @@ import { WorkoutProgramsService } from './workout-programs.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
-import { CreateWorkoutProgramDto } from './dto/create-workout-program.dto';
+import { CreateWorkoutProgramDto, FindMatchingWorkoutProgramDto } from './dto/create-workout-program.dto';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import type { Request } from 'express';
@@ -22,6 +22,17 @@ export class WorkoutProgramsController {
   @Get('schedule')
   async getSchedule(@Req() request: Request, @Query() query: ListScheduleDto) {
     return this.workoutProgramsService.getCalendar(request.user!.id!, query);
+  }
+
+  @Post('match')
+  async findMatchingProgram(
+    @Req() request: Request,
+    @Body() dto: FindMatchingWorkoutProgramDto,
+  ) {
+    return this.workoutProgramsService.findMatchingProgramByExerciseIds(
+      request.user!.id!,
+      dto.exerciseIds,
+    );
   }
 
   @Get(':id')
