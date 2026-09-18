@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class ProgramExerciseDto {
   @Type(() => Number)
@@ -56,4 +56,14 @@ export class CreateWorkoutProgramDto {
   @ValidateNested({ each: true })
   @Type(() => ProgramExerciseDto)
   exercises: ProgramExerciseDto[];
+}
+
+export class FindMatchingWorkoutProgramDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  exerciseIds: number[];
 }

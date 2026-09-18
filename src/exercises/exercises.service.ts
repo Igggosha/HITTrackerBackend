@@ -13,9 +13,13 @@ import {
 } from '../db/schema';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
+import { StorageService } from '../storage/storage.service';
+import type { UploadedFile } from '../storage/upload-validation';
 
 @Injectable()
 export class ExercisesService {
+  constructor(private readonly storageService: StorageService) {}
+
   /**
    * Отримати вправи для конкретного користувача на основі його програми
    */
@@ -89,6 +93,7 @@ export class ExercisesService {
         name: exercises.name,
         description: exercises.description,
         videoUrl: exercises.videoUrl,
+        imageKey: exercises.imageKey,
         difficulty: exercises.difficulty,
         muscleId: muscles.id,
         muscleCommonName: muscles.commonName,
@@ -140,7 +145,8 @@ export class ExercisesService {
           name: row.name,
           description: row.description,
           videoUrl: row.videoUrl,
-          difficulty: row.difficulty, 
+          imageKey: row.imageKey,
+          difficulty: row.difficulty,
           likesCount: likesMap.get(row.id) || 0,
           isLiked: userLikesSet.has(row.id),
           isBookmarked: bookmarks.has(row.id),
@@ -163,7 +169,44 @@ export class ExercisesService {
       }
     }
 
-    return Array.from(exercisesMap.values());
+    // Presigning is a local HMAC, so signing a whole page costs no round trips.
+    return this.withImageUrls(Array.from(exercisesMap.values()));
+  }
+
+  async getSharedExerciseById(id: number) {
+    const rows = await db
+      .select({
+        id: exercises.id,
+        name: exercises.name,
+        description: exercises.description,
+        videoUrl: exercises.videoUrl,
+        imageKey: exercises.imageKey,
+        difficulty: exercises.difficulty,
+        muscleId: muscles.id,
+        muscleCommonName: muscles.commonName,
+        scientificName: muscles.scientificName,
+      })
+      .from(exercises)
+      .leftJoin(exercisesTrainMuscles, eq(exercises.id, exercisesTrainMuscles.exerciseId))
+      .leftJoin(muscles, eq(exercisesTrainMuscles.muscleId, muscles.id))
+      .where(eq(exercises.id, id));
+
+    if (!rows.length) throw new NotFoundException('Exercise not found');
+    const exercise = rows[0];
+    return this.withImageUrl({
+      id: exercise.id,
+      name: exercise.name,
+      description: exercise.description,
+      videoUrl: exercise.videoUrl,
+      imageKey: exercise.imageKey,
+      difficulty: exercise.difficulty,
+      muscles: rows.flatMap((row) => row.muscleId === null ? [] : [{
+        id: row.muscleId,
+        name: row.muscleCommonName,
+        commonName: row.muscleCommonName,
+        scientificName: row.scientificName,
+      }]),
+    });
   }
 
   /**
@@ -206,7 +249,7 @@ export class ExercisesService {
         ...newExercise,
         muscleIds: data.muscleIds || [],
       };
-    });
+    }).then((created) => this.withImageUrl(created));
   }
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
@@ -242,13 +285,99 @@ export class ExercisesService {
         }
 
         return { ...updated, muscleIds: muscleIds ?? undefined };
-      });
+      }).then((result) => this.withImageUrl(result));
     } catch (error: any) {
       if (error?.code === '23505') {
         throw new ConflictException(`Exercise "${changes.name}" already exists in the database.`);
       }
       throw error;
     }
+  }
+
+  /**
+   * Replaces an exercise illustration. Moderator-only; enforced by the guard on
+   * the controller, not here.
+   */
+  async setImage(exerciseId: number, file: UploadedFile | undefined) {
+    const [exercise] = await db
+      .select({ id: exercises.id })
+      .from(exercises)
+      .where(eq(exercises.id, exerciseId))
+      .limit(1);
+    if (!exercise) throw new NotFoundException('Exercise not found');
+
+    const stored = await this.storageService.uploadImage({
+      scope: 'exercises',
+      ownerId: exerciseId,
+      file,
+      maxDimension: this.storageService.limits.exerciseImageMaxDimension,
+    });
+
+    let replacedKey: string | null;
+    try {
+      replacedKey = await this.setImageKey(exerciseId, stored.key);
+    } catch (error) {
+      // Nothing references the new object, so it must not be left behind.
+      await this.storageService.remove(stored.key);
+      throw error;
+    }
+
+    await this.storageService.remove(replacedKey);
+
+    return this.getSharedExerciseById(exerciseId);
+  }
+
+  async removeImage(exerciseId: number) {
+    const replacedKey = await this.setImageKey(exerciseId, null);
+    await this.storageService.remove(replacedKey);
+
+    return this.getSharedExerciseById(exerciseId);
+  }
+
+  /**
+   * Swaps the stored image key and returns the replaced one so its object can
+   * be deleted once no row points at it.
+   */
+  private async setImageKey(
+    exerciseId: number,
+    imageKey: string | null,
+  ): Promise<string | null> {
+    return db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ imageKey: exercises.imageKey })
+        .from(exercises)
+        .where(eq(exercises.id, exerciseId))
+        .for('update')
+        .limit(1);
+      if (!current) throw new NotFoundException('Exercise not found');
+
+      await tx
+        .update(exercises)
+        .set({ imageKey })
+        .where(eq(exercises.id, exerciseId));
+
+      return current.imageKey === imageKey ? null : current.imageKey;
+    });
+  }
+
+  /**
+   * Swaps the internal object key for a presigned URL. The key never leaves
+   * the API, so a client cannot address the bucket directly.
+   */
+  private async withImageUrl<T extends { imageKey?: string | null }>(
+    row: T,
+  ): Promise<Omit<T, 'imageKey'> & { imageUrl: string | null }> {
+    const { imageKey, ...rest } = row;
+    return {
+      ...rest,
+      imageUrl: await this.storageService.getUrl(imageKey),
+    };
+  }
+
+  private async withImageUrls<T extends { imageKey?: string | null }>(
+    rows: T[],
+  ): Promise<(Omit<T, 'imageKey'> & { imageUrl: string | null })[]> {
+    return Promise.all(rows.map((row) => this.withImageUrl(row)));
   }
 
   async toggleBookmark(userId: number, exerciseId: number) {

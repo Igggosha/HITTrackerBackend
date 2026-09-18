@@ -1,3 +1,5 @@
+import { validateStorageEnvironment } from '../storage/storage.config';
+
 // 24 random URL-safe characters provide at least 144 bits of entropy.
 const SECRET_MINIMUM_LENGTH = 24;
 const PLACEHOLDER_SECRETS = new Set([
@@ -44,6 +46,9 @@ export function validateEnvironment(
   ) {
     throw new Error('CORS_ORIGINS is required in production.');
   }
+
+  // Object storage is optional, but a partially configured one must not boot.
+  validateStorageEnvironment(environment);
 
   return environment;
 }

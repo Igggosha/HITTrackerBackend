@@ -5,13 +5,22 @@ import {
   Get, 
   Param, 
   ParseIntPipe, 
+  Patch,
   Post, 
+  Query,
   Req, 
   UseGuards 
 } from '@nestjs/common';
 import { WorkoutsService } from './workouts.service';
 import { JwtGuard } from '../auth/jwt.guard';
-import { FinishWorkoutDto, RecordSetDto, StartWorkoutDto } from './dto/workout.dto';
+import {
+  FinishWorkoutDto,
+  ListWorkoutHistoryDto,
+  RecordSetDto,
+  StartWorkoutDto,
+  UpdateSetDto,
+  WorkoutHistoryDatesDto,
+} from './dto/workout.dto';
 
 @UseGuards(JwtGuard)
 @Controller('workouts')
@@ -20,7 +29,7 @@ export class WorkoutsController {
 
   @Post('start')
   async startWorkout(@Req() req, @Body() body: StartWorkoutDto) {
-    return this.workoutsService.startWorkout(req.user.id, body);
+    return this.workoutsService.startWorkout(req.user.id, req.user.role, body);
   }
 
   @Get('active')
@@ -37,6 +46,16 @@ export class WorkoutsController {
     return this.workoutsService.recordSet(workoutId, req.user.id, body);
   }
 
+  @Patch(':workoutId/sets/:setId')
+  async updateSet(
+    @Req() req,
+    @Param('workoutId', ParseIntPipe) workoutId: number,
+    @Param('setId', ParseIntPipe) setId: number,
+    @Body() body: UpdateSetDto,
+  ) {
+    return this.workoutsService.updateSet(workoutId, setId, req.user.id, body);
+  }
+
   @Post(':id/finish')
   async finishWorkout(
     @Req() req, 
@@ -51,14 +70,29 @@ export class WorkoutsController {
     return this.workoutsService.togglePause(workoutId, req.user.id);
   }
 
+  @Post(':id/heartbeat')
+  async heartbeat(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.heartbeat(workoutId, req.user.id);
+  }
+
   @Post(':id/cancel')
   async cancelWorkout(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
     return this.workoutsService.cancelWorkout(workoutId, req.user.id);
   }
 
   @Get('history')
-  async getHistory(@Req() req) {
-    return this.workoutsService.getUserHistory(req.user.id);
+  async getHistory(@Req() req, @Query() query: ListWorkoutHistoryDto) {
+    return this.workoutsService.getUserHistory(req.user.id, query);
+  }
+
+  @Get('history/dates')
+  async getHistoryDates(@Req() req, @Query() query: WorkoutHistoryDatesDto) {
+    return this.workoutsService.getHistoryDates(req.user.id, query);
+  }
+
+  @Get('history/:id')
+  async getHistoryDetails(@Req() req, @Param('id', ParseIntPipe) workoutId: number) {
+    return this.workoutsService.getHistoryDetails(req.user.id, req.user.role, workoutId);
   }
 
   @Delete(':id')

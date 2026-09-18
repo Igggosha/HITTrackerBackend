@@ -1,16 +1,22 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
+import { MAX_IMAGE_UPLOAD_BYTES } from '../storage/storage.config';
+import type { UploadedFile as UploadedImage } from '../storage/upload-validation';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
 import { UsersService } from './users.service';
@@ -57,5 +63,42 @@ export class UsersController {
   @Post('me/presence')
   updatePresence(@Req() request: Request) {
     return this.usersService.touchPresence(request.user!.id!);
+  }
+
+  /**
+   * Replaces the caller's avatar with the uploaded image.
+   *
+   * The interceptor limit is a memory guard: multer buffers the whole body, so
+   * the request is cut off well before `MAX_UPLOAD_BYTES` is even checked.
+   */
+  @Post('me/avatar')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: MAX_IMAGE_UPLOAD_BYTES,
+        files: 1,
+        fields: 0,
+        parts: 1,
+      },
+    }),
+  )
+  uploadAvatar(
+    @Req() request: Request,
+    @UploadedFile() file: UploadedImage | undefined,
+  ) {
+    return this.usersService.updateAvatar(
+      request.user!.id!,
+      file,
+      request.get('X-Profile-Contract') === 'v2',
+    );
+  }
+
+  @Delete('me/avatar')
+  removeAvatar(@Req() request: Request) {
+    return this.usersService.removeAvatar(
+      request.user!.id!,
+      request.get('X-Profile-Contract') === 'v2',
+    );
   }
 }

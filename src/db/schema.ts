@@ -1,23 +1,26 @@
 import {
-    boolean,
-    date,
-    integer,
-    pgTable,
-    primaryKey,
-    real,
-    serial,
-    text,
-    timestamp,
-    uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+  boolean,
+  date,
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  real,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const userRoles = [
-    "user",
-    "helper",
-    "moderator",
-    "admin",
-    "super_admin",
+  'user',
+  'helper',
+  'moderator',
+  'admin',
+  'super_admin',
 ] as const;
 
 export type UserRole = (typeof userRoles)[number];
@@ -25,129 +28,142 @@ export type UserRole = (typeof userRoles)[number];
 // ================= USERS =================
 
 export const users = pgTable(
-    "users",
-    {
-        id: serial("id").primaryKey(),
-        email: text("email").notNull().unique(),
-        username: text("username"),
-        displayName: text("display_name").notNull(),
-        passwordHash: text("password_hash"),
-        googleId: text("google_id").unique(),
-        role: text("role").$type<UserRole>().notNull().default("user"),
+  'users',
+  {
+    id: serial('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    username: text('username'),
+    displayName: text('display_name').notNull(),
+    passwordHash: text('password_hash'),
+    googleId: text('google_id').unique(),
+    role: text('role').$type<UserRole>().notNull().default('user'),
 
-        // Password Reset
-        resetPasswordToken: text("reset_password_token"),
-        resetPasswordExpires: timestamp("reset_password_expires"),
+    // Password Reset
+    resetPasswordToken: text('reset_password_token'),
+    resetPasswordExpires: timestamp('reset_password_expires'),
 
-        // Profile
-        age: integer("age"),
-        gender: text("gender"),
-        height: real("height"),
-        goal: text("goal"),
+    // Profile
+    age: integer('age'),
+    gender: text('gender'),
+    height: real('height'),
+    goal: text('goal'),
 
-        lastSeenAt: timestamp("last_seen_at"),
+    // Object storage key of the avatar. The bucket is private, so the API
+    // hands clients a short-lived presigned URL built from this key.
+    avatarKey: text('avatar_key'),
+    lastSeenAt: timestamp('last_seen_at'),
 
-        createdAt: timestamp("created_at").defaultNow().notNull(),
-    },
-    (table) => [
-        uniqueIndex("users_username_lower_unique")
-            .on(sql`lower(${table.username})`)
-            .where(sql`${table.username} is not null`),
-    ],
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('users_username_lower_unique')
+      .on(sql`lower(${table.username})`)
+      .where(sql`${table.username} is not null`),
+  ],
 );
 
-export const usernameReservations = pgTable("username_reservations", {
-    username: text("username").primaryKey(),
-    userId: integer("user_id")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-    reservedUntil: timestamp("reserved_until").notNull(),
+export const usernameReservations = pgTable('username_reservations', {
+  username: text('username').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  reservedUntil: timestamp('reserved_until').notNull(),
 });
 
-export const oauthLoginCodes = pgTable("oauth_login_codes", {
-    id: serial("id").primaryKey(),
-    codeHash: text("code_hash").notNull().unique(),
-    codeChallenge: text("code_challenge").notNull(),
-    userId: integer("user_id")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-    expiresAt: timestamp("expires_at").notNull(),
+export const oauthLoginCodes = pgTable('oauth_login_codes', {
+  id: serial('id').primaryKey(),
+  codeHash: text('code_hash').notNull().unique(),
+  codeChallenge: text('code_challenge').notNull(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at').notNull(),
 });
+
+// Refresh tokens are opaque credentials; only their SHA-256 hashes are persisted.
+export const authRefreshSessions = pgTable(
+  'auth_refresh_sessions',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    revokedAt: timestamp('revoked_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [index('auth_refresh_sessions_user_id_idx').on(table.userId)],
+);
 
 // A password is never turned into an account until the email owner proves access.
-export const pendingRegistrations = pgTable("pending_registrations", {
-    email: text("email").primaryKey(),
-    displayName: text("display_name").notNull(),
-    passwordHash: text("password_hash").notNull(),
-    verificationCodeHash: text("verification_code_hash").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    attempts: integer("attempts").notNull().default(0),
-    lockedUntil: timestamp("locked_until"),
+export const pendingRegistrations = pgTable('pending_registrations', {
+  email: text('email').primaryKey(),
+  displayName: text('display_name').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  verificationCodeHash: text('verification_code_hash').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  lockedUntil: timestamp('locked_until'),
 });
 
 // ================= BODY TRACKING =================
 
-export const userBodyMetrics = pgTable("user_body_metrics", {
-    id: serial("id").primaryKey(),
+export const userBodyMetrics = pgTable('user_body_metrics', {
+  id: serial('id').primaryKey(),
 
-    userId: integer("user_id")
-        .notNull()
-        .references(() => users.id, {
-            onDelete: "cascade",
-        }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, {
+      onDelete: 'cascade',
+    }),
 
-    weight: real("weight").notNull(),
+  weight: real('weight').notNull(),
 
-    bodyFatPercentage: real("body_fat_percentage"),
+  bodyFatPercentage: real('body_fat_percentage'),
 
-    muscleMass: real("muscle_mass"),
+  muscleMass: real('muscle_mass'),
 
-    recordedAt: timestamp("recorded_at")
-        .defaultNow()
-        .notNull(),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 });
-
 
 // ================= EXERCISE DATABASE =================
 
-export const muscles = pgTable("muscles", {
-    id: serial("id").primaryKey(),
+export const muscles = pgTable('muscles', {
+  id: serial('id').primaryKey(),
 
-    commonName: text("common_name")
-        .notNull()
-        .unique(),
+  commonName: text('common_name').notNull().unique(),
 
-    scientificName: text("scientific_name"),
+  scientificName: text('scientific_name'),
 });
 
+export const exercises = pgTable('exercises', {
+  id: serial('id').primaryKey(),
 
-export const exercises = pgTable("exercises", {
-    id: serial("id").primaryKey(),
+  name: text('name').notNull().unique(),
 
-    name: text("name")
-        .notNull()
-        .unique(),
+  description: text('description'),
 
-    description: text("description"),
-
-    videoUrl: text("video_url"),
-    difficulty: integer("difficulty").default(1).notNull(),
+  videoUrl: text('video_url'),
+  // Object storage key of the illustration; see `users.avatar_key`.
+  imageKey: text('image_key'),
+  difficulty: integer('difficulty').default(1).notNull(),
 });
 
 export const exerciseLikes = pgTable(
-    "exercise_likes",
-    {
-        userId: integer("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
-        exerciseId: integer("exercise_id")
-            .notNull()
-            .references(() => exercises.id, { onDelete: "cascade" }),
-        createdAt: timestamp("created_at").defaultNow().notNull(),
-    },
-    (table) => ({
-        pk: primaryKey({
-            columns: [table.userId, table.exerciseId],
+  'exercise_likes',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.userId, table.exerciseId],
         }),
     })
 );
@@ -204,10 +220,24 @@ export const workoutPrograms = pgTable(
                 onDelete: "set null",
             }),
 
+        shareToken: text("share_token").unique(),
+
+        sourceProgramId: integer("source_program_id"),
+
         createdAt: timestamp("created_at")
             .defaultNow()
             .notNull(),
-    }
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.sourceProgramId],
+            foreignColumns: [table.id],
+            name: "workout_programs_source_program_id_fkey",
+        }).onDelete("set null"),
+        uniqueIndex("workout_programs_owner_source_unique")
+            .on(table.createdById, table.sourceProgramId)
+            .where(sql`${table.sourceProgramId} is not null`),
+    ],
 );
 
 
@@ -340,6 +370,21 @@ export const userProgramSchedule = pgTable(
 
 // ================= COMPLETED WORKOUT HISTORY =================
 
+export type WorkoutHistoryPlanItem = {
+    exerciseId: number;
+    name: string;
+    sets: number;
+    reps: number | null;
+    weight: number | null;
+};
+
+export type WorkoutHistorySnapshot = {
+    programId: number | null;
+    programName: string | null;
+    scheduledFor: string | null;
+    plan: WorkoutHistoryPlanItem[];
+};
+
 
 export const workouts = pgTable(
     "workouts",
@@ -369,6 +414,7 @@ export const workouts = pgTable(
         status: text("status").notNull().default("active"),
         pausedAt: timestamp("paused_at"),
         pausedSeconds: integer("paused_seconds").notNull().default(0),
+        lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
 
         notes: text("notes"),
 
@@ -376,6 +422,9 @@ export const workouts = pgTable(
         finishedAt: timestamp("finished_at"),
         scheduleId: integer("schedule_id")
             .references(() => userProgramSchedule.id, { onDelete: "set null" }),
+
+        // Immutable source plan used by completed-workout history.
+        historySnapshot: jsonb("history_snapshot").$type<WorkoutHistorySnapshot>(),
 
         createdAt: timestamp("created_at")
             .defaultNow()

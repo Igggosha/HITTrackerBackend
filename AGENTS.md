@@ -5,7 +5,7 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 ## Architecture and dependencies
 
 - Preserve the current direction: controller → feature service → `src/db/db.ts`/`src/db/schema.ts`. DTOs define input validation. Do not add repository/interface/use-case layers without a real second implementation or demonstrated need.
-- Feature boundaries are `auth`, `users`, `exercises`, `workout-programs`, and `workouts`. Shared auth guards/roles stay in `auth`; the shared database schema stays in `db`.
+- Feature boundaries are `auth`, `users`, `exercises`, `workout-programs`, and `workouts`. Shared auth guards/roles stay in `auth`; the shared database schema stays in `db`; object storage stays in `storage`.
 - Controllers own HTTP decorators, guards, params/query/body handling; services own business rules and transactions. Never expose password/token hashes or internal errors.
 - Before changing a request or response shape, find all mobile callers under `../hit-tracker-mobile/src` and update the contract coherently.
 
@@ -19,10 +19,20 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 
 ## Authentication and external integrations
 
-- JWTs expire after one hour; `RolesGuard` re-reads the current database role for privileged operations.
+- Access JWTs expire after five minutes. Rotating 30-day refresh sessions are stored as hashes; refresh reloads the current database role. `RolesGuard` also re-reads the role for privileged operations.
 - Email registration remains pending until verification; password-reset and mobile OAuth records store hashes of one-time codes. Preserve expiry, attempt/lockout, and one-time-consumption behavior.
 - Treat Google OAuth redirect/session/PKCE as one contract across mobile and web callbacks. Recheck `GOOGLE_OAUTH_SETUP.md`, `.env.example`, CORS, and trusted-proxy assumptions.
 - SMTP, PostgreSQL, and Google are external boundaries: client errors must remain safe and failures must be diagnosable without exposing secrets.
+
+## Object storage
+
+- `src/storage` is the only module that talks to S3/MinIO or decodes an uploaded image. Feature services call `StorageService`; they never construct an S3 client, a bucket name, or an object key.
+- Object keys stay server-side. Persist the key in a nullable `*_key` column and expose a presigned URL (`avatarUrl`, `imageUrl`) in responses. A key that arrives from the database is checked against the managed prefixes before it reaches the S3 client.
+- Every upload is re-encoded, never stored as received: the container bytes decide the format, not the declared `Content-Type`, and re-encoding strips EXIF (including GPS). Keep the multer `fileSize` limit as the memory guard and `MAX_UPLOAD_BYTES` as the policy limit.
+- Write the new object first, swap the key inside a transaction that captures the replaced one, and delete the old object only afterwards. A failed delete is logged, never thrown: it must not fail a request whose database write already succeeded.
+- Storage is optional. With `S3_BUCKET` unset the API boots and the media endpoints answer `503 STORAGE_UNAVAILABLE`; a partially filled configuration must fail at boot instead.
+- The bucket is private and the API authenticates with the bucket-scoped service account created in `docker/minio-init.sh`, never with the MinIO root credentials. Widening the bucket policy or enabling anonymous read is a security change.
+- Presigned URLs are signed for `S3_PUBLIC_ENDPOINT`. Changing how the bucket is exposed means rechecking that value, the tunnel hostname, and the URL lifetime together.
 
 ## Database and migrations
 

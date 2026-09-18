@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db/db';
 import {
   exerciseInPrograms,
@@ -8,6 +9,7 @@ import {
   users,
   userProgramSchedule,
   userProgramScheduleSeries,
+  workouts,
   workoutPrograms,
   programLikes,
   type UserRole,
@@ -17,6 +19,7 @@ import { CreateWorkoutProgramDto, ProgramExerciseDto } from './dto/create-workou
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
+import { hasSameExerciseMultiset } from './sharing.utils';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -26,6 +29,15 @@ export class WorkoutProgramsService {
 
   async createOfficialProgram(userId: number, dto: CreateWorkoutProgramDto) {
     return this.createProgram(userId, false, dto);
+  }
+
+  async findMatchingProgramByExerciseIds(userId: number, exerciseIds: number[]) {
+    const programId = await this.findMatchingProgram(
+      userId,
+      exerciseIds.map((exerciseId) => ({ exerciseId })),
+      true,
+    );
+    return { programId };
   }
 
   async copyAsPersonalProgram(userId: number, role: UserRole, sourceId: number, dto: CreateWorkoutProgramDto) {
@@ -38,6 +50,78 @@ export class WorkoutProgramsService {
       throw new NotFoundException('Workout program not found');
     }
     return this.createPersonalProgram(userId, dto);
+  }
+
+  async createShareToken(userId: number, role: UserRole, programId: number) {
+    const accessible = await this.getProgramById(programId, userId, role);
+    if (accessible.isPersonal && accessible.createdById !== userId) {
+      throw new ForbiddenException('Only the owner can share a personal program');
+    }
+
+    const [program] = await db.select({ shareToken: workoutPrograms.shareToken })
+      .from(workoutPrograms)
+      .where(eq(workoutPrograms.id, programId))
+      .limit(1);
+    if (program.shareToken) return { token: program.shareToken };
+
+    const token = randomUUID();
+    const [updated] = await db.update(workoutPrograms)
+      .set({ shareToken: token })
+      .where(and(eq(workoutPrograms.id, programId), isNull(workoutPrograms.shareToken)))
+      .returning({ shareToken: workoutPrograms.shareToken });
+    if (updated?.shareToken) return { token: updated.shareToken };
+
+    const [current] = await db.select({ shareToken: workoutPrograms.shareToken })
+      .from(workoutPrograms)
+      .where(eq(workoutPrograms.id, programId))
+      .limit(1);
+    if (!current?.shareToken) throw new NotFoundException('Workout program not found');
+    return { token: current.shareToken };
+  }
+
+  async getSharedProgram(token: string) {
+    const source = await this.findSharedProgram(token);
+    const { createdById: _createdById, ...program } = source;
+    return { ...program, schedule: await this.getSchedule(source.id) };
+  }
+
+  async importSharedProgram(userId: number, token: string) {
+    const source = await this.findSharedProgram(token);
+    if (!source.isPersonal || source.createdById === userId) {
+      return { programId: source.id, imported: false, alreadyImported: true };
+    }
+
+    const findExisting = async () => {
+      const [existing] = await db.select({ id: workoutPrograms.id })
+        .from(workoutPrograms)
+        .where(and(
+          eq(workoutPrograms.createdById, userId),
+          eq(workoutPrograms.sourceProgramId, source.id),
+        ))
+        .limit(1);
+      return existing;
+    };
+    const existing = await findExisting();
+    if (existing) return { programId: existing.id, imported: false, alreadyImported: true };
+
+    try {
+      const exercises = await this.getScheduleExercises(db, source.id);
+      const matchingProgramId = await this.findMatchingPersonalProgram(userId, exercises);
+      if (matchingProgramId) {
+        return { programId: matchingProgramId, imported: false, alreadyImported: true };
+      }
+      const program = await this.createProgram(userId, true, {
+        name: source.name,
+        description: source.description ?? undefined,
+        exercises,
+      }, source.id);
+      return { programId: program.id, imported: true, alreadyImported: false };
+    } catch (error: any) {
+      if (error?.code !== '23505') throw error;
+      const raced = await findExisting();
+      if (!raced) throw error;
+      return { programId: raced.id, imported: false, alreadyImported: true };
+    }
   }
 
   async scheduleProgram(userId: number, role: UserRole, dto: ScheduleProgramDto) {
@@ -78,9 +162,11 @@ export class WorkoutProgramsService {
         programDescription: workoutPrograms.description,
         isPersonal: workoutPrograms.isPersonal,
         seriesId: userProgramSchedule.seriesId,
+        completedAt: workouts.finishedAt,
       })
       .from(userProgramSchedule)
       .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
+      .leftJoin(workouts, and(eq(workouts.scheduleId, userProgramSchedule.id), eq(workouts.status, 'completed')))
       .where(and(
         eq(userProgramSchedule.userId, userId),
         gte(userProgramSchedule.scheduledFor, from),
@@ -194,10 +280,16 @@ export class WorkoutProgramsService {
       if (!assignment) throw new NotFoundException('Workout program not found');
     }
 
-    return { ...program, schedule: await this.getSchedule(id) };
+    const { shareToken: _shareToken, sourceProgramId: _sourceProgramId, ...safeProgram } = program;
+    return { ...safeProgram, schedule: await this.getSchedule(id) };
   }
 
-  private async createProgram(userId: number, isPersonal: boolean, dto: CreateWorkoutProgramDto) {
+  private async createProgram(
+    userId: number,
+    isPersonal: boolean,
+    dto: CreateWorkoutProgramDto,
+    sourceProgramId: number | null = null,
+  ) {
     return db.transaction(async (tx: any) => {
       await this.ensureExercisesExist(tx, dto.exercises);
       const [program] = await tx
@@ -207,6 +299,7 @@ export class WorkoutProgramsService {
           description: dto.description?.trim() || null,
           isPersonal,
           createdById: userId,
+          sourceProgramId,
         })
         .returning();
       await this.replaceSchedule(tx, program.id, dto.exercises);
@@ -303,13 +396,70 @@ export class WorkoutProgramsService {
         setsCount: exerciseInPrograms.sets,
         targetReps: exerciseInPrograms.firstSetRepCount,
         plannedWeight: exerciseInPrograms.weight,
-        exercise: { id: exercises.id, name: exercises.name },
+        exercise: {
+          id: exercises.id,
+          name: exercises.name,
+          difficulty: exercises.difficulty,
+        },
       })
       .from(programContent)
       .leftJoin(exerciseInPrograms, eq(programContent.id, exerciseInPrograms.programContentId))
       .leftJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
       .where(eq(programContent.programId, programId))
       .orderBy(asc(programContent.week), asc(exerciseInPrograms.weekDay), asc(exerciseInPrograms.id));
+  }
+
+  private async findSharedProgram(token: string) {
+    const [program] = await db.select({
+      id: workoutPrograms.id,
+      name: workoutPrograms.name,
+      description: workoutPrograms.description,
+      isPersonal: workoutPrograms.isPersonal,
+      createdAt: workoutPrograms.createdAt,
+      createdById: workoutPrograms.createdById,
+      ownerUsername: users.username,
+    })
+      .from(workoutPrograms)
+      .leftJoin(users, eq(workoutPrograms.createdById, users.id))
+      .where(eq(workoutPrograms.shareToken, token))
+      .limit(1);
+    if (!program) throw new NotFoundException('Shared workout program not found');
+    return program;
+  }
+
+  private async findMatchingPersonalProgram(
+    userId: number,
+    sourceExercises: readonly Pick<ProgramExerciseDto, 'exerciseId'>[],
+  ) {
+    return this.findMatchingProgram(userId, sourceExercises, false);
+  }
+
+  private async findMatchingProgram(
+    userId: number,
+    sourceExercises: readonly Pick<ProgramExerciseDto, 'exerciseId'>[],
+    includeOfficial: boolean,
+  ) {
+    const candidates = await db
+      .select({ id: workoutPrograms.id })
+      .from(workoutPrograms)
+      .where(includeOfficial
+        ? or(
+          and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)),
+          eq(workoutPrograms.isPersonal, false),
+        )
+        : and(eq(workoutPrograms.isPersonal, true), eq(workoutPrograms.createdById, userId)));
+    if (!candidates.length) return null;
+
+    const rows = await db
+      .select({ programId: programContent.programId, exerciseId: exerciseInPrograms.exerciseId })
+      .from(programContent)
+      .innerJoin(exerciseInPrograms, eq(exerciseInPrograms.programContentId, programContent.id))
+      .where(inArray(programContent.programId, candidates.map((candidate) => candidate.id)));
+
+    return candidates.find((candidate) => hasSameExerciseMultiset(
+      sourceExercises,
+      rows.filter((row) => row.programId === candidate.id),
+    ))?.id ?? null;
   }
 
   private async materializeWeeklyAssignments(userId: number, from: string, to: string) {

@@ -26,9 +26,90 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
     command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
+    restart: "no"
+    networks:
+      - private
+
+  bootstrap:
+    image: postgres:17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+    volumes:
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql.utf16:ro
+    command: ["/bin/sh", "/docker-entrypoint-initdb.d/00-init-db.sh"]
+    restart: "no"
+    networks:
+      - private
+
+  # Object storage for user-uploaded media (avatars, exercise images).
+  # A dedicated storage network lets cloudflared reach only MinIO, while
+  # loopback ports serve local development.
+  minio:
+    build:
+      context: .
+      dockerfile: docker/minio.Dockerfile
+      args:
+        MINIO_RELEASE: ${MINIO_IMAGE_TAG:-RELEASE.2025-10-15T17-29-55Z}
+        MINIO_COMMIT: ${MINIO_SOURCE_COMMIT:-9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a}
+    image: hit-tracker-minio:${MINIO_IMAGE_TAG:-RELEASE.2025-10-15T17-29-55Z}
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # MinIO handles abandoned multipart uploads with a server-side sweep,
+      # not the S3 AbortIncompleteMultipartUpload lifecycle action.
+      MINIO_API_STALE_UPLOADS_EXPIRY: ${MINIO_API_STALE_UPLOADS_EXPIRY:-24h}
+      MINIO_API_STALE_UPLOADS_CLEANUP_INTERVAL: ${MINIO_API_STALE_UPLOADS_CLEANUP_INTERVAL:-6h}
+    volumes:
+      - minio_data:/data
+    ports:
+      # Never bind to 0.0.0.0 unless the host firewall protects these ports.
+      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - private
+      - storage-edge
+
+  # Creates the bucket and a bucket-scoped service account for the API.
+  # The bucket stays private: objects are read through short-lived presigned URLs.
+  minio-init:
+    image: quay.io/minio/mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-hit-tracker}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_UPLOAD_PREFIX: ${S3_UPLOAD_PREFIX:-uploads}
+      S3_TEMP_PREFIX: ${S3_TEMP_PREFIX:-tmp}
+      S3_TEMP_EXPIRY_DAYS: ${S3_TEMP_EXPIRY_DAYS:-1}
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/minio-init.sh"]
+    volumes:
+      - ./docker/minio-init.sh:/docker-entrypoint-init.d/minio-init.sh:ro
     restart: "no"
     networks:
       - private
@@ -42,6 +123,10 @@ services:
         condition: service_completed_successfully
       seed:
         condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     ports:
       # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
       - "127.0.0.1:${PORT:-3000}:3000"
@@ -51,6 +136,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      # Inside Compose the API reaches MinIO by service name; presigned URLs
+      # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
+      S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -63,6 +151,7 @@ services:
       - edge
 
   frontend:
+    profiles: ["edge"]
     build:
       context: ../hit-tracker-mobile
       dockerfile: Dockerfile
@@ -73,10 +162,10 @@ services:
       - edge
 
   # Background outbound-only connector. It is opt-in and has no access to the
-  # internal PostgreSQL network or any published inbound ports.
+  # internal PostgreSQL network. Its storage network can only reach MinIO.
   cloudflared:
+    profiles: ["edge"]
     image: cloudflare/cloudflared:latest
-    profiles: ["tunnel"]
     depends_on:
       api:
         condition: service_healthy
@@ -86,6 +175,7 @@ services:
     restart: unless-stopped
     networks:
       - edge
+      - storage-edge
 
   seed:
     image: postgres:17
@@ -121,6 +211,7 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
@@ -128,4 +219,7 @@ networks:
     internal: true
   # Reserved for the API and a future HTTPS tunnel/reverse proxy.
   edge:
+    driver: bridge
+  # Must be non-internal for MinIO's loopback port bindings to be published.
+  storage-edge:
     driver: bridge

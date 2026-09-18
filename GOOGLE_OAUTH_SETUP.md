@@ -14,7 +14,8 @@
    ```
 
    `OAUTH_SUCCESS_REDIRECT_URL` необов'язковий. Якщо його не вказати, callback
-   повертає JSON. Якщо вказати, бекенд перенаправляє браузер на цю адресу з
+   повертає JSON. Якщо вказати, бекенд встановлює API-scoped `HttpOnly`
+   refresh-cookie та перенаправляє браузер на цю адресу з короткоживучим
    `accessToken` у URL-фрагменті (після `#`), який не передається на сервер.
 
 ## 2. Створити OAuth-клієнт у Google Cloud
@@ -68,7 +69,8 @@ http://localhost:3000/auth/google
 
 Після успіху відбувається callback. Новий користувач створюється, а наявний
 користувач з такою ж перевіреною Google-поштою автоматично прив'язується до
-Google. Усі наступні входи повертають ваш існуючий JWT `accessToken`.
+Google. Усі наступні входи видають access JWT на п’ять хвилин і ротаційну
+refresh-сесію на 30 днів.
 
 Для фронтенду з `OAUTH_SUCCESS_REDIRECT_URL` прочитайте токен так:
 
@@ -76,8 +78,10 @@ Google. Усі наступні входи повертають ваш існу�
 const accessToken = new URLSearchParams(window.location.hash.slice(1)).get('accessToken');
 ```
 
-Збережіть його так само, як токен звичайного логіну, і відразу приберіть
-фрагмент з адреси через `history.replaceState(null, '', location.pathname)`.
+Тримайте access token у пам’яті, надсилайте API-запити з
+`credentials: 'include'` і відразу приберіть фрагмент з адреси через
+`history.replaceState(null, '', location.pathname)`. Після завершення access
+token клієнт викликає `POST /auth/refresh`; refresh-cookie недоступна JavaScript.
 
 ## 4. Підключити React Native Expo
 
@@ -128,9 +132,9 @@ Google callback завжди лишається HTTPS/HTTP-адресою бек
    import * as Linking from 'expo-linking';
 
    function handleGoogleCallback(url: string) {
-     const accessToken = Linking.parse(url).queryParams.accessToken;
-     if (typeof accessToken === 'string') {
-       // Зберегти токен у вашому secure storage та перейти в застосунок.
+     const code = Linking.parse(url).queryParams.code;
+     if (typeof code === 'string') {
+       // Обміняти одноразовий code разом із PKCE verifier на access/refresh session.
      }
    }
 
@@ -141,8 +145,9 @@ Google callback завжди лишається HTTPS/HTTP-адресою бек
    // У cleanup компонента: subscription.remove()
    ```
 
-   Для custom scheme токен передається як query-параметр deep link. Для web
-   callback він, як і раніше, передається у фрагменті URL.
+   Для custom scheme передається одноразовий PKCE code. Для web callback
+   access token передається у фрагменті URL, а refresh token — лише в
+   `HttpOnly` cookie API.
 
 ## 5. Production-перевірка
 
@@ -152,9 +157,9 @@ Google callback завжди лишається HTTPS/HTTP-адресою бек
 - Для External-застосунку опублікуйте Branding/Audience перед запуском для
   всіх користувачів. Брендинг і деякі scopes можуть потребувати Google
   verification; базові `email` і `profile` не є sensitive scopes.
-- Поточний `express-session` memory store підходить для локальної розробки або
-  одного процесу. Перед кількома інстансами підключіть спільне session storage
-  (наприклад Redis), інакше OAuth `state` може потрапити на інший інстанс.
+- OAuth `state` зберігається у спільному PostgreSQL session store, тому кілька
+  API-інстансів мають використовувати ту саму базу й однаковий
+  `OAUTH_SESSION_SECRET`.
 
 ## Маршрути
 
@@ -162,3 +167,6 @@ Google callback завжди лишається HTTPS/HTTP-адресою бек
 | --- | --- | --- |
 | GET | `/auth/google` | Починає Google OAuth і перенаправляє на Google |
 | GET | `/auth/google/callback` | Приймає callback, створює/зв'язує користувача, видає JWT |
+| POST | `/auth/oauth/exchange` | Одноразово обмінює native PKCE code на access/refresh session |
+| POST | `/auth/refresh` | Ротує refresh session і видає access JWT з актуальною роллю |
+| POST | `/auth/logout` | Відкликає refresh session і очищає web-cookie |

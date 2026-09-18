@@ -1,12 +1,38 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class WorkoutPlanItemDto {
+  @IsInt()
+  @Min(1)
+  exerciseId: number;
+
+  @IsInt()
+  @Min(0)
+  sets: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  reps?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  weight?: number;
+}
 
 export class StartWorkoutDto {
   @IsOptional()
@@ -21,18 +47,31 @@ export class StartWorkoutDto {
   @IsInt()
   @Min(1)
   scheduleId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  programId?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => WorkoutPlanItemDto)
+  plan?: WorkoutPlanItemDto[];
 }
 
 export class RecordSetDto {
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   exerciseId: number;
 
   @IsNumber()
   @Min(0)
   weight: number;
 
-  @IsNumber()
-  @Min(0)
+  @IsInt()
+  @Min(1)
   reps: number;
 
   @IsOptional()
@@ -43,22 +82,68 @@ export class RecordSetDto {
   @IsBoolean()
   isDropSet?: boolean;
 
-  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  rpe: number;
+}
+
+export class UpdateSetDto {
   @IsNumber()
-  rpe?: number;
+  @Min(0)
+  weight: number;
+
+  @IsInt()
+  @Min(1)
+  reps: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  rpe: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isFailure?: boolean;
 }
 
 export class FinishWorkoutDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class ListWorkoutHistoryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  durationSeconds?: number;
+  @IsString()
+  @MaxLength(300)
+  cursor?: string;
 
   @IsOptional()
   @IsDateString()
-  finishedAt?: string;
+  from?: string;
+
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+}
+
+export class WorkoutHistoryDatesDto {
+  @IsDateString()
+  from: string;
+
+  @IsDateString()
+  to: string;
 }

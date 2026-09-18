@@ -7,6 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './google.strategy';
 import { GoogleAuthGuard } from './google-auth.guard';
+import { ACCESS_TOKEN_TTL } from './refresh-token';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { GoogleAuthGuard } from './google-auth.guard';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
+        signOptions: { expiresIn: ACCESS_TOKEN_TTL },
       }),
     }),
   ],

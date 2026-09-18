@@ -1,4 +1,19 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ExercisesService } from './exercises.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import type { Request } from "express";
@@ -6,6 +21,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
+import { MAX_IMAGE_UPLOAD_BYTES } from '../storage/storage.config';
+import type { UploadedFile as UploadedImage } from '../storage/upload-validation';
 
 @UseGuards(JwtGuard, RolesGuard)
 @Controller('exercises')
@@ -69,5 +86,44 @@ export class ExercisesController {
   @Post(':id/bookmark')
   async bookmark(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
     return this.exercisesService.toggleBookmark(req.user!.id!, id);
+  }
+
+  /**
+   * Uploads the illustration for an exercise. The interceptor limit only caps
+   * what multer buffers; the configured limit is applied during validation.
+   */
+  @Post(':id/image')
+  @MinimumRole('moderator')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: MAX_IMAGE_UPLOAD_BYTES,
+        files: 1,
+        fields: 0,
+        parts: 1,
+      },
+    }),
+  )
+  async uploadImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: UploadedImage | undefined,
+  ) {
+    return this.exercisesService.setImage(id, file);
+  }
+
+  @Delete(':id/image')
+  @MinimumRole('moderator')
+  async removeImage(@Param('id', ParseIntPipe) id: number) {
+    return this.exercisesService.removeImage(id);
+  }
+}
+
+@Controller('shared/exercises')
+export class SharedExercisesController {
+  constructor(private readonly exercisesService: ExercisesService) {}
+
+  @Get(':id')
+  getById(@Param('id', ParseIntPipe) id: number) {
+    return this.exercisesService.getSharedExerciseById(id);
   }
 }
