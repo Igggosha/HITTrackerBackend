@@ -1,5 +1,15 @@
 import { db } from '../db/db';
 import { ExercisesService } from './exercises.service';
+import type { StorageService } from '../storage/storage.service';
+
+// Storage is switched off in these tests: `getUrl` answers null for every key,
+// which is exactly what the service sees when S3_BUCKET is unset.
+const storage = {
+  getUrl: jest.fn().mockResolvedValue(null),
+  remove: jest.fn().mockResolvedValue(undefined),
+  uploadImage: jest.fn(),
+  limits: { exerciseImageMaxDimension: 1280 },
+} as unknown as StorageService;
 
 jest.mock('../db/db', () => ({
   db: { delete: jest.fn(), insert: jest.fn(), select: jest.fn() },
@@ -16,7 +26,7 @@ function query(rows: unknown[]) {
 }
 
 describe('ExercisesService likes', () => {
-  const service = new ExercisesService();
+  const service = new ExercisesService(storage);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -61,6 +71,8 @@ describe('ExercisesService likes', () => {
       name: 'Bench press',
       description: 'Press safely',
       videoUrl: null,
+      // The object key never reaches the client; only a signed URL does.
+      imageUrl: null,
       difficulty: 2,
       muscles: [
         { id: 1, name: 'Chest', commonName: 'Chest', scientificName: null },

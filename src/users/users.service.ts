@@ -17,6 +17,8 @@ import {
 import { hasMinimumRole } from '../auth/roles';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { StorageService } from '../storage/storage.service';
+import type { UploadedFile } from '../storage/upload-validation';
 import {
   isReservedUsername,
   isValidUsername,
@@ -25,7 +27,10 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
+  ) {}
 
   async listUsers({ search, page, limit, online }: ListUsersDto) {
     const searchFilter = search?.trim()
@@ -159,10 +164,14 @@ export class UsersService {
         username: users.username,
         displayName: users.displayName,
         role: users.role,
+        avatarKey: users.avatarKey,
       });
     if (!deleted) throw new NotFoundException('User not found');
 
-    return { user: deleted };
+    const { avatarKey, ...deletedUser } = deleted;
+    await this.storageService.remove(avatarKey);
+
+    return { user: deletedUser };
   }
 
   async getProfile(userId: number, useIdentityContractV2 = false) {
@@ -177,6 +186,7 @@ export class UsersService {
         gender: users.gender,
         height: users.height,
         goal: users.goal,
+        avatarKey: users.avatarKey,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -191,11 +201,80 @@ export class UsersService {
       .orderBy(desc(userBodyMetrics.recordedAt))
       .limit(1);
 
+    // The object key stays server-side; clients only ever see a signed URL.
+    const { avatarKey, ...profile } = user;
+
     return {
-      ...user,
+      ...profile,
       username: useIdentityContractV2 ? user.username : user.displayName,
       weight: latestMetric?.weight ?? null,
+      avatarUrl: await this.storageService.getUrl(avatarKey),
     };
+  }
+
+  /**
+   * Replaces the avatar and removes the object it superseded.
+   *
+   * The new object is written before the row is updated, so a failed upload
+   * leaves the current avatar untouched. The previous key is captured inside
+   * the same transaction that overwrites it, and its object is deleted only
+   * once the row no longer refers to it.
+   */
+  async updateAvatar(
+    userId: number,
+    file: UploadedFile | undefined,
+    useIdentityContractV2 = false,
+  ) {
+    const stored = await this.storageService.uploadImage({
+      scope: 'avatars',
+      ownerId: userId,
+      file,
+      maxDimension: this.storageService.limits.avatarMaxDimension,
+      square: true,
+    });
+
+    let replacedKey: string | null;
+    try {
+      replacedKey = await this.setAvatarKey(userId, stored.key);
+    } catch (error) {
+      // The row was not updated, so nothing points at the new object.
+      await this.storageService.remove(stored.key);
+      throw error;
+    }
+
+    await this.storageService.remove(replacedKey);
+
+    return this.getProfile(userId, useIdentityContractV2);
+  }
+
+  async removeAvatar(userId: number, useIdentityContractV2 = false) {
+    const replacedKey = await this.setAvatarKey(userId, null);
+    await this.storageService.remove(replacedKey);
+
+    return this.getProfile(userId, useIdentityContractV2);
+  }
+
+  /**
+   * Swaps the stored avatar key and returns the one that was replaced, so the
+   * caller can clean up an object that nothing references any more.
+   */
+  private async setAvatarKey(
+    userId: number,
+    avatarKey: string | null,
+  ): Promise<string | null> {
+    return db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ avatarKey: users.avatarKey })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for('update')
+        .limit(1);
+      if (!current) throw new NotFoundException('User not found');
+
+      await tx.update(users).set({ avatarKey }).where(eq(users.id, userId));
+
+      return current.avatarKey === avatarKey ? null : current.avatarKey;
+    });
   }
 
   async getUsernameAvailability(userId: number, value: unknown) {

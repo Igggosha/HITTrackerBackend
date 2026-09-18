@@ -48,6 +48,10 @@ export const users = pgTable(
         height: real("height"),
         goal: text("goal"),
 
+        // Object storage key of the avatar. The bucket is private, so the API
+        // hands clients a short-lived presigned URL built from this key.
+        avatarKey: text("avatar_key"),
+
         lastSeenAt: timestamp("last_seen_at"),
 
         createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -150,6 +154,8 @@ export const exercises = pgTable("exercises", {
     description: text("description"),
 
     videoUrl: text("video_url"),
+    // Object storage key of the illustration; see `users.avatar_key`.
+    imageKey: text("image_key"),
     difficulty: integer("difficulty").default(1).notNull(),
 });
 

@@ -44,6 +44,9 @@ the host on port `3000` by default.
    docker compose up --build
    ```
 
+   To include the separately checked-out mobile frontend and Cloudflare
+   connector, use `docker compose --profile edge up --build` instead.
+
 3. Check the API at `http://localhost:3000/` and stop the stack with
    `docker compose down`.
 
@@ -126,6 +129,108 @@ can be removed only after those client versions are retired.
 Для встановлених старих клієнтів без цього заголовка історичне поле профілю
 `username` і надалі читає та оновлює видиме ім'я. Цей сумісний режим можна
 видалити лише після припинення підтримки таких версій клієнта.
+
+## Object storage (MinIO) / Об'єктне сховище
+
+User-uploaded media — profile avatars today, exercise illustrations and
+anything added later — lives in MinIO rather than in PostgreSQL or on the API
+container's disk. MinIO speaks the S3 API, so the same configuration works
+against AWS S3 or any other S3-compatible service without code changes.
+
+### How a file travels
+
+1. The client `POST`s `multipart/form-data` with a single `file` part to the
+   API. It never talks to MinIO directly.
+2. The API checks the real container bytes (not the declared `Content-Type`),
+   re-encodes the image to WebP with `sharp`, and resizes it. Re-encoding also
+   drops every metadata block, including EXIF GPS coordinates.
+3. The object is written under `uploads/<scope>/<owner id>/<uuid>.webp` and only
+   that key is stored in PostgreSQL.
+4. Read paths return `avatarUrl` / `imageUrl`: a presigned `GET` URL valid for
+   `S3_PRESIGNED_URL_TTL_SECONDS`. The bucket stays private and anonymous
+   access is explicitly disabled.
+
+Because each upload gets a fresh UUID, a replaced avatar has a new URL, so no
+client or CDN can serve the stale image. The object it replaced is deleted only
+after the database row stops pointing at it.
+
+### Running it
+
+`docker compose up --build` starts `minio` alongside PostgreSQL, then
+`minio-init` creates the bucket, the temporary-object lifecycle rule, and a
+**bucket-scoped** service account for the API. MinIO's server-side stale-upload
+sweep cleans abandoned multipart uploads. The API never uses the MinIO root
+credentials.
+The patched MinIO release is built from its official source and verified
+against `MINIO_SOURCE_COMMIT`, because upstream no longer publishes that server
+release as an official container image. The `mc` bootstrap image remains
+registry-pinned.
+
+- S3 API: `http://127.0.0.1:9000`
+- Console: `http://127.0.0.1:9001` (sign in with `MINIO_ROOT_USER` /
+  `MINIO_ROOT_PASSWORD`)
+
+Both ports bind to loopback. `MINIO_BIND_ADDRESS` can widen that — for instance
+to test uploads from a phone on the same Wi-Fi — but only do so behind a
+firewall, and never expose the console publicly.
+
+### Configuration
+
+Storage is optional. With `S3_BUCKET` empty the API still boots; the media
+endpoints answer `503` with `code: "STORAGE_UNAVAILABLE"` and `avatarUrl` is
+`null`. A *partially* filled configuration fails at boot instead of failing on
+the first upload.
+
+Two endpoints matter and they are not interchangeable:
+
+- `S3_ENDPOINT` — where the API itself reaches MinIO. Compose overrides it with
+  `http://minio:9000`.
+- `S3_PUBLIC_ENDPOINT` — the host the presigned URL is signed for. A SigV4
+  signature is bound to that host, so it must be exactly what the client calls.
+  Behind the Cloudflare tunnel, publish MinIO under its own hostname and put
+  that hostname here; otherwise every download returns `SignatureDoesNotMatch`.
+
+See the `Object Storage` block in `.env.example` for the remaining settings
+(size limit, image dimensions, WebP quality, URL lifetime, key prefixes).
+
+### API
+
+| Method   | Route                  | Role        | Body             |
+| -------- | ---------------------- | ----------- | ---------------- |
+| `POST`   | `/users/me/avatar`     | any user    | `file` (image)   |
+| `DELETE` | `/users/me/avatar`     | any user    | —                |
+| `POST`   | `/exercises/:id/image` | `moderator` | `file` (image)   |
+| `DELETE` | `/exercises/:id/image` | `moderator` | —                |
+
+Accepted input: JPEG, PNG, WebP or GIF, up to `MAX_UPLOAD_BYTES` (10 MB by
+default; the hard request cap is 50 MB). Avatars are cropped to a centred
+square, exercise images are fitted inside the maximum dimension. Rejections use
+machine-readable codes: `FILE_REQUIRED`, `FILE_TOO_LARGE`,
+`UNSUPPORTED_IMAGE_TYPE`, `STORAGE_UNAVAILABLE`.
+
+```bash
+curl -X POST http://localhost:3000/users/me/avatar \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -F "file=@avatar.jpg"
+```
+
+### Adding a new kind of file
+
+1. Add the scope to `STORAGE_SCOPES` in `src/storage/object-key.ts`.
+2. Add a nullable `*_key` column in `src/db/schema.ts` plus a migration.
+3. Call `storageService.uploadImage({ scope, ownerId, file, maxDimension })`
+   from the owning feature service, and `storageService.getUrl(key)` on the
+   read path. Delete the replaced key with `storageService.remove(...)` only
+   after the row no longer references it.
+
+Keep the object key server-side. Responses expose a URL, never a key.
+
+### Backups / Резервне копіювання
+
+The bucket lives in the `minio_data` Docker volume and is **not** covered by a
+PostgreSQL dump. A database backup taken on its own restores rows whose
+`avatar_key` points at objects that no longer exist. Back up the volume
+alongside the database, or re-run `mc mirror` to a second location.
 
 ## Google OAuth
 

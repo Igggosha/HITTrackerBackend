@@ -1,5 +1,20 @@
 import { db } from '../db/db';
 import { UsersService } from './users.service';
+import type { StorageService, StoredImage } from '../storage/storage.service';
+
+// Storage is switched off in these tests, so every avatar URL resolves to null.
+// The doubles are standalone consts so assertions never reference an unbound
+// method off the stub object.
+const getAvatarUrl = jest.fn<Promise<string | null>, [unknown]>();
+const removeObject = jest.fn<Promise<void>, [unknown]>();
+const uploadImage = jest.fn<Promise<StoredImage>, [unknown]>();
+
+const storage = {
+  getUrl: getAvatarUrl,
+  remove: removeObject,
+  uploadImage,
+  limits: { avatarMaxDimension: 512 },
+} as unknown as StorageService;
 
 const mockDbLimit = jest.fn();
 const mockTxLimit = jest.fn();
@@ -8,11 +23,17 @@ const mockReservationValues = jest.fn();
 const mockReservationUpsert = jest.fn();
 const mockDbSet = jest.fn();
 const mockDbReturning = jest.fn();
+const mockDbDeleteReturning = jest.fn();
 
 const tx = {
   execute: jest.fn(),
   select: jest.fn(() => ({
-    from: () => ({ where: () => ({ limit: mockTxLimit }) }),
+    from: () => ({
+      where: () => ({
+        limit: mockTxLimit,
+        for: () => ({ limit: mockTxLimit }),
+      }),
+    }),
   })),
   insert: jest.fn(() => ({ values: mockReservationValues })),
   delete: jest.fn(() => ({ where: jest.fn() })),
@@ -27,6 +48,9 @@ jest.mock('../db/db', () => ({
   db: {
     transaction: jest.fn((callback) => callback(tx)),
     update: jest.fn(() => ({ set: mockDbSet })),
+    delete: jest.fn(() => ({
+      where: () => ({ returning: mockDbDeleteReturning }),
+    })),
     insert: jest.fn(),
     select: jest.fn(() => ({
       from: () => ({
@@ -40,10 +64,12 @@ jest.mock('../db/db', () => ({
 }));
 
 describe('UsersService profile identity', () => {
-  const service = new UsersService({ get: jest.fn(() => 25) } as any);
+  const service = new UsersService({ get: jest.fn(() => 25) } as any, storage);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getAvatarUrl.mockResolvedValue(null);
+    removeObject.mockResolvedValue(undefined);
     mockDbLimit.mockReset();
     mockTxLimit.mockReset();
     mockTxReturning.mockReset();
@@ -51,6 +77,7 @@ describe('UsersService profile identity', () => {
     mockReservationUpsert.mockReset();
     mockDbSet.mockReset();
     mockDbReturning.mockReset();
+    mockDbDeleteReturning.mockReset();
     mockDbSet.mockReturnValue({
       where: () => ({ returning: mockDbReturning }),
     });
@@ -65,11 +92,40 @@ describe('UsersService profile identity', () => {
   afterEach(() => jest.useRealTimers());
 
   it('PROFILE-USERNAME-012 rejects an exact reserved username before database access', async () => {
-    await expect(service.getUsernameAvailability(1, 'admin')).rejects.toMatchObject({
+    await expect(
+      service.getUsernameAvailability(1, 'admin'),
+    ).rejects.toMatchObject({
       response: { code: 'USERNAME_RESERVED' },
       status: 400,
     });
     expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it('removes a deleted user avatar without exposing its object key', async () => {
+    mockDbLimit
+      .mockResolvedValueOnce([{ role: 'super_admin' }])
+      .mockResolvedValueOnce([{ id: 2, role: 'user' }]);
+    mockDbDeleteReturning.mockResolvedValueOnce([
+      {
+        id: 2,
+        email: 'deleted@example.com',
+        username: 'deleted',
+        displayName: 'Deleted User',
+        role: 'user',
+        avatarKey: 'uploads/avatars/2/avatar.webp',
+      },
+    ]);
+
+    await expect(service.deleteUser(1, 2)).resolves.toEqual({
+      user: {
+        id: 2,
+        email: 'deleted@example.com',
+        username: 'deleted',
+        displayName: 'Deleted User',
+        role: 'user',
+      },
+    });
+    expect(removeObject).toHaveBeenCalledWith('uploads/avatars/2/avatar.webp');
   });
 
   it('PROFILE-USERNAME-002 hides active reservations while allowing the owner', async () => {
@@ -218,5 +274,76 @@ describe('UsersService profile identity', () => {
       response: { code: 'INVALID_DISPLAY_NAME' },
       status: 400,
     });
+  });
+  it('AVATAR-001 stores the new object, then deletes the one it replaced', async () => {
+    uploadImage.mockResolvedValue({
+      key: 'uploads/avatars/1/new.webp',
+      width: 512,
+      height: 512,
+    });
+    mockTxLimit.mockResolvedValueOnce([
+      { avatarKey: 'uploads/avatars/1/old.webp' },
+    ]);
+    mockDbLimit
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          email: 'user@example.com',
+          username: 'john',
+          displayName: 'John Doe',
+          role: 'user',
+          avatarKey: 'uploads/avatars/1/new.webp',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.updateAvatar(
+      1,
+      { buffer: Buffer.from('x') },
+      true,
+    );
+
+    expect(removeObject).toHaveBeenCalledWith('uploads/avatars/1/old.webp');
+    // The raw object key must never appear in a response.
+    expect(result).not.toHaveProperty('avatarKey');
+    expect(result.avatarUrl).toBeNull();
+  });
+
+  it('AVATAR-002 removes the uploaded object when the row cannot be updated', async () => {
+    uploadImage.mockResolvedValue({
+      key: 'uploads/avatars/9/new.webp',
+      width: 512,
+      height: 512,
+    });
+    // The account disappeared between the upload and the update.
+    mockTxLimit.mockResolvedValueOnce([]);
+
+    await expect(
+      service.updateAvatar(9, { buffer: Buffer.from('x') }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(removeObject).toHaveBeenCalledWith('uploads/avatars/9/new.webp');
+  });
+
+  it('AVATAR-003 clears the key and deletes the object on removal', async () => {
+    mockTxLimit.mockResolvedValueOnce([
+      { avatarKey: 'uploads/avatars/1/old.webp' },
+    ]);
+    mockDbLimit
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          email: 'user@example.com',
+          username: 'john',
+          displayName: 'John Doe',
+          role: 'user',
+          avatarKey: null,
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.removeAvatar(1, true);
+
+    expect(removeObject).toHaveBeenCalledWith('uploads/avatars/1/old.webp');
+    expect(result.avatarUrl).toBeNull();
   });
 });
