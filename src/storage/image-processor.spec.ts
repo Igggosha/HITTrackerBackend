@@ -36,4 +36,25 @@ describe('image processing', () => {
     expect(metadata.orientation).toBeUndefined();
     expect(metadata.exif).toBeUndefined();
   });
+
+  it('keeps a portrait avatar square without enlarging its short edge', async () => {
+    const input = await sharp({
+      create: {
+        width: 120,
+        height: 300,
+        channels: 3,
+        background: '#336699',
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const processed = await processImage(input, {
+      maxDimension: 512,
+      quality: 82,
+      square: true,
+    });
+
+    expect(processed).toMatchObject({ width: 120, height: 120 });
+  });
 });
