@@ -100,7 +100,6 @@ export class ExercisesController {
         fileSize: MAX_IMAGE_UPLOAD_BYTES,
         files: 1,
         fields: 0,
-        parts: 1,
       },
     }),
   )

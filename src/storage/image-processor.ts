@@ -35,17 +35,27 @@ export async function processImage(
   input: Buffer,
   { maxDimension, quality, square = false }: ProcessImageOptions,
 ): Promise<ProcessedImage> {
-  const { data, info } = await sharp(input, {
+  const image = sharp(input, {
     limitInputPixels: MAX_INPUT_PIXELS,
     // An animated source is flattened to its first frame on purpose: animated
     // WebP costs far more to encode and nothing in the app plays avatars.
     animated: false,
-  })
+  });
+  const metadata = await image.metadata();
+  const swapsDimensions = [5, 6, 7, 8].includes(metadata.orientation ?? 1);
+  const orientedWidth = swapsDimensions ? metadata.height : metadata.width;
+  const orientedHeight = swapsDimensions ? metadata.width : metadata.height;
+  const squareDimension =
+    square && orientedWidth && orientedHeight
+      ? Math.min(maxDimension, orientedWidth, orientedHeight)
+      : maxDimension;
+
+  const { data, info } = await image
     // Applies the EXIF orientation flag before the tag is discarded.
     .rotate()
     .resize({
-      width: maxDimension,
-      height: maxDimension,
+      width: square ? squareDimension : maxDimension,
+      height: square ? squareDimension : maxDimension,
       fit: square ? 'cover' : 'inside',
       position: 'centre',
       withoutEnlargement: true,

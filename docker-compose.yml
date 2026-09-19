@@ -55,8 +55,8 @@ services:
       - private
 
   # Object storage for user-uploaded media (avatars, exercise images).
-  # A dedicated storage network lets cloudflared reach only MinIO, while
-  # loopback ports serve local development.
+  # MinIO has no host ports. The API reaches it on `private`; cloudflared can
+  # publish only the S3 API through its dedicated `storage-edge` network.
   minio:
     build:
       context: .
@@ -76,10 +76,6 @@ services:
       MINIO_API_STALE_UPLOADS_CLEANUP_INTERVAL: ${MINIO_API_STALE_UPLOADS_CLEANUP_INTERVAL:-6h}
     volumes:
       - minio_data:/data
-    ports:
-      # Never bind to 0.0.0.0 unless the host firewall protects these ports.
-      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:9000/minio/health/live"]
       interval: 5s
@@ -220,6 +216,6 @@ networks:
   # Reserved for the API and a future HTTPS tunnel/reverse proxy.
   edge:
     driver: bridge
-  # Must be non-internal for MinIO's loopback port bindings to be published.
+  # Dedicated path from cloudflared to MinIO; PostgreSQL is not on this network.
   storage-edge:
     driver: bridge
