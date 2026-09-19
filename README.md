@@ -166,13 +166,10 @@ against `MINIO_SOURCE_COMMIT`, because upstream no longer publishes that server
 release as an official container image. The `mc` bootstrap image remains
 registry-pinned.
 
-- S3 API: `http://127.0.0.1:9000`
-- Console: `http://127.0.0.1:9001` (sign in with `MINIO_ROOT_USER` /
-  `MINIO_ROOT_PASSWORD`)
-
-Both ports bind to loopback. `MINIO_BIND_ADDRESS` can widen that — for instance
-to test uploads from a phone on the same Wi-Fi — but only do so behind a
-firewall, and never expose the console publicly.
+MinIO publishes no ports on the host. The API reaches the S3 endpoint at
+`http://minio:9000` over the private Docker network. For browser and phone
+downloads, route a dedicated files hostname through Cloudflare Tunnel to
+`http://minio:9000` and keep the MinIO console private.
 
 ### Configuration
 
