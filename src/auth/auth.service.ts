@@ -40,6 +40,7 @@ import {
   hashRefreshToken,
   REFRESH_TOKEN_TTL_MS,
 } from './refresh-token';
+import { recordUserActivity } from '../users/user-activity';
 
 export type GoogleUser = {
   email: string;
@@ -325,6 +326,12 @@ export class AuthService {
         .where(eq(users.id, userByEmail.id))
         .returning();
 
+      await recordUserActivity({
+        userId: userByEmail.id,
+        actorUserId: userByEmail.id,
+        type: 'account.google_linked',
+      });
+
       return {
         message: 'Google account linked successfully',
         user: this.toPublicUser(linkedUser),
@@ -426,6 +433,12 @@ export class AuthService {
             isNull(authRefreshSessions.revokedAt),
           ),
         );
+    });
+
+    await recordUserActivity({
+      userId: user.id,
+      actorUserId: user.id,
+      type: 'account.password_changed',
     });
 
     return { message: 'Password successfully updated.' };

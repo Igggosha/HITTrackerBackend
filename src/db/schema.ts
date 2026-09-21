@@ -62,6 +62,33 @@ export const users = pgTable(
   ],
 );
 
+export type UserActivityMetadata = Record<string, unknown>;
+
+export const userActivityEvents = pgTable(
+  'user_activity_events',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    actorUserId: integer('actor_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    type: text('type').notNull(),
+    metadata: jsonb('metadata')
+      .$type<UserActivityMetadata>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('user_activity_events_user_created_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const usernameReservations = pgTable('username_reservations', {
   username: text('username').primaryKey(),
   userId: integer('user_id')

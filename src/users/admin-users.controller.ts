@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { ListUsersDto } from './dto/list-users.dto';
+import { ListUserActivityDto, ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UsersService } from './users.service';
 
@@ -16,6 +16,30 @@ export class AdminUsersController {
   @Get()
   list(@Query() query: ListUsersDto) {
     return this.usersService.listUsers(query);
+  }
+
+  @Get(':id/activity')
+  activity(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) targetUserId: number,
+    @Query() query: ListUserActivityDto,
+  ) {
+    return this.usersService.getAdminUserActivity(
+      request.user!.id!,
+      targetUserId,
+      query,
+    );
+  }
+
+  @Get(':id')
+  details(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) targetUserId: number,
+  ) {
+    return this.usersService.getAdminUserDetails(
+      request.user!.id!,
+      targetUserId,
+    );
   }
 
   @Patch(':id/role')
