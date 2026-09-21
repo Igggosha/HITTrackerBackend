@@ -24,3 +24,18 @@ export class ListUsersDto {
   @IsIn(['true'])
   online?: 'true';
 }
+
+export class ListUserActivityDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit = 25;
+}

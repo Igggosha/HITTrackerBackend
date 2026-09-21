@@ -6,24 +6,34 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, count, desc, eq, gt, gte, ilike, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
+  sets,
+  userActivityEvents,
   usernameReservations,
   userBodyMetrics,
+  userProgramSchedule,
   users,
+  workouts,
+  workoutPrograms,
   type UserRole,
 } from '../db/schema';
 import { hasMinimumRole } from '../auth/roles';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
-import { ListUsersDto } from './dto/list-users.dto';
+import { ListUserActivityDto, ListUsersDto } from './dto/list-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   isReservedUsername,
   isValidUsername,
   normalizeUsername,
 } from './username';
+import {
+  paginateUserActivity,
+  recordUserActivity,
+  type AdminUserActivityItem,
+} from './user-activity';
 
 @Injectable()
 export class UsersService {
@@ -66,6 +76,264 @@ export class UsersService {
     ]);
 
     return { items, page, limit, total };
+  }
+
+  private async getInspectableUser(actorUserId: number, targetUserId: number) {
+    const [[actor], [target]] = await Promise.all([
+      db
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, actorUserId))
+        .limit(1),
+      db.select().from(users).where(eq(users.id, targetUserId)).limit(1),
+    ]);
+    if (!actor || !hasMinimumRole(actor.role, 'admin')) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+    if (!target) throw new NotFoundException('User not found');
+    return target;
+  }
+
+  async getAdminUserDetails(actorUserId: number, targetUserId: number) {
+    const target = await this.getInspectableUser(actorUserId, targetUserId);
+    const [latestMetric, [workoutStats], [programStats], [scheduleStats], [lastWorkout]] =
+      await Promise.all([
+        db
+          .select({
+            weight: userBodyMetrics.weight,
+            bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
+            muscleMass: userBodyMetrics.muscleMass,
+            recordedAt: userBodyMetrics.recordedAt,
+          })
+          .from(userBodyMetrics)
+          .where(eq(userBodyMetrics.userId, targetUserId))
+          .orderBy(desc(userBodyMetrics.recordedAt))
+          .limit(1),
+        db
+          .select({
+            completedCount: count(),
+            totalDurationSeconds: sql<number>`coalesce(sum(${workouts.durationSeconds}), 0)::int`,
+          })
+          .from(workouts)
+          .where(
+            and(
+              eq(workouts.userId, targetUserId),
+              eq(workouts.status, 'completed'),
+              isNotNull(workouts.finishedAt),
+            ),
+          ),
+        db
+          .select({ count: count() })
+          .from(workoutPrograms)
+          .where(
+            and(
+              eq(workoutPrograms.createdById, targetUserId),
+              eq(workoutPrograms.isPersonal, true),
+            ),
+          ),
+        db
+          .select({ count: count() })
+          .from(userProgramSchedule)
+          .where(eq(userProgramSchedule.userId, targetUserId)),
+        db
+          .select({
+            id: workouts.id,
+            title: workouts.type,
+            finishedAt: workouts.finishedAt,
+          })
+          .from(workouts)
+          .where(
+            and(
+              eq(workouts.userId, targetUserId),
+              eq(workouts.status, 'completed'),
+              isNotNull(workouts.finishedAt),
+            ),
+          )
+          .orderBy(desc(workouts.finishedAt))
+          .limit(1),
+      ]);
+
+    return {
+      user: {
+        id: target.id,
+        email: target.email,
+        username: target.username,
+        displayName: target.displayName,
+        role: target.role,
+        age: target.age,
+        gender: target.gender,
+        height: target.height,
+        goal: target.goal,
+        avatarUrl: await this.storageService.getUrl(target.avatarKey),
+        lastSeenAt: target.lastSeenAt,
+        online:
+          !!target.lastSeenAt &&
+          target.lastSeenAt >= new Date(Date.now() - 90_000),
+        createdAt: target.createdAt,
+        authMethods: {
+          password: !!target.passwordHash,
+          google: !!target.googleId,
+        },
+      },
+      latestMetric: latestMetric[0] ?? null,
+      stats: {
+        completedWorkoutCount: workoutStats?.completedCount ?? 0,
+        totalDurationSeconds: workoutStats?.totalDurationSeconds ?? 0,
+        personalProgramCount: programStats?.count ?? 0,
+        scheduledWorkoutCount: scheduleStats?.count ?? 0,
+        lastWorkout: lastWorkout ?? null,
+      },
+    };
+  }
+
+  async getAdminUserActivity(
+    actorUserId: number,
+    targetUserId: number,
+    { page, limit }: ListUserActivityDto,
+  ) {
+    const target = await this.getInspectableUser(actorUserId, targetUserId);
+    const take = page * limit + 1;
+    const [logged, completedWorkouts, personalPrograms, schedules, metrics] =
+      await Promise.all([
+        db
+          .select()
+          .from(userActivityEvents)
+          .where(eq(userActivityEvents.userId, targetUserId))
+          .orderBy(desc(userActivityEvents.createdAt))
+          .limit(take),
+        db
+          .select({
+            id: workouts.id,
+            title: workouts.type,
+            finishedAt: workouts.finishedAt,
+            durationSeconds: workouts.durationSeconds,
+            historySnapshot: workouts.historySnapshot,
+            setCount: sql<number>`(select count(*)::int from ${sets} where ${sets.workoutId} = ${workouts.id})`,
+          })
+          .from(workouts)
+          .where(
+            and(
+              eq(workouts.userId, targetUserId),
+              eq(workouts.status, 'completed'),
+              isNotNull(workouts.finishedAt),
+            ),
+          )
+          .orderBy(desc(workouts.finishedAt))
+          .limit(take),
+        db
+          .select({
+            id: workoutPrograms.id,
+            name: workoutPrograms.name,
+            sourceProgramId: workoutPrograms.sourceProgramId,
+            createdAt: workoutPrograms.createdAt,
+          })
+          .from(workoutPrograms)
+          .where(
+            and(
+              eq(workoutPrograms.createdById, targetUserId),
+              eq(workoutPrograms.isPersonal, true),
+            ),
+          )
+          .orderBy(desc(workoutPrograms.createdAt))
+          .limit(take),
+        db
+          .select({
+            id: userProgramSchedule.id,
+            programName: workoutPrograms.name,
+            scheduledFor: userProgramSchedule.scheduledFor,
+            createdAt: userProgramSchedule.createdAt,
+          })
+          .from(userProgramSchedule)
+          .innerJoin(
+            workoutPrograms,
+            eq(userProgramSchedule.programId, workoutPrograms.id),
+          )
+          .where(eq(userProgramSchedule.userId, targetUserId))
+          .orderBy(desc(userProgramSchedule.createdAt))
+          .limit(take),
+        db
+          .select()
+          .from(userBodyMetrics)
+          .where(eq(userBodyMetrics.userId, targetUserId))
+          .orderBy(desc(userBodyMetrics.recordedAt))
+          .limit(take),
+      ]);
+
+    const categoryFor = (
+      type: string,
+    ): AdminUserActivityItem['category'] => {
+      if (type.startsWith('role.')) return 'access';
+      if (
+        type.startsWith('profile.') ||
+        type.startsWith('username.') ||
+        type.startsWith('avatar.')
+      ) {
+        return 'profile';
+      }
+      return 'account';
+    };
+    const sources: AdminUserActivityItem[][] = [
+      logged.map((event) => ({
+        id: `event-${event.id}`,
+        type: event.type,
+        category: categoryFor(event.type),
+        occurredAt: event.createdAt,
+        metadata: event.metadata,
+        actorUserId: event.actorUserId,
+      })),
+      completedWorkouts.map((workout) => ({
+        id: `workout-${workout.id}`,
+        type: 'workout.completed',
+        category: 'training' as const,
+        occurredAt: workout.finishedAt!,
+        metadata: {
+          title: workout.title,
+          durationSeconds: workout.durationSeconds ?? 0,
+          setCount: workout.setCount,
+          programName: workout.historySnapshot?.programName ?? null,
+        },
+      })),
+      personalPrograms.map((program) => ({
+        id: `program-${program.id}`,
+        type: program.sourceProgramId
+          ? 'program.imported'
+          : 'program.created',
+        category: 'programs' as const,
+        occurredAt: program.createdAt,
+        metadata: { name: program.name },
+      })),
+      schedules.map((schedule) => ({
+        id: `schedule-${schedule.id}`,
+        type: 'schedule.created',
+        category: 'programs' as const,
+        occurredAt: schedule.createdAt,
+        metadata: {
+          programName: schedule.programName,
+          scheduledFor: schedule.scheduledFor,
+        },
+      })),
+      metrics.map((metric) => ({
+        id: `metric-${metric.id}`,
+        type: 'body_metric.recorded',
+        category: 'profile' as const,
+        occurredAt: metric.recordedAt,
+        metadata: {
+          weight: metric.weight,
+          bodyFatPercentage: metric.bodyFatPercentage,
+          muscleMass: metric.muscleMass,
+        },
+      })),
+      [
+        {
+          id: `account-${target.id}`,
+          type: 'account.created',
+          category: 'account' as const,
+          occurredAt: target.createdAt,
+          metadata: {},
+        },
+      ],
+    ];
+    return paginateUserActivity(sources, page, limit);
   }
 
   async touchPresence(userId: number) {
@@ -124,6 +392,15 @@ export class UsersService {
         displayName: users.displayName,
         role: users.role,
       });
+
+    if (target.role !== role) {
+      await recordUserActivity({
+        userId: targetUserId,
+        actorUserId,
+        type: 'role.changed',
+        metadata: { from: target.role, to: role },
+      });
+    }
 
     return { user: updated };
   }
@@ -244,12 +521,26 @@ export class UsersService {
 
     await this.storageService.remove(replacedKey);
 
+    await recordUserActivity({
+      userId,
+      actorUserId: userId,
+      type: 'avatar.updated',
+    });
+
     return this.getProfile(userId, useIdentityContractV2);
   }
 
   async removeAvatar(userId: number, useIdentityContractV2 = false) {
     const replacedKey = await this.setAvatarKey(userId, null);
     await this.storageService.remove(replacedKey);
+
+    if (replacedKey) {
+      await recordUserActivity({
+        userId,
+        actorUserId: userId,
+        type: 'avatar.removed',
+      });
+    }
 
     return this.getProfile(userId, useIdentityContractV2);
   }
@@ -328,6 +619,20 @@ export class UsersService {
       ...(profile.email ? { email: profile.email.trim().toLowerCase() } : {}),
       ...(normalizedDisplayName ? { displayName: normalizedDisplayName } : {}),
     };
+    const [previous] = Object.keys(changes).length
+      ? await db
+          .select({
+            email: users.email,
+            displayName: users.displayName,
+            age: users.age,
+            gender: users.gender,
+            height: users.height,
+            goal: users.goal,
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+      : [];
 
     try {
       if (Object.keys(changes).length) {
@@ -353,11 +658,33 @@ export class UsersService {
       await db.insert(userBodyMetrics).values({ userId, weight });
     }
 
+    if (previous && Object.keys(changes).length) {
+      const changedFields = Object.entries(changes)
+        .filter(
+          ([field, value]) =>
+            previous[field as keyof typeof previous] !== value,
+        )
+        .map(([field, value]) => ({
+          field,
+          from: previous[field as keyof typeof previous] ?? null,
+          to: value ?? null,
+        }));
+      if (changedFields.length) {
+        await recordUserActivity({
+          userId,
+          actorUserId: userId,
+          type: 'profile.updated',
+          metadata: { changes: changedFields },
+        });
+      }
+    }
+
     return this.getProfile(userId, useIdentityContractV2);
   }
 
   async updateUsername(userId: number, value: unknown) {
     const normalizedUsername = this.validateUsername(value);
+    let previousUsername: string | null = null;
     try {
       await db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(42719, ${userId})`);
@@ -372,6 +699,7 @@ export class UsersService {
         const currentUsername = currentUser.username
           ? normalizeUsername(currentUser.username)
           : null;
+        previousUsername = currentUsername;
         if (normalizedUsername !== currentUsername) {
           const usernamesToLock = [currentUsername, normalizedUsername]
             .filter((value): value is string => Boolean(value))
@@ -444,6 +772,15 @@ export class UsersService {
         });
       }
       throw error;
+    }
+
+    if (previousUsername !== normalizedUsername) {
+      await recordUserActivity({
+        userId,
+        actorUserId: userId,
+        type: 'username.changed',
+        metadata: { from: previousUsername, to: normalizedUsername },
+      });
     }
 
     return this.getProfile(userId, true);

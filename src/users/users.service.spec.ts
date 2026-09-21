@@ -51,7 +51,7 @@ jest.mock('../db/db', () => ({
     delete: jest.fn(() => ({
       where: () => ({ returning: mockDbDeleteReturning }),
     })),
-    insert: jest.fn(),
+    insert: jest.fn(() => ({ values: jest.fn() })),
     select: jest.fn(() => ({
       from: () => ({
         where: () => ({
@@ -127,6 +127,35 @@ describe('UsersService profile identity', () => {
     });
     expect(removeObject).toHaveBeenCalledWith('uploads/avatars/2/avatar.webp');
   });
+
+  it('does not let moderators inspect user details', async () => {
+    mockDbLimit
+      .mockResolvedValueOnce([{ role: 'moderator' }])
+      .mockResolvedValueOnce([{ id: 2, role: 'user' }]);
+
+    await expect(service.getAdminUserDetails(1, 2)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it('lets administrators inspect a super-admin', async () => {
+    mockDbLimit
+      .mockResolvedValueOnce([{ role: 'admin' }])
+      .mockResolvedValueOnce([{ id: 2, role: 'super_admin' }]);
+
+    const inspect = service as unknown as {
+      getInspectableUser: (
+        actorUserId: number,
+        targetUserId: number,
+      ) => Promise<{ id: number; role: string }>;
+    };
+
+    await expect(inspect.getInspectableUser(1, 2)).resolves.toMatchObject({
+      id: 2,
+      role: 'super_admin',
+    });
+  });
+
   it('PROFILE-USERNAME-002 hides active reservations while allowing the owner', async () => {
     mockDbLimit
       .mockResolvedValueOnce([])
@@ -229,6 +258,16 @@ describe('UsersService profile identity', () => {
   it('PROFILE-USERNAME-012 preserves the legacy profile-name contract', async () => {
     mockDbReturning.mockResolvedValue([{ id: 1 }]);
     mockDbLimit
+      .mockResolvedValueOnce([
+        {
+          email: 'user@example.com',
+          displayName: 'Before',
+          age: null,
+          gender: null,
+          height: null,
+          goal: null,
+        },
+      ])
       .mockResolvedValueOnce([
         {
           id: 1,
