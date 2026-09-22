@@ -664,4 +664,34 @@ export class WorkoutsService {
       id: workoutId,
     };
   }
+
+  async getUniqueExerciseIds(userId: number) {
+    const rows = await db
+      .select({ exerciseId: sets.exerciseId })
+      .from(sets)
+      .leftJoin(workouts, eq(sets.workoutId, workouts.id))
+      .where(eq(workouts.userId, userId));
+
+    const uniqueIds = Array.from(new Set(rows.map((row) => row.exerciseId)));
+    return uniqueIds;
+  }
+
+  async getUserSetsByExercise(userId: number, exerciseId: number) {
+    const rows = await db
+      .select({
+        set: sets,
+        exercise: exercises,
+        workout: workouts,
+      })
+      .from(sets)
+      .leftJoin(workouts, eq(sets.workoutId, workouts.id))
+      .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
+      .where(and(eq(workouts.userId, userId), eq(sets.exerciseId, exerciseId)))
+      .orderBy(desc(workouts.finishedAt), desc(sets.id));
+
+    return rows.map((row) => ({
+      ...row.set,
+      exerciseName: row.exercise?.name,
+    }));
+  }
 }

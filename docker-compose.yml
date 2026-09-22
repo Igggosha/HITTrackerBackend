@@ -115,14 +115,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      seed:
-        condition: service_completed_successfully
+      # migrate:
+      #   condition: service_completed_successfully
+      # seed:
+      #   condition: service_completed_successfully
       minio:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      # minio-init:
+      #   condition: service_completed_successfully
     ports:
       # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
       - "127.0.0.1:${PORT:-3000}:3000"
