@@ -667,13 +667,26 @@ export class WorkoutsService {
 
   async getUniqueExerciseIds(userId: number) {
     const rows = await db
-      .select({ exerciseId: sets.exerciseId })
+      .select({
+        exerciseId: sets.exerciseId,
+        exerciseName: exercises.name,
+      })
       .from(sets)
       .leftJoin(workouts, eq(sets.workoutId, workouts.id))
+      .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
       .where(eq(workouts.userId, userId));
 
-    const uniqueIds = Array.from(new Set(rows.map((row) => row.exerciseId)));
-    return uniqueIds;
+    const uniqueExercises = new Map<number, { exerciseId: number; exerciseName: string | null }>();
+
+    for (const row of rows) {
+      if (row.exerciseId === null || uniqueExercises.has(row.exerciseId)) continue;
+      uniqueExercises.set(row.exerciseId, {
+        exerciseId: row.exerciseId,
+        exerciseName: row.exerciseName ?? null,
+      });
+    }
+
+    return [...uniqueExercises.values()];
   }
 
   async getUserSetsByExercise(userId: number, exerciseId: number) {
