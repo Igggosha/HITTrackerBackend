@@ -47,6 +47,10 @@ the host on port `3000` by default.
    To include the separately checked-out mobile frontend and Cloudflare
    connector, use `docker compose --profile edge up --build` instead.
 
+   Production web and Android setup, including the three tunnel hostnames and
+   EAS build commands, is documented in
+   [`../hit-tracker-mobile/docs/release.md`](../hit-tracker-mobile/docs/release.md).
+
 3. Check the API at `http://localhost:3000/` and stop the stack with
    `docker compose down`.
 

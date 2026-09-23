@@ -1,15 +1,22 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
+import type { Express } from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { isCorsOriginAllowed } from './config/cors';
+import { configureTrustProxy } from './config/trust-proxy';
 import { pool } from './db/db';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  // Cloudflare Tunnel is the only public hop; secure OAuth cookies need its HTTPS signal.
+  configureTrustProxy(
+    app.getHttpAdapter().getInstance() as Express,
+    process.env.NODE_ENV === 'production',
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.use(helmet());
   app.use(json({ limit: '100kb' }));
@@ -37,7 +44,10 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: (origin, callback) => callback(null, isCorsOriginAllowed(origin)),
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow: boolean) => void,
+    ) => callback(null, isCorsOriginAllowed(origin)),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
       'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, ngrok-skip-browser-warning',
@@ -47,4 +57,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
-bootstrap();
+void bootstrap();

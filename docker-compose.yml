@@ -117,14 +117,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # migrate:
-      #   condition: service_completed_successfully
-      # seed:
-      #   condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+      seed:
+        condition: service_completed_successfully
       minio:
         condition: service_healthy
-      # minio-init:
-      #   condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
     ports:
       # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
       - "127.0.0.1:${PORT:-3000}:3000"
@@ -154,7 +154,8 @@ services:
       context: ../hit-tracker-mobile
       dockerfile: Dockerfile
       args:
-        EXPO_PUBLIC_API_URL: https://api.hit-tracker.com
+        EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:?Set public HTTPS API URL for the web build}
+        EXPO_PUBLIC_WEB_URL: ${EXPO_PUBLIC_WEB_URL:?Set public HTTPS web URL for the web build}
     restart: unless-stopped
     networks:
       - edge
