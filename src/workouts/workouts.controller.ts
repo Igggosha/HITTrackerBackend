@@ -27,6 +27,19 @@ import {
 export class WorkoutsController {
   constructor(private readonly workoutsService: WorkoutsService) {}
 
+  @Get('exercise-ids')
+  async getUniqueExerciseIds(@Req() req) {
+    console.log('req exercise ids')
+    return this.workoutsService.getUniqueExerciseIds(req.user.id);
+  }
+  @Get('exercise/:exerciseId/sets')
+  async getUserSetsByExercise(
+    @Req() req,
+    @Param('exerciseId', ParseIntPipe) exerciseId: number,
+  ) {
+    return this.workoutsService.getUserSetsByExercise(req.user.id, exerciseId);
+  }
+  
   @Post('start')
   async startWorkout(@Req() req, @Body() body: StartWorkoutDto) {
     return this.workoutsService.startWorkout(req.user.id, req.user.role, body);
