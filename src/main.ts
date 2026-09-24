@@ -1,5 +1,3 @@
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import type { ValidationError } from 'class-validator';
 import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
 import type { Express } from 'express';
@@ -10,47 +8,7 @@ import { AppModule } from './app.module';
 import { isCorsOriginAllowed } from './config/cors';
 import { configureTrustProxy } from './config/trust-proxy';
 import { pool } from './db/db';
-import { BODY_METRIC_RANGES } from './users/body-metrics';
-
-function validationException(errors: ValidationError[]) {
-  const targetName = errors.find((error) => error.target)?.target?.constructor
-    .name;
-  if (targetName === 'CreateBodyMetricDto') {
-    const details = errors.flatMap((error) => {
-      const constraint = Object.keys(error.constraints ?? {}).find((key) =>
-        ['min', 'max'].includes(key),
-      );
-      if (!constraint) return [];
-      const range = BODY_METRIC_RANGES[
-        error.property as keyof typeof BODY_METRIC_RANGES
-      ];
-      return range
-        ? [
-            {
-              field: error.property,
-              code: 'OUT_OF_RANGE',
-              min: range.min,
-              max: range.max,
-            },
-          ]
-        : [];
-    });
-    if (details.length) {
-      return new BadRequestException({
-        code: 'BODY_METRIC_OUT_OF_RANGE',
-        details,
-      });
-    }
-    if (errors.some((error) => error.property === 'recordedAt')) {
-      return new BadRequestException({ code: 'BODY_METRIC_INVALID_DATE' });
-    }
-    return new BadRequestException({ code: 'BODY_METRIC_INVALID' });
-  }
-  if (targetName === 'ListBodyMetricsDto') {
-    return new BadRequestException({ code: 'INVALID_PERIOD' });
-  }
-  return new BadRequestException(errors);
-}
+import { createValidationPipe } from './users/body-metrics-validation';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -60,11 +18,7 @@ async function bootstrap() {
     process.env.NODE_ENV === 'production',
   );
   app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      exceptionFactory: validationException,
-    }),
+    createValidationPipe({ transform: true, whitelist: true }),
   );
   app.use(helmet());
   app.use(json({ limit: '100kb' }));

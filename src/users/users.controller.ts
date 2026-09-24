@@ -70,18 +70,12 @@ export class UsersController {
   }
 
   @Post('me/body-metrics')
-  createBodyMetric(
-    @Req() request: Request,
-    @Body() dto: CreateBodyMetricDto,
-  ) {
+  createBodyMetric(@Req() request: Request, @Body() dto: CreateBodyMetricDto) {
     return this.usersService.createBodyMetric(request.user!.id!, dto);
   }
 
   @Get('me/body-metrics')
-  getBodyMetrics(
-    @Req() request: Request,
-    @Query() dto: ListBodyMetricsDto,
-  ) {
+  getBodyMetrics(@Req() request: Request, @Query() dto: ListBodyMetricsDto) {
     return this.usersService.getBodyMetrics(request.user!.id!, dto);
   }
 

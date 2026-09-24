@@ -44,7 +44,6 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   aggregateBodyMetrics,
   getBodyMetricRangeDetails,
-  type BodyMetricRow,
 } from './body-metrics';
 import {
   isReservedUsername,
@@ -702,7 +701,7 @@ export class UsersService {
 
     return {
       period: { from: from.toISOString(), to: to.toISOString() },
-      metrics: aggregateBodyMetrics(rows as BodyMetricRow[], from, to),
+      metrics: aggregateBodyMetrics(rows, from, to),
     };
   }
 
