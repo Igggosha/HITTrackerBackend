@@ -1,4 +1,3 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
 import type { Express } from 'express';
@@ -9,6 +8,7 @@ import { AppModule } from './app.module';
 import { isCorsOriginAllowed } from './config/cors';
 import { configureTrustProxy } from './config/trust-proxy';
 import { pool } from './db/db';
+import { createValidationPipe } from './users/body-metrics-validation';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -17,7 +17,9 @@ async function bootstrap() {
     app.getHttpAdapter().getInstance() as Express,
     process.env.NODE_ENV === 'production',
   );
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalPipes(
+    createValidationPipe({ transform: true, whitelist: true }),
+  );
   app.use(helmet());
   app.use(json({ limit: '100kb' }));
   app.use(urlencoded({ extended: true, limit: '100kb' }));

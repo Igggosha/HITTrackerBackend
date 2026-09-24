@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -136,23 +137,43 @@ export const pendingRegistrations = pgTable('pending_registrations', {
 
 // ================= BODY TRACKING =================
 
-export const userBodyMetrics = pgTable('user_body_metrics', {
-  id: serial('id').primaryKey(),
+export const userBodyMetrics = pgTable(
+  'user_body_metrics',
+  {
+    id: serial('id').primaryKey(),
 
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
 
-  weight: real('weight').notNull(),
+    weight: real('weight'),
 
-  bodyFatPercentage: real('body_fat_percentage'),
+    bodyFatPercentage: real('body_fat_percentage'),
 
-  muscleMass: real('muscle_mass'),
+    muscleMass: real('muscle_mass'),
 
-  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
-});
+    waistCircumference: real('waist_circumference'),
+
+    recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      'user_body_metrics_at_least_one_metric',
+      sql`
+        ${table.weight} IS NOT NULL OR
+        ${table.bodyFatPercentage} IS NOT NULL OR
+        ${table.muscleMass} IS NOT NULL OR
+        ${table.waistCircumference} IS NOT NULL
+      `,
+    ),
+    index('user_body_metrics_user_recorded_idx').on(
+      table.userId,
+      table.recordedAt,
+    ),
+  ],
+);
 
 // ================= EXERCISE DATABASE =================
 
