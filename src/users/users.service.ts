@@ -6,7 +6,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, count, desc, eq, gt, gte, ilike, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  isNotNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   sets,
@@ -23,7 +36,16 @@ import { hasMinimumRole } from '../auth/roles';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
 import { ListUserActivityDto, ListUsersDto } from './dto/list-users.dto';
+import {
+  CreateBodyMetricDto,
+  ListBodyMetricsDto,
+} from './dto/body-metrics.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import {
+  aggregateBodyMetrics,
+  getBodyMetricRangeDetails,
+  type BodyMetricRow,
+} from './body-metrics';
 import {
   isReservedUsername,
   isValidUsername,
@@ -106,7 +128,12 @@ export class UsersService {
             recordedAt: userBodyMetrics.recordedAt,
           })
           .from(userBodyMetrics)
-          .where(eq(userBodyMetrics.userId, targetUserId))
+          .where(
+            and(
+              eq(userBodyMetrics.userId, targetUserId),
+              isNotNull(userBodyMetrics.weight),
+            ),
+          )
           .orderBy(desc(userBodyMetrics.recordedAt))
           .limit(1),
         db
@@ -474,7 +501,12 @@ export class UsersService {
     const [latestMetric] = await db
       .select({ weight: userBodyMetrics.weight })
       .from(userBodyMetrics)
-      .where(eq(userBodyMetrics.userId, userId))
+      .where(
+        and(
+          eq(userBodyMetrics.userId, userId),
+          isNotNull(userBodyMetrics.weight),
+        ),
+      )
       .orderBy(desc(userBodyMetrics.recordedAt))
       .limit(1);
 
@@ -592,6 +624,85 @@ export class UsersService {
       available:
         (!owner || owner.id === userId) &&
         (!reservation || reservation.userId === userId),
+    };
+  }
+
+  async createBodyMetric(userId: number, dto: CreateBodyMetricDto) {
+    const details = getBodyMetricRangeDetails(dto);
+    if (details.length) {
+      throw new BadRequestException({
+        code: 'BODY_METRIC_OUT_OF_RANGE',
+        details,
+      });
+    }
+
+    const values = {
+      weight: dto.weight ?? null,
+      bodyFatPercentage: dto.bodyFatPercentage ?? null,
+      muscleMass: dto.muscleMass ?? null,
+      waistCircumference: dto.waistCircumference ?? null,
+    };
+    if (Object.values(values).every((value) => value === null)) {
+      throw new BadRequestException({ code: 'BODY_METRIC_REQUIRED' });
+    }
+
+    const recordedAt = dto.recordedAt ? new Date(dto.recordedAt) : new Date();
+    if (Number.isNaN(recordedAt.getTime())) {
+      throw new BadRequestException({ code: 'BODY_METRIC_INVALID_DATE' });
+    }
+    if (recordedAt.getTime() > Date.now() + 5 * 60 * 1000) {
+      throw new BadRequestException({ code: 'BODY_METRIC_FUTURE_DATE' });
+    }
+
+    const [created] = await db
+      .insert(userBodyMetrics)
+      .values({ userId, ...values, recordedAt })
+      .returning({
+        id: userBodyMetrics.id,
+        weight: userBodyMetrics.weight,
+        bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
+        muscleMass: userBodyMetrics.muscleMass,
+        waistCircumference: userBodyMetrics.waistCircumference,
+        recordedAt: userBodyMetrics.recordedAt,
+      });
+    return created;
+  }
+
+  async getBodyMetrics(userId: number, dto: ListBodyMetricsDto) {
+    const from = new Date(dto.from);
+    const to = new Date(dto.to);
+    if (
+      !dto.from ||
+      !dto.to ||
+      Number.isNaN(from.getTime()) ||
+      Number.isNaN(to.getTime()) ||
+      from > to ||
+      to.getTime() - from.getTime() > 400 * 24 * 60 * 60 * 1000
+    ) {
+      throw new BadRequestException({ code: 'INVALID_PERIOD' });
+    }
+
+    const rows = await db
+      .select({
+        id: userBodyMetrics.id,
+        weight: userBodyMetrics.weight,
+        bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
+        muscleMass: userBodyMetrics.muscleMass,
+        waistCircumference: userBodyMetrics.waistCircumference,
+        recordedAt: userBodyMetrics.recordedAt,
+      })
+      .from(userBodyMetrics)
+      .where(
+        and(
+          eq(userBodyMetrics.userId, userId),
+          lte(userBodyMetrics.recordedAt, to),
+        ),
+      )
+      .orderBy(asc(userBodyMetrics.recordedAt), asc(userBodyMetrics.id));
+
+    return {
+      period: { from: from.toISOString(), to: to.toISOString() },
+      metrics: aggregateBodyMetrics(rows as BodyMetricRow[], from, to),
     };
   }
 

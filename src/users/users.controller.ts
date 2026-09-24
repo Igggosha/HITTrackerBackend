@@ -19,6 +19,10 @@ import { MAX_IMAGE_UPLOAD_BYTES } from '../storage/storage.config';
 import type { UploadedFile as UploadedImage } from '../storage/upload-validation';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
+import {
+  CreateBodyMetricDto,
+  ListBodyMetricsDto,
+} from './dto/body-metrics.dto';
 import { UsersService } from './users.service';
 
 @UseGuards(JwtGuard)
@@ -63,6 +67,22 @@ export class UsersController {
   @Post('me/presence')
   updatePresence(@Req() request: Request) {
     return this.usersService.touchPresence(request.user!.id!);
+  }
+
+  @Post('me/body-metrics')
+  createBodyMetric(
+    @Req() request: Request,
+    @Body() dto: CreateBodyMetricDto,
+  ) {
+    return this.usersService.createBodyMetric(request.user!.id!, dto);
+  }
+
+  @Get('me/body-metrics')
+  getBodyMetrics(
+    @Req() request: Request,
+    @Query() dto: ListBodyMetricsDto,
+  ) {
+    return this.usersService.getBodyMetrics(request.user!.id!, dto);
   }
 
   /**
