@@ -28,7 +28,7 @@ function query(rows: unknown[]) {
 }
 
 describe('Shared workout programs', () => {
-  const service = new WorkoutProgramsService();
+  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any);
 
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());

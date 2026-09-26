@@ -255,6 +255,10 @@ export const workoutPrograms = pgTable(
 
         description: text("description"),
 
+        videoUrl: text("video_url"),
+
+        imageKey: text("image_key"),
+
         isPersonal: boolean("is_personal")
             .notNull()
             .default(false),

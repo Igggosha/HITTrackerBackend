@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class ProgramExerciseDto {
   @Type(() => Number)
@@ -50,6 +50,12 @@ export class CreateWorkoutProgramDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @IsUrl({ require_tld: true })
+  @Matches(/^https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\//i)
+  @MaxLength(2048)
+  videoUrl?: string;
 
   @IsArray()
   @ArrayMinSize(1)
