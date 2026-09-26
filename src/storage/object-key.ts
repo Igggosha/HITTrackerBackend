@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
  */
 
 /** One folder per kind of media. Add a scope here before using it. */
-export const STORAGE_SCOPES = ['avatars', 'exercises'] as const;
+export const STORAGE_SCOPES = ['avatars', 'exercises', 'programs'] as const;
 export type StorageScope = (typeof STORAGE_SCOPES)[number];
 
 const SEGMENT_PATTERN = /^[a-z0-9][a-z0-9-]*$/;

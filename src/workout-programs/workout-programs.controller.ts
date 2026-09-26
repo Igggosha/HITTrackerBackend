@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -7,6 +8,8 @@ import { CreateWorkoutProgramDto, FindMatchingWorkoutProgramDto } from './dto/cr
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import type { Request } from 'express';
+import { MAX_IMAGE_UPLOAD_BYTES } from '../storage/storage.config';
+import type { UploadedFile as UploadedImage } from '../storage/upload-validation';
 
 @UseGuards(JwtGuard, RolesGuard)
 @MinimumRole('user')
@@ -83,6 +86,21 @@ export class WorkoutProgramsController {
   @Patch(':id')
   async update(@Req() request: Request, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWorkoutProgramDto) {
     return this.workoutProgramsService.updateProgram(request.user!.id!, request.user!.role!, id, dto);
+  }
+
+  @Post(':id/image')
+  @MinimumRole('moderator')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES, files: 1, fields: 0 },
+  }))
+  uploadImage(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: UploadedImage | undefined) {
+    return this.workoutProgramsService.setImage(id, file);
+  }
+
+  @Delete(':id/image')
+  @MinimumRole('moderator')
+  removeImage(@Param('id', ParseIntPipe) id: number) {
+    return this.workoutProgramsService.removeImage(id);
   }
 }
 

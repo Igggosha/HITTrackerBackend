@@ -20,9 +20,13 @@ import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 import { ListScheduleDto, ScheduleProgramDto } from './dto/schedule-program.dto';
 import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
 import { hasSameExerciseMultiset } from './sharing.utils';
+import { StorageService } from '../storage/storage.service';
+import type { UploadedFile } from '../storage/upload-validation';
 
 @Injectable()
 export class WorkoutProgramsService {
+  constructor(private readonly storageService: StorageService) {}
+
   async createPersonalProgram(userId: number, dto: CreateWorkoutProgramDto) {
     return this.createProgram(userId, true, dto);
   }
@@ -82,7 +86,7 @@ export class WorkoutProgramsService {
   async getSharedProgram(token: string) {
     const source = await this.findSharedProgram(token);
     const { createdById: _createdById, ...program } = source;
-    return { ...program, schedule: await this.getSchedule(source.id) };
+    return { ...(await this.withImageUrl(program)), schedule: await this.getSchedule(source.id) };
   }
 
   async importSharedProgram(userId: number, token: string) {
@@ -211,6 +215,51 @@ export class WorkoutProgramsService {
     return this.createOfficialRevision(userId, program, dto);
   }
 
+  async setImage(programId: number, file: UploadedFile | undefined) {
+    const [program] = await db.select().from(workoutPrograms)
+      .where(eq(workoutPrograms.id, programId)).limit(1);
+    if (!program) throw new NotFoundException('Workout program not found');
+    if (program.isPersonal) throw new ForbiddenException('Only official programs can have managed images');
+
+    const stored = await this.storageService.uploadImage({
+      scope: 'programs',
+      ownerId: programId,
+      file,
+      maxDimension: this.storageService.limits.exerciseImageMaxDimension,
+    });
+
+    let replacedKey: string | null;
+    try {
+      replacedKey = await this.setImageKey(programId, stored.key);
+    } catch (error) {
+      await this.storageService.remove(stored.key);
+      throw error;
+    }
+    await this.storageService.remove(replacedKey);
+    return this.getProgramById(programId, 0, 'moderator');
+  }
+
+  async removeImage(programId: number) {
+    const [program] = await db.select({ id: workoutPrograms.id, isPersonal: workoutPrograms.isPersonal })
+      .from(workoutPrograms).where(eq(workoutPrograms.id, programId)).limit(1);
+    if (!program) throw new NotFoundException('Workout program not found');
+    if (program.isPersonal) throw new ForbiddenException('Only official programs can have managed images');
+    const replacedKey = await this.setImageKey(programId, null);
+    await this.storageService.remove(replacedKey);
+    return this.getProgramById(programId, 0, 'moderator');
+  }
+
+  private async setImageKey(programId: number, imageKey: string | null): Promise<string | null> {
+    return db.transaction(async (tx: any) => {
+      const [current] = await tx.select({ imageKey: workoutPrograms.imageKey, isPersonal: workoutPrograms.isPersonal })
+        .from(workoutPrograms).where(eq(workoutPrograms.id, programId)).for('update').limit(1);
+      if (!current) throw new NotFoundException('Workout program not found');
+      if (current.isPersonal) throw new ForbiddenException('Only official programs can have managed images');
+      await tx.update(workoutPrograms).set({ imageKey, videoUrl: imageKey ? null : undefined }).where(eq(workoutPrograms.id, programId));
+      return current.imageKey === imageKey ? null : current.imageKey;
+    });
+  }
+
   async getAllPrograms(userId: number, role: UserRole) {
     const visibility = hasMinimumRole(role, 'moderator')
       ? eq(workoutPrograms.isActive, true)
@@ -224,6 +273,8 @@ export class WorkoutProgramsService {
         id: workoutPrograms.id,
         name: workoutPrograms.name,
         description: workoutPrograms.description,
+        videoUrl: workoutPrograms.videoUrl,
+        imageKey: workoutPrograms.imageKey,
         isPersonal: workoutPrograms.isPersonal,
         createdAt: workoutPrograms.createdAt,
         ownerUsername: users.username,
@@ -256,7 +307,8 @@ export class WorkoutProgramsService {
       if (!schedules.has(row.programId)) schedules.set(row.programId, []);
       schedules.get(row.programId)!.push(row);
     }
-    return programs.map((program) => ({ ...program, schedule: schedules.get(program.id) || [] }));
+    const projected = await this.withImageUrls(programs);
+    return projected.map((program) => ({ ...program, schedule: schedules.get(program.id) || [] }));
   }
 
   async toggleLike(userId: number, role: UserRole, programId: number) {
@@ -281,7 +333,7 @@ export class WorkoutProgramsService {
     }
 
     const { shareToken: _shareToken, sourceProgramId: _sourceProgramId, ...safeProgram } = program;
-    return { ...safeProgram, schedule: await this.getSchedule(id) };
+    return { ...(await this.withImageUrl(safeProgram)), schedule: await this.getSchedule(id) };
   }
 
   private async createProgram(
@@ -297,23 +349,28 @@ export class WorkoutProgramsService {
         .values({
           name: dto.name.trim(),
           description: dto.description?.trim() || null,
+          videoUrl: dto.videoUrl?.trim() || null,
           isPersonal,
           createdById: userId,
           sourceProgramId,
         })
         .returning();
       await this.replaceSchedule(tx, program.id, dto.exercises);
-      return program;
+      return this.withImageUrl(program);
     });
   }
 
   private async updatePersonalProgram(id: number, dto: UpdateWorkoutProgramDto) {
-    return db.transaction(async (tx: any) => {
+    const result = await db.transaction(async (tx: any) => {
+      const [current] = await tx.select({ imageKey: workoutPrograms.imageKey })
+        .from(workoutPrograms).where(eq(workoutPrograms.id, id)).for('update').limit(1);
+      if (!current) throw new NotFoundException('Workout program not found');
       const [program] = await tx
         .update(workoutPrograms)
         .set({
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
           ...(dto.description !== undefined ? { description: dto.description.trim() || null } : {}),
+          ...(dto.videoUrl !== undefined ? { videoUrl: dto.videoUrl.trim() || null, imageKey: null } : {}),
         })
         .where(eq(workoutPrograms.id, id))
         .returning();
@@ -322,12 +379,14 @@ export class WorkoutProgramsService {
         await this.ensureExercisesExist(tx, dto.exercises);
         await this.replaceSchedule(tx, id, dto.exercises);
       }
-      return program;
+      return { program, replacedKey: dto.videoUrl !== undefined ? current.imageKey : null };
     });
+    await this.storageService.remove(result.replacedKey);
+    return this.withImageUrl(result.program);
   }
 
   private async createOfficialRevision(userId: number, program: typeof workoutPrograms.$inferSelect, dto: UpdateWorkoutProgramDto) {
-    return db.transaction(async (tx: any) => {
+    const result = await db.transaction(async (tx: any) => {
       const definitions = dto.exercises ?? await this.getScheduleExercises(tx, program.id);
       await this.ensureExercisesExist(tx, definitions);
       const [revision] = await tx
@@ -335,14 +394,23 @@ export class WorkoutProgramsService {
         .values({
           name: dto.name?.trim() ?? program.name,
           description: dto.description !== undefined ? dto.description.trim() || null : program.description,
+          videoUrl: dto.videoUrl !== undefined ? dto.videoUrl.trim() || null : program.videoUrl,
+          imageKey: dto.videoUrl !== undefined ? null : program.imageKey,
           isPersonal: false,
           createdById: userId,
         })
         .returning();
       await this.replaceSchedule(tx, revision.id, definitions);
+      const movedImageKey = dto.videoUrl === undefined ? program.imageKey : null;
+      const replacedKey = dto.videoUrl !== undefined ? program.imageKey : null;
+      if (movedImageKey || replacedKey) {
+        await tx.update(workoutPrograms).set({ imageKey: null }).where(eq(workoutPrograms.id, program.id));
+      }
       await tx.update(workoutPrograms).set({ isActive: false }).where(eq(workoutPrograms.id, program.id));
-      return revision;
+      return { revision, replacedKey };
     });
+    await this.storageService.remove(result.replacedKey);
+    return this.withImageUrl(result.revision);
   }
 
   private async ensureExercisesExist(tx: any, definitions: ProgramExerciseDto[]) {
@@ -388,7 +456,7 @@ export class WorkoutProgramsService {
   }
 
   private async getSchedule(programId: number) {
-    return db
+    const rows = await db
       .select({
         contentId: programContent.id,
         week: programContent.week,
@@ -400,6 +468,7 @@ export class WorkoutProgramsService {
           id: exercises.id,
           name: exercises.name,
           difficulty: exercises.difficulty,
+          imageKey: exercises.imageKey,
         },
       })
       .from(programContent)
@@ -407,6 +476,14 @@ export class WorkoutProgramsService {
       .leftJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
       .where(eq(programContent.programId, programId))
       .orderBy(asc(programContent.week), asc(exerciseInPrograms.weekDay), asc(exerciseInPrograms.id));
+    const imageUrls = await this.storageService.getUrls(rows.map((row: any) => row.exercise?.imageKey));
+    return rows.map((row: any, index) => {
+      const { imageKey: _imageKey, ...exercise } = row.exercise ?? {};
+      return {
+        ...row,
+        exercise: row.exercise ? { ...exercise, imageUrl: imageUrls[index] } : row.exercise,
+      };
+    });
   }
 
   private async findSharedProgram(token: string) {
@@ -414,6 +491,8 @@ export class WorkoutProgramsService {
       id: workoutPrograms.id,
       name: workoutPrograms.name,
       description: workoutPrograms.description,
+      videoUrl: workoutPrograms.videoUrl,
+      imageKey: workoutPrograms.imageKey,
       isPersonal: workoutPrograms.isPersonal,
       createdAt: workoutPrograms.createdAt,
       createdById: workoutPrograms.createdById,
@@ -425,6 +504,15 @@ export class WorkoutProgramsService {
       .limit(1);
     if (!program) throw new NotFoundException('Shared workout program not found');
     return program;
+  }
+
+  private async withImageUrl<T extends { imageKey?: string | null }>(row: T): Promise<Omit<T, 'imageKey'> & { imageUrl: string | null }> {
+    const { imageKey, ...rest } = row;
+    return { ...rest, imageUrl: await this.storageService.getUrl(imageKey) };
+  }
+
+  private async withImageUrls<T extends { imageKey?: string | null }>(rows: T[]) {
+    return Promise.all(rows.map((row) => this.withImageUrl(row)));
   }
 
   private async findMatchingPersonalProgram(
