@@ -6,3 +6,5 @@ coverage
 npm-debug.log*
 Dockerfile*
 docker-compose*.yml
+**/node_modules
+**/dist

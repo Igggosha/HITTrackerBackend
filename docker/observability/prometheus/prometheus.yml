@@ -28,3 +28,13 @@ scrape_configs:
       credentials_file: /run/metrics/metrics-token
     static_configs:
       - targets: [relay:9464]
+  # Analytics read-side service (docker-compose `events` profile, same
+  # METRICS_TOKEN bearer check). Like `relay`, it only resolves when the
+  # `events` and `observability` profiles run together.
+  - job_name: analytics
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /run/metrics/metrics-token
+    static_configs:
+      - targets: [analytics:3000]
