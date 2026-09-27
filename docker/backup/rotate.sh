@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+umask 077
 ROOT=${BACKUP_ROOT:-/backups}
 daily=${BACKUP_KEEP_DAILY:-7}
 weekly=${BACKUP_KEEP_WEEKLY:-4}
