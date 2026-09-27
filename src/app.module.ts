@@ -15,6 +15,7 @@ import { RelayModule } from './relay/relay.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 import { MetricsModule } from './metrics/metrics.module';
+import { AnalyticsProxyModule } from './analytics-proxy/analytics-proxy.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
 
@@ -103,6 +104,7 @@ import { requestIds } from './common/request-id';
     ExercisesModule,
     UsersModule,
     MetricsModule,
+    AnalyticsProxyModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

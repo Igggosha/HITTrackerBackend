@@ -71,7 +71,39 @@ export function validateEnvironment(
   // has no ConfigModule of its own and must fail fast the same way.
   validateRelayEnvironment(environment);
 
+  validateAnalyticsProxyEnvironment(environment);
+
   return environment;
+}
+
+/**
+ * The analytics proxy is optional: without ANALYTICS_URL the API boots and
+ * `GET /analytics/*` answers 503 ANALYTICS_UNAVAILABLE. A set but malformed
+ * URL must fail at boot instead.
+ */
+export function validateAnalyticsProxyEnvironment(
+  environment: NodeJS.ProcessEnv,
+): void {
+  const raw = environment.ANALYTICS_URL;
+  if (raw) {
+    let url: URL | undefined;
+    try {
+      url = new URL(raw);
+    } catch {
+      url = undefined;
+    }
+    if (
+      !url ||
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.username ||
+      url.password
+    ) {
+      throw new Error(
+        'ANALYTICS_URL must be an http(s) URL without credentials.',
+      );
+    }
+  }
+  assertOptionalIntInRange(environment, 'ANALYTICS_TIMEOUT_MS', 100, 60_000);
 }
 
 function assertOptionalIntInRange(
