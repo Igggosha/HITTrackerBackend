@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Request, Response, NextFunction } from 'express';
+import { context, trace } from '@opentelemetry/api';
 
 export type RequestWithId = Request & { id: string };
 export const requestIds = new AsyncLocalStorage<string>();
@@ -33,5 +34,7 @@ export function requestIdMiddleware(
       : randomUUID();
   (req as RequestWithId).id = id;
   res.setHeader('X-Request-Id', id);
+  const traceId = trace.getSpanContext(context.active())?.traceId;
+  if (traceId) res.setHeader('X-Trace-Id', traceId);
   requestIds.run(id, next);
 }
