@@ -454,6 +454,21 @@ PostgreSQL's own `statement_timeout`. The standalone relay also serves its own
 `RELAY_METRICS_PORT` (default 9464), Bearer-protected the same way as the
 API's. See [the Kafka guide](docs/diploma/kafka.md) for contracts and a demo.
 
+## Analytics service (CQRS read side)
+
+The `events` profile also runs `services/analytics`, a separate NestJS service
+with its own package, Dockerfile and database (`analytics`, role
+`analytics_app`, created by `analytics-db-init` and migrated by
+`analytics-migrate`). It consumes `hit.workout.v1`/`hit.user.v1` and serves
+weekly volume, personal records, streaks, exercise progress and body-metric
+timelines. Clients call it through this API: `GET /analytics/*` is proxied to
+`ANALYTICS_URL` (`503 ANALYTICS_UNAVAILABLE` when unset/down, timeout
+`ANALYTICS_TIMEOUT_MS`). Set `ANALYTICS_DB_PASSWORD` in `.env`. The endpoint
+reference is in [services/analytics/README.md](services/analytics/README.md);
+design, rebuild-from-log, backfill
+(`scripts/backfill-analytics-events.ts`) and the demo are in
+[docs/diploma/analytics-cqrs.md](docs/diploma/analytics-cqrs.md).
+
 ## Project setup
 
 ```bash

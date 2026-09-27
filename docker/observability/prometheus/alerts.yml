@@ -29,3 +29,10 @@ groups:
           severity: critical
         annotations:
           summary: PostgreSQL exporter cannot reach the primary
+      - alert: AnalyticsConsumerLagging
+        expr: sum(analytics_consumer_lag{job="analytics"}) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics read models are more than 100 events behind Kafka

@@ -249,6 +249,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
+      # Thin proxy for GET /analytics/* (src/analytics-proxy). Without the
+      # `events` profile the name does not resolve and those routes answer
+      # 503 ANALYTICS_UNAVAILABLE; nothing else changes.
+      ANALYTICS_URL: ${ANALYTICS_URL:-http://analytics:3000}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -285,12 +289,23 @@ services:
     profiles: [events]
     depends_on: [kafka]
     entrypoint: ["/bin/bash"]
+    # Domain topics keep every event (retention.ms=-1): they are the log the
+    # analytics read models are rebuilt from (docs/diploma/analytics-cqrs.md).
+    # The DLQ keeps 30 days for inspection/replay. `kafka-configs --alter`
+    # re-applies retention on every start, so a topic created before this
+    # setting (existing volume) is fixed up too; both commands are idempotent.
+    environment:
+      DOMAIN_TOPIC_RETENTION_MS: ${DOMAIN_TOPIC_RETENTION_MS:--1}
+      DLQ_RETENTION_MS: ${DLQ_RETENTION_MS:-2592000000}
     command:
       - -c
       - >-
+        set -e;
         until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
         for topic in hit.workout.v1 hit.user.v1 hit.events.dlq; do
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1;
+          if [ "$$topic" = hit.events.dlq ]; then retention="$$DLQ_RETENTION_MS"; else retention="$$DOMAIN_TOPIC_RETENTION_MS"; fi;
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1 --config retention.ms=$$retention;
+          /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter --entity-type topics --entity-name $$topic --add-config retention.ms=$$retention;
         done
     networks: [private]
     restart: "no"
@@ -322,6 +337,76 @@ services:
       RELAY_METRICS_PORT: ${RELAY_METRICS_PORT:-9464}
       METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
     command: ["node", "dist/src/relay/main.js"]
+    networks: [private]
+    restart: unless-stopped
+
+  # ---- Analytics read side (CQRS), profile `events` ------------------------
+  # Database-per-service on the existing PostgreSQL server: a separate
+  # `analytics` database and `analytics_app` role (a second PostgreSQL
+  # container would cost more RAM; see docs/diploma/analytics-cqrs.md).
+  analytics-db-init:
+    image: postgres:17
+    profiles: [events]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      ANALYTICS_DB_PASSWORD: ${ANALYTICS_DB_PASSWORD:-change_me}
+    volumes:
+      - ./docker/analytics-db-init.sh:/docker-entrypoint-init.d/analytics-db-init.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/analytics-db-init.sh"]
+    restart: "no"
+    networks: [private]
+
+  analytics-migrate:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+      target: migration
+    profiles: [events]
+    depends_on:
+      analytics-db-init:
+        condition: service_completed_successfully
+    environment:
+      ANALYTICS_DATABASE_URL: postgresql://analytics_app:${ANALYTICS_DB_PASSWORD:-change_me}@postgres:5432/analytics
+    restart: "no"
+    networks: [private]
+
+  analytics:
+    image: hit-tracker-analytics:20260928
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+      target: production
+    profiles: [events]
+    depends_on:
+      analytics-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    # Explicit, minimal environment (no `env_file: .env`): only the shared
+    # JWT secret it verifies tokens with, its own database and Kafka.
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ANALYTICS_DATABASE_URL: postgresql://analytics_app:${ANALYTICS_DB_PASSWORD:-change_me}@postgres:5432/analytics
+      KAFKA_BROKERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+      ANALYTICS_MAX_ATTEMPTS: ${ANALYTICS_MAX_ATTEMPTS:-5}
+      LOG_LEVEL: ${ANALYTICS_LOG_LEVEL:-info}
+    # No host port: the mobile app reaches it only through the main API
+    # (GET /analytics/*); Prometheus scrapes it on the private network.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks: [private]
     restart: unless-stopped
 
