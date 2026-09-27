@@ -94,14 +94,23 @@ users, workouts, and other local test data are not copied through Git.
 
 ### Local observability
 
-Prometheus and Grafana are opt-in: set a unique `METRICS_TOKEN` (at least 24
-characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in `.env`,
-then run `docker compose --profile observability up --build`. Open Grafana at
-`http://localhost:3001` (admin / your configured password); Prometheus is at
-`http://localhost:9090`. Both ports bind to localhost and can be changed with
-`GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the bearer token and
-remains protected if the API is reachable through the tunnel. Demo details are
-in [docs/diploma/observability.md](docs/diploma/observability.md).
+Prometheus, Grafana, and Loki are opt-in: set a unique `METRICS_TOKEN` (at
+least 24 characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in
+`.env`, then run `docker compose --profile observability up --build`. Open
+Grafana at `http://localhost:3001` (admin / your configured password);
+Prometheus is at `http://localhost:9090`. Both ports bind to localhost and can
+be changed with `GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the
+bearer token and remains protected if the API is reachable through the
+tunnel.
+
+Every container's logs (api, postgres, minio, ...) are collected by Grafana
+Alloy and shipped to Loki, and are searchable in Grafana's provisioned
+**Logs** dashboard next to the metrics dashboards, filterable by service,
+level, and request ID; the API Overview dashboard's 5xx panel links straight
+there. Loki has no host port by default (`LOKI_PORT` opts one in for
+debugging) and is reachable only from Grafana and Alloy. Demo details,
+including how to correlate a specific `X-Request-Id` across every service,
+are in [docs/diploma/observability.md](docs/diploma/observability.md).
 
 #### Refreshing `sql/init.sql`
 

@@ -1,0 +1,125 @@
+// Grafana Alloy replaces Promtail (deprecated) as the log-collection agent
+// for this stack. It discovers containers through the Docker socket, keeps
+// only containers that belong to THIS Compose project (so a second, unrelated
+// project on the same machine is never scraped), tags every log line with
+// `service`/`project` labels, and — for the api container, whose stdout is
+// structured JSON from nestjs-pino — promotes only the low-cardinality
+// `level` field to a Loki label while pushing the per-request `requestId`,
+// `req.method`, `req.url` (path only) and `res.statusCode` fields into Loki
+// structured metadata instead. See docs/diploma/observability.md ("Logs
+// (Loki)") for why labels must stay low-cardinality.
+//
+// SECURITY: this component mounts /var/run/docker.sock read-only (see the
+// `alloy` service in docker-compose.yml). Access to the Docker socket is
+// equivalent to root on the host: whoever can reach it can create a
+// privileged container, read any other container's filesystem/secrets/env,
+// or stop/inspect anything Docker manages. Alloy only reads it (list
+// containers + tail logs) and it is never exposed outside this container;
+// still, treat the `alloy` container itself as a root-equivalent process on
+// the host and do not add other responsibilities to it.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// `targets = []` here: this component only exists to produce a reusable rule
+// set (`.rules`). `loki.source.docker` below applies these rules itself
+// while discovering targets, so the "keep" rule (project filter) also
+// decides which containers get tailed at all, not just which labels they get.
+discovery.relabel "docker_targets" {
+  targets = []
+
+  // Keep only containers from this Compose project. Every container Compose
+  // creates carries this label; containers from another project (e.g. the
+  // developer's own default `hittrackerbackend` project running alongside a
+  // differently-named `-p` project) are dropped here and never reach Loki.
+  // ALLOY_COMPOSE_PROJECT (docker-compose.yml) tracks whatever project name
+  // Compose itself resolved (directory name, `.env` COMPOSE_PROJECT_NAME, or
+  // `-p`), as long as that same value is also visible to Compose's own
+  // variable interpolation (export it, or set it in `.env`).
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = sys.env("ALLOY_COMPOSE_PROJECT")
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.docker_targets.rules
+  forward_to    = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+  forward_to = [loki.write.default.receiver]
+
+  // Only the api (and, as more Node services are added, list their compose
+  // service names here too) writes pino JSON lines; postgres/minio/grafana/
+  // prometheus/etc. log plain text and must not go through stage.json.
+  stage.match {
+    selector = "{service=~\"^(api)$\"}"
+
+    stage.json {
+      expressions = {
+        level      = "level",
+        requestId  = "requestId",
+        req_method = "req.method",
+        req_url    = "req.url",
+        res_status = "res.statusCode",
+      }
+    }
+
+    // pino's numeric levels (10/20/30/40/50/60) are not human-readable and
+    // are exactly the kind of low-cardinality field that belongs on a label
+    // once mapped to a name; unmapped/missing values pass through as-is.
+    stage.template {
+      source   = "level"
+      template = "{{ if eq .Value \"10\" }}trace{{ else if eq .Value \"20\" }}debug{{ else if eq .Value \"30\" }}info{{ else if eq .Value \"40\" }}warn{{ else if eq .Value \"50\" }}error{{ else if eq .Value \"60\" }}fatal{{ else }}{{ .Value }}{{ end }}"
+    }
+
+    // Only `level` (a handful of possible values) becomes a Loki label.
+    // `service`/`project`/`container` labels were already added above by
+    // discovery.relabel, before loki.source.docker even ingested the line.
+    stage.labels {
+      values = {
+        level = "",
+      }
+    }
+
+    // requestId is unique per request (unbounded cardinality) and
+    // req.method/req.url/res.statusCode are per-request too, so all four go
+    // into structured metadata: queryable with `| requestId="..."` etc.
+    // without ever becoming index labels. See docs/diploma/observability.md.
+    stage.structured_metadata {
+      values = {
+        requestId  = "",
+        method     = "req_method",
+        path       = "req_url",
+        statusCode = "res_status",
+      }
+    }
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

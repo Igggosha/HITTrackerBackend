@@ -1,0 +1,55 @@
+# Grafana-managed alert (not a Loki ruler rule): Grafana's built-in alerting
+# engine already evaluates rules against any datasource, including Loki, with
+# no Alertmanager/ruler storage to run — the same way Prometheus's
+# alerts.yml rules in this stack are evaluated without an Alertmanager
+# deployed. That makes this the simpler of the two reliable options; see
+# docs/diploma/observability.md ("Logs (Loki)") for the write-up.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: logs-alerts
+    folder: Observability
+    interval: 1m
+    rules:
+      - uid: api-error-logs-high
+        title: API error logs > 20 per 5m
+        condition: B
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: The api container logged more than 20 error-level lines in the last 5 minutes.
+        data:
+          - refId: A
+            datasourceUid: loki
+            queryType: range
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: sum(count_over_time({service="api"} | level="error" [5m]))
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            queryType: ""
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              type: classic_conditions
+              refId: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [20]
+                  operator:
+                    type: and
+                  query:
+                    params: ["A"]
+                  reducer:
+                    type: last
+                    params: []
