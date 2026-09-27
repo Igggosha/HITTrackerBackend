@@ -12,7 +12,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { db } from '../db/db';
@@ -41,11 +41,21 @@ import {
   REFRESH_TOKEN_TTL_MS,
 } from './refresh-token';
 import { recordUserActivity } from '../users/user-activity';
+import { OutboxService } from '../outbox/outbox.service';
+import type { DbTransaction } from '../outbox/transaction';
 
 export type GoogleUser = {
   email: string;
   googleId: string;
 };
+
+type VerificationOutcome =
+  | { kind: 'not_found' }
+  | { kind: 'locked'; lockedUntil: Date }
+  | { kind: 'expired' }
+  | { kind: 'too_many_attempts' }
+  | { kind: 'invalid_code'; attempts: number }
+  | { kind: 'registered' };
 
 type AuthUser = {
   id: number;
@@ -61,6 +71,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -109,7 +120,10 @@ export class AuthService {
     const verificationCodeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    await db
+    // The lock check above and this upsert are separate statements. The
+    // `setWhere` repeats the check atomically, so a lockout set by a
+    // concurrent failed verification is never reset by this request.
+    const [stored] = await db
       .insert(pendingRegistrations)
       .values({
         email,
@@ -129,7 +143,21 @@ export class AuthService {
           attempts: 0,
           lockedUntil: null,
         },
-      });
+        setWhere: or(
+          isNull(pendingRegistrations.lockedUntil),
+          lte(pendingRegistrations.lockedUntil, new Date()),
+        ),
+      })
+      .returning({ email: pendingRegistrations.email });
+    if (!stored) {
+      throw new HttpException(
+        {
+          message: 'Too many invalid codes. Please try again later.',
+          retryAfterSeconds: 30 * 60,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
 
     await this.mailerService.sendMail({
       to: email,
@@ -142,76 +170,55 @@ export class AuthService {
 
   async verifyRegistration(dto: VerifyRegistrationDto) {
     const email = dto.email.trim().toLowerCase();
-    const [pending] = await db
-      .select()
-      .from(pendingRegistrations)
-      .where(eq(pendingRegistrations.email, email))
-      .limit(1);
-
     const now = new Date();
-    if (!pending) {
-      throw new BadRequestException({
-        message: 'Registration request not found or expired.',
-        code: 'REGISTRATION_NOT_FOUND',
-      });
-    }
 
-    if (pending.lockedUntil && pending.lockedUntil > now) {
-      throw new HttpException(
-        {
-          message: 'Too many invalid codes. Please try again later.',
-          retryAfterSeconds: Math.ceil(
-            (pending.lockedUntil.getTime() - now.getTime()) / 1000,
-          ),
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    if (pending.lockedUntil || pending.expiresAt <= now) {
-      await db
-        .delete(pendingRegistrations)
-        .where(eq(pendingRegistrations.email, email));
-      throw new GoneException({
-        message: 'Verification code has expired.',
-        code: 'VERIFICATION_CODE_EXPIRED',
-      });
-    }
-
-    const validCode = await bcrypt.compare(
-      dto.code,
-      pending.verificationCodeHash,
-    );
-    if (!validCode) {
-      const attempts = pending.attempts + 1;
-      if (attempts >= 5) {
-        const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
-        await db
-          .update(pendingRegistrations)
-          .set({ attempts, lockedUntil, verificationCodeHash: '' })
-          .where(eq(pendingRegistrations.email, email));
-        throw new HttpException(
-          {
-            message: 'Too many invalid codes. Please try again later.',
-            retryAfterSeconds: 30 * 60,
-          },
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      } else {
-        await db
-          .update(pendingRegistrations)
-          .set({ attempts })
-          .where(eq(pendingRegistrations.email, email));
-      }
-      throw new BadRequestException({
-        message: 'Invalid verification code.',
-        code: 'INVALID_VERIFICATION_CODE',
-        ...(attempts >= 2 ? { attemptsRemaining: 5 - attempts } : {}),
-      });
-    }
-
+    let outcome: VerificationOutcome;
     try {
-      await db.transaction(async (tx) => {
+      outcome = await db.transaction(async (tx) => {
+        // The row lock serializes attempts for one email. Without it, parallel
+        // guesses all read the same attempt count and the five-attempt
+        // lockout could be bypassed by sending many codes at once.
+        const [pending] = await tx
+          .select()
+          .from(pendingRegistrations)
+          .where(eq(pendingRegistrations.email, email))
+          .for('update')
+          .limit(1);
+
+        if (!pending) return { kind: 'not_found' };
+
+        if (pending.lockedUntil && pending.lockedUntil > now) {
+          return { kind: 'locked', lockedUntil: pending.lockedUntil };
+        }
+
+        if (pending.lockedUntil || pending.expiresAt <= now) {
+          await tx
+            .delete(pendingRegistrations)
+            .where(eq(pendingRegistrations.email, email));
+          return { kind: 'expired' };
+        }
+
+        const validCode = await bcrypt.compare(
+          dto.code,
+          pending.verificationCodeHash,
+        );
+        if (!validCode) {
+          const attempts = pending.attempts + 1;
+          if (attempts >= 5) {
+            const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+            await tx
+              .update(pendingRegistrations)
+              .set({ attempts, lockedUntil, verificationCodeHash: '' })
+              .where(eq(pendingRegistrations.email, email));
+            return { kind: 'too_many_attempts' };
+          }
+          await tx
+            .update(pendingRegistrations)
+            .set({ attempts })
+            .where(eq(pendingRegistrations.email, email));
+          return { kind: 'invalid_code', attempts };
+        }
+
         const [existingUser] = await tx
           .select()
           .from(users)
@@ -232,7 +239,8 @@ export class AuthService {
         await tx
           .delete(pendingRegistrations)
           .where(eq(pendingRegistrations.email, email));
-        return newUser;
+        await this.enqueueUserRegistered(tx, newUser, 'email');
+        return { kind: 'registered' };
       });
     } catch (error: unknown) {
       const databaseError = error as { code?: string; constraint?: string };
@@ -245,7 +253,64 @@ export class AuthService {
       throw error;
     }
 
-    return { message: 'Registration successful' };
+    // Errors are raised after the transaction so the attempt counter, the
+    // lockout and the expired-row cleanup are committed, not rolled back.
+    switch (outcome.kind) {
+      case 'not_found':
+        throw new BadRequestException({
+          message: 'Registration request not found or expired.',
+          code: 'REGISTRATION_NOT_FOUND',
+        });
+      case 'locked':
+        throw new HttpException(
+          {
+            message: 'Too many invalid codes. Please try again later.',
+            retryAfterSeconds: Math.ceil(
+              (outcome.lockedUntil.getTime() - now.getTime()) / 1000,
+            ),
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      case 'expired':
+        throw new GoneException({
+          message: 'Verification code has expired.',
+          code: 'VERIFICATION_CODE_EXPIRED',
+        });
+      case 'too_many_attempts':
+        throw new HttpException(
+          {
+            message: 'Too many invalid codes. Please try again later.',
+            retryAfterSeconds: 30 * 60,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      case 'invalid_code':
+        throw new BadRequestException({
+          message: 'Invalid verification code.',
+          code: 'INVALID_VERIFICATION_CODE',
+          ...(outcome.attempts >= 2
+            ? { attemptsRemaining: 5 - outcome.attempts }
+            : {}),
+        });
+      case 'registered':
+        return { message: 'Registration successful' };
+    }
+  }
+
+  private async enqueueUserRegistered(
+    tx: DbTransaction,
+    user: { id: number; createdAt: Date },
+    method: 'email' | 'google',
+  ) {
+    await this.outbox.enqueue(tx, {
+      type: 'user.registered',
+      aggregateId: user.id,
+      payload: {
+        userId: user.id,
+        method,
+        registeredAt: user.createdAt.toISOString(),
+      },
+    });
   }
 
   async validateUser(email: string, password: string) {
@@ -320,16 +385,22 @@ export class AuthService {
       .limit(1);
 
     if (userByEmail) {
-      const [linkedUser] = await db
-        .update(users)
-        .set({ googleId: googleUser.googleId })
-        .where(eq(users.id, userByEmail.id))
-        .returning();
+      const linkedUser = await db.transaction(async (tx) => {
+        const [linked] = await tx
+          .update(users)
+          .set({ googleId: googleUser.googleId })
+          .where(eq(users.id, userByEmail.id))
+          .returning();
 
-      await recordUserActivity({
-        userId: userByEmail.id,
-        actorUserId: userByEmail.id,
-        type: 'account.google_linked',
+        await recordUserActivity(
+          {
+            userId: userByEmail.id,
+            actorUserId: userByEmail.id,
+            type: 'account.google_linked',
+          },
+          tx,
+        );
+        return linked;
       });
 
       return {
@@ -338,15 +409,19 @@ export class AuthService {
       };
     }
 
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        email: googleUser.email,
-        username: null,
-        displayName: googleUser.email.split('@', 1)[0],
-        googleId: googleUser.googleId,
-      })
-      .returning();
+    const newUser = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(users)
+        .values({
+          email: googleUser.email,
+          username: null,
+          displayName: googleUser.email.split('@', 1)[0],
+          googleId: googleUser.googleId,
+        })
+        .returning();
+      await this.enqueueUserRegistered(tx, created, 'google');
+      return created;
+    });
 
     return {
       message: 'Google registration successful',
@@ -415,15 +490,26 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
 
-    await db.transaction(async (tx) => {
-      await tx
+    const consumed = await db.transaction(async (tx) => {
+      // The token is consumed only while it is still the stored, unexpired
+      // one: of two concurrent resets with the same link exactly one wins.
+      const [updated] = await tx
         .update(users)
         .set({
           passwordHash,
           resetPasswordToken: null,
           resetPasswordExpires: null,
         })
-        .where(eq(users.id, user.id));
+        .where(
+          and(
+            eq(users.id, user.id),
+            eq(users.resetPasswordToken, hashPasswordResetToken(dto.token)),
+            gt(users.resetPasswordExpires, new Date()),
+          ),
+        )
+        .returning({ id: users.id });
+      if (!updated) return false;
+
       await tx
         .update(authRefreshSessions)
         .set({ revokedAt: new Date() })
@@ -433,13 +519,19 @@ export class AuthService {
             isNull(authRefreshSessions.revokedAt),
           ),
         );
+      await recordUserActivity(
+        {
+          userId: user.id,
+          actorUserId: user.id,
+          type: 'account.password_changed',
+        },
+        tx,
+      );
+      return true;
     });
-
-    await recordUserActivity({
-      userId: user.id,
-      actorUserId: user.id,
-      type: 'account.password_changed',
-    });
+    if (!consumed) {
+      throw new BadRequestException('Invalid or expired password reset token.');
+    }
 
     return { message: 'Password successfully updated.' };
   }

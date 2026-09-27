@@ -12,7 +12,12 @@ const storage = {
 } as unknown as StorageService;
 
 jest.mock('../db/db', () => ({
-  db: { delete: jest.fn(), insert: jest.fn(), select: jest.fn() },
+  db: {
+    delete: jest.fn(),
+    insert: jest.fn(),
+    select: jest.fn(),
+    transaction: jest.fn(),
+  },
 }));
 
 function query(rows: unknown[]) {
@@ -78,5 +83,24 @@ describe('ExercisesService likes', () => {
         { id: 1, name: 'Chest', commonName: 'Chest', scientificName: null },
       ],
     });
+  });
+});
+
+describe('ExercisesService concurrent creation', () => {
+  const service = new ExercisesService(storage);
+
+  it('maps a unique violation from a concurrent identical create to 409', async () => {
+    // Both requests passed the name pre-check; the unique index decides.
+    const limit = jest.fn().mockResolvedValue([]);
+    jest.mocked(db.select).mockReturnValue({
+      from: () => ({ where: () => ({ limit }) }),
+    } as any);
+    jest
+      .mocked(db.transaction)
+      .mockRejectedValue({ code: '23505', constraint: 'exercises_name_unique' });
+
+    await expect(
+      service.createExercise({ name: 'Squat' } as any),
+    ).rejects.toMatchObject({ status: 409 });
   });
 });

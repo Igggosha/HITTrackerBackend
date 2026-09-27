@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/db';
@@ -22,10 +22,14 @@ import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
 import { hasSameExerciseMultiset } from './sharing.utils';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
+import { OutboxService } from '../outbox/outbox.service';
 
 @Injectable()
 export class WorkoutProgramsService {
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    private readonly storageService: StorageService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   async createPersonalProgram(userId: number, dto: CreateWorkoutProgramDto) {
     return this.createProgram(userId, true, dto);
@@ -130,26 +134,41 @@ export class WorkoutProgramsService {
 
   async scheduleProgram(userId: number, role: UserRole, dto: ScheduleProgramDto) {
     await this.getProgramById(dto.programId, userId, role);
-    if (dto.repeat !== 'weekly') {
-      return db.insert(userProgramSchedule)
-        .values({ userId, programId: dto.programId, scheduledFor: dto.scheduledFor })
-        .onConflictDoNothing()
-        .returning();
-    }
+    const weekly = dto.repeat === 'weekly';
 
     return db.transaction(async (tx: any) => {
-      const [series] = await tx.insert(userProgramScheduleSeries).values({
-        userId,
-        programId: dto.programId,
-        startsOn: dto.scheduledFor,
-        endsOn: dto.repeatUntil ?? null,
-      }).returning();
-      return tx.insert(userProgramSchedule).values({
+      const series = weekly
+        ? (await tx.insert(userProgramScheduleSeries).values({
+          userId,
+          programId: dto.programId,
+          startsOn: dto.scheduledFor,
+          endsOn: dto.repeatUntil ?? null,
+        }).returning())[0]
+        : null;
+      // The unique (user, date, program) index makes a retried request a no-op.
+      const assignments = await tx.insert(userProgramSchedule).values({
         userId,
         programId: dto.programId,
         scheduledFor: dto.scheduledFor,
-        seriesId: series.id,
+        seriesId: series?.id ?? null,
       }).onConflictDoNothing().returning();
+
+      if (series || assignments.length) {
+        await this.outbox.enqueue(tx, {
+          type: 'program.scheduled',
+          aggregateId: userId,
+          payload: {
+            userId,
+            programId: dto.programId,
+            scheduledFor: dto.scheduledFor,
+            repeat: weekly ? 'weekly' : 'none',
+            repeatUntil: weekly ? dto.repeatUntil ?? null : null,
+            seriesId: series?.id ?? null,
+            scheduleIds: assignments.map((assignment: { id: number }) => assignment.id),
+          },
+        });
+      }
+      return assignments;
     });
   }
 
@@ -185,17 +204,20 @@ export class WorkoutProgramsService {
   }
 
   async removeScheduledProgram(userId: number, id: number) {
-    const [assignment] = await db.select({ seriesId: userProgramSchedule.seriesId })
-      .from(userProgramSchedule)
-      .where(and(eq(userProgramSchedule.id, id), eq(userProgramSchedule.userId, userId)))
-      .limit(1);
-    if (!assignment) throw new NotFoundException('Scheduled workout not found');
+    await db.transaction(async (tx: any) => {
+      const [assignment] = await tx.select({ seriesId: userProgramSchedule.seriesId })
+        .from(userProgramSchedule)
+        .where(and(eq(userProgramSchedule.id, id), eq(userProgramSchedule.userId, userId)))
+        .for('update')
+        .limit(1);
+      if (!assignment) throw new NotFoundException('Scheduled workout not found');
 
-    if (assignment.seriesId) {
-      await db.delete(userProgramScheduleSeries).where(eq(userProgramScheduleSeries.id, assignment.seriesId));
-    } else {
-      await db.delete(userProgramSchedule).where(eq(userProgramSchedule.id, id));
-    }
+      if (assignment.seriesId) {
+        await tx.delete(userProgramScheduleSeries).where(eq(userProgramScheduleSeries.id, assignment.seriesId));
+      } else {
+        await tx.delete(userProgramSchedule).where(eq(userProgramSchedule.id, id));
+      }
+    });
   }
 
   async updateProgram(userId: number, role: UserRole, id: number, dto: UpdateWorkoutProgramDto) {
@@ -385,8 +407,20 @@ export class WorkoutProgramsService {
     return this.withImageUrl(result.program);
   }
 
-  private async createOfficialRevision(userId: number, program: typeof workoutPrograms.$inferSelect, dto: UpdateWorkoutProgramDto) {
+  private async createOfficialRevision(userId: number, loaded: typeof workoutPrograms.$inferSelect, dto: UpdateWorkoutProgramDto) {
     const result = await db.transaction(async (tx: any) => {
+      // Two moderators editing the same revision would otherwise both fork it
+      // and leave two active copies. The lock serializes them; the second one
+      // sees the revision already retired and gets a conflict to reload.
+      const [program] = await tx.select().from(workoutPrograms)
+        .where(eq(workoutPrograms.id, loaded.id)).for('update').limit(1);
+      if (!program) throw new NotFoundException('Workout program not found');
+      if (loaded.isActive && !program.isActive) {
+        throw new ConflictException({
+          message: 'This program was changed by another moderator. Reload it and try again.',
+          code: 'PROGRAM_REVISION_CONFLICT',
+        });
+      }
       const definitions = dto.exercises ?? await this.getScheduleExercises(tx, program.id);
       await this.ensureExercisesExist(tx, definitions);
       const [revision] = await tx
@@ -551,21 +585,25 @@ export class WorkoutProgramsService {
   }
 
   private async materializeWeeklyAssignments(userId: number, from: string, to: string) {
-    const series = await db.select().from(userProgramScheduleSeries).where(and(
-      eq(userProgramScheduleSeries.userId, userId),
-      lte(userProgramScheduleSeries.startsOn, to),
-      or(isNull(userProgramScheduleSeries.endsOn), gte(userProgramScheduleSeries.endsOn, from)),
-    ));
-    const assignments = series.flatMap((item) => weeklyDatesInRange(
-      item.startsOn,
-      from,
-      item.endsOn && item.endsOn < to ? item.endsOn : to,
-    ).map((scheduledFor) => ({
-      userId,
-      programId: item.programId,
-      scheduledFor,
-      seriesId: item.id,
-    })));
-    if (assignments.length) await db.insert(userProgramSchedule).values(assignments).onConflictDoNothing();
+    await db.transaction(async (tx: any) => {
+      // FOR SHARE keeps a concurrent series removal from deleting a series
+      // between this read and the insert that references it.
+      const series = await tx.select().from(userProgramScheduleSeries).where(and(
+        eq(userProgramScheduleSeries.userId, userId),
+        lte(userProgramScheduleSeries.startsOn, to),
+        or(isNull(userProgramScheduleSeries.endsOn), gte(userProgramScheduleSeries.endsOn, from)),
+      )).for('share');
+      const assignments = series.flatMap((item: typeof userProgramScheduleSeries.$inferSelect) => weeklyDatesInRange(
+        item.startsOn,
+        from,
+        item.endsOn && item.endsOn < to ? item.endsOn : to,
+      ).map((scheduledFor) => ({
+        userId,
+        programId: item.programId,
+        scheduledFor,
+        seriesId: item.id,
+      })));
+      if (assignments.length) await tx.insert(userProgramSchedule).values(assignments).onConflictDoNothing();
+    });
   }
 }

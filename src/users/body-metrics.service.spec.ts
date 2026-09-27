@@ -2,11 +2,16 @@ import type { StorageService } from '../storage/storage.service';
 import { ConfigService } from '@nestjs/config';
 import { db } from '../db/db';
 import { UsersService } from './users.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 jest.mock('../db/db', () => ({ db: {} }));
 
 describe('UsersService body metrics validation', () => {
-  const service = new UsersService(new ConfigService(), {} as StorageService);
+  const service = new UsersService(
+    new ConfigService(),
+    {} as StorageService,
+    new OutboxService(),
+  );
 
   it('returns the required code when no metric is provided', async () => {
     await expect(service.createBodyMetric(1, {})).rejects.toMatchObject({

@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import type { StorageService, StoredImage } from '../storage/storage.service';
 import { UsersService } from './users.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 // Storage is switched off in these tests, so every avatar URL resolves to null.
 // The doubles are standalone consts so assertions never reference an unbound
@@ -24,24 +25,29 @@ const mockReservationUpsert = jest.fn();
 const mockDbSet = jest.fn();
 const mockDbReturning = jest.fn();
 const mockDbDeleteReturning = jest.fn();
+const mockTxLockRows = jest.fn();
+const mockTxDeleteReturning = jest.fn();
+const mockTxSet = jest.fn(() => ({
+  where: () => ({ returning: mockTxReturning }),
+}));
 
 const tx = {
   execute: jest.fn(),
+  rollback: jest.fn(),
   select: jest.fn(() => ({
     from: () => ({
       where: () => ({
         limit: mockTxLimit,
         for: () => ({ limit: mockTxLimit }),
+        orderBy: () => ({ for: mockTxLockRows }),
       }),
     }),
   })),
   insert: jest.fn(() => ({ values: mockReservationValues })),
-  delete: jest.fn(() => ({ where: jest.fn() })),
-  update: jest.fn(() => ({
-    set: () => ({
-      where: () => ({ returning: mockTxReturning }),
-    }),
+  delete: jest.fn(() => ({
+    where: jest.fn(() => ({ returning: mockTxDeleteReturning })),
   })),
+  update: jest.fn(() => ({ set: mockTxSet })),
 };
 
 jest.mock('../db/db', () => ({
@@ -64,7 +70,11 @@ jest.mock('../db/db', () => ({
 }));
 
 describe('UsersService profile identity', () => {
-  const service = new UsersService({ get: jest.fn(() => 25) } as any, storage);
+  const service = new UsersService(
+    { get: jest.fn(() => 25) } as any,
+    storage,
+    new OutboxService(),
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -78,6 +88,8 @@ describe('UsersService profile identity', () => {
     mockDbSet.mockReset();
     mockDbReturning.mockReset();
     mockDbDeleteReturning.mockReset();
+    mockTxLockRows.mockReset();
+    mockTxDeleteReturning.mockReset();
     mockDbSet.mockReturnValue({
       where: () => ({ returning: mockDbReturning }),
     });
@@ -102,10 +114,11 @@ describe('UsersService profile identity', () => {
   });
 
   it('removes a deleted user avatar without exposing its object key', async () => {
-    mockDbLimit
-      .mockResolvedValueOnce([{ role: 'super_admin' }])
-      .mockResolvedValueOnce([{ id: 2, role: 'user' }]);
-    mockDbDeleteReturning.mockResolvedValueOnce([
+    mockTxLockRows.mockResolvedValueOnce([
+      { id: 1, role: 'super_admin' },
+      { id: 2, role: 'user' },
+    ]);
+    mockTxDeleteReturning.mockResolvedValueOnce([
       {
         id: 2,
         email: 'deleted@example.com',
@@ -256,18 +269,18 @@ describe('UsersService profile identity', () => {
   });
 
   it('PROFILE-USERNAME-012 preserves the legacy profile-name contract', async () => {
-    mockDbReturning.mockResolvedValue([{ id: 1 }]);
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
+    mockTxLimit.mockResolvedValueOnce([
+      {
+        email: 'user@example.com',
+        displayName: 'Before',
+        age: null,
+        gender: null,
+        height: null,
+        goal: null,
+      },
+    ]);
     mockDbLimit
-      .mockResolvedValueOnce([
-        {
-          email: 'user@example.com',
-          displayName: 'Before',
-          age: null,
-          gender: null,
-          height: null,
-          goal: null,
-        },
-      ])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -281,8 +294,9 @@ describe('UsersService profile identity', () => {
 
     const result = await service.updateProfile(1, { username: ' John Doe ' });
 
-    expect(mockDbSet).toHaveBeenCalledWith({ displayName: 'John Doe' });
-    expect(db.transaction).not.toHaveBeenCalled();
+    expect(mockTxSet).toHaveBeenCalledWith({ displayName: 'John Doe' });
+    // The legacy field edits the display name only: no username lock/change.
+    expect(tx.execute).not.toHaveBeenCalled();
     expect(result.username).toBe('John Doe');
   });
 
