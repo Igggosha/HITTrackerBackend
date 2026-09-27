@@ -45,7 +45,13 @@ instead of blocking or double-publishing. `markPublished` / `recordFailure`
 (`attempts + 1`, truncated `last_error`) finish the job, and `processBatch(publish)`
 wraps one iteration in a transaction. It stops at the first failure; after
 `maxAttempts` (default 10), `processDeadLetters` sends the row to the DLQ and
-marks it published only after Kafka accepts it.
+marks it published only after Kafka accepts it. A failed DLQ send records the
+error in `last_error` (via `recordFailure`), the same as a normal publish
+failure, instead of leaving the row's failure invisible until the next
+attempt. Each iteration's transaction also carries a `SET LOCAL
+statement_timeout`/`idle_in_transaction_session_timeout`
+(`RELAY_DB_TX_TIMEOUT_MS`, default 10s) as a backstop independent of whatever
+bound the caller's own `publish` puts on its broker calls.
 
 ## Activity log in the same transaction
 

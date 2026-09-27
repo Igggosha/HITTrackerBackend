@@ -171,6 +171,25 @@ describe('OutboxService', () => {
     expect(fake.find('update')).toHaveLength(0);
   });
 
+  it('bounds the transaction with SET LOCAL statement/idle timeouts', async () => {
+    const prior = process.env.RELAY_DB_TX_TIMEOUT_MS;
+    process.env.RELAY_DB_TX_TIMEOUT_MS = '2500';
+    try {
+      fake.returns('select', outboxEvents, []);
+      await outbox.processBatch(jest.fn());
+      const rendered = fake
+        .find('execute')
+        .map((query) => renderSql(query.args[0]));
+      expect(rendered).toContain('SET LOCAL statement_timeout = 2500');
+      expect(rendered).toContain(
+        'SET LOCAL idle_in_transaction_session_timeout = 2500',
+      );
+    } finally {
+      if (prior === undefined) delete process.env.RELAY_DB_TX_TIMEOUT_MS;
+      else process.env.RELAY_DB_TX_TIMEOUT_MS = prior;
+    }
+  });
+
   it('sends max-attempt rows to the DLQ and marks only acknowledged rows', async () => {
     fake.returns('select', outboxEvents, [
       {
@@ -195,7 +214,7 @@ describe('OutboxService', () => {
     expect(fake.committed('update', outboxEvents)).toHaveLength(1);
   });
 
-  it('keeps a row unpublished when DLQ delivery fails', async () => {
+  it('keeps a row unpublished but records the error when DLQ delivery fails', async () => {
     fake.returns('select', outboxEvents, [
       { ...event('a', '2026-09-27T10:00:00Z'), attempts: 10 },
     ]);
@@ -203,7 +222,17 @@ describe('OutboxService', () => {
       throw new Error('dlq down');
     });
     expect(result.failed?.id).toBe('a');
-    expect(fake.find('update', outboxEvents)).toHaveLength(0);
+
+    const updates = fake.committed('update', outboxEvents);
+    expect(updates).toHaveLength(1);
+    const set = calledWith(updates[0], 'set')[0].args[0] as Record<
+      string,
+      unknown
+    >;
+    expect(set.lastError).toBe('Error: dlq down');
+    // The failure update touches `attempts`/`last_error` only; it never sets
+    // `published_at`, so the row stays unpublished for the next attempt.
+    expect(set).not.toHaveProperty('publishedAt');
   });
 });
 

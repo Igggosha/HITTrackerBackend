@@ -19,6 +19,15 @@ one user's events go to the same partition within each topic. Kafka has no
 ordering across topics; use one relay instance when publication order matters. Three
 partitions, replication factor one, and a 512 MB heap suit the local demo.
 
+Kafka has no host port and lives only on the internal `private` Compose
+network (`internal: true`): nothing outside the Docker host, and none of the
+other container networks (`edge`, `storage-edge`, `observability`), can reach
+`kafka:9092`. There is no SASL or TLS listener - the plaintext listener is
+acceptable only because the network itself is unreachable from the host or an
+Internet-facing tunnel. Exposing a host port for Kafka or Kafka UI beyond
+`127.0.0.1`, or adding a listener reachable from `edge`, is a security change
+that requires SASL/TLS first.
+
 Delivery is **at least once**: Kafka can accept a send just before the database
 transaction fails, causing a retry. Consumers must de-duplicate by envelope
 `id` and commit their offset after their own effect succeeds. After ten normal
@@ -57,6 +66,25 @@ The pending outbox row should eventually appear in the topic and gain
 For a host-run in-process relay, set `KAFKA_BROKERS` and start the API. For a
 standalone relay, run `node dist/src/relay/main.js` with that variable and the
 usual database configuration. Compose chooses standalone so the API remains
-stateless. `/metrics` exposes `outbox_unpublished_events` on the API; the publish
-counters belong to the relay process, whose standalone mode has no HTTP scrape
-endpoint yet.
+stateless. `/metrics` exposes `outbox_unpublished_events` on the API; the
+publish counters (`outbox_published_total`, `outbox_publish_failures_total`)
+belong to the relay process, which serves its own `/metrics` on
+`RELAY_METRICS_PORT` (default 9464, private network only, no host port),
+protected by the same `METRICS_TOKEN` bearer check as the API's endpoint.
+Prometheus's `relay` scrape job (`docker/observability/prometheus/prometheus.yml`)
+only resolves this target when both the `events` and `observability` profiles
+are running together.
+
+Every broker call the relay makes (a normal publish or a DLQ publish) is
+bounded twice: kafkajs's own `requestTimeout`/`connectionTimeout` (both
+`RELAY_PUBLISH_TIMEOUT_MS`/`RELAY_CONNECTION_TIMEOUT_MS`, default 5000ms each)
+and, independently, a `Promise.race` inside `RelayService.publish` that always
+settles by the timeout even if the underlying call ignores it. This matters
+because each poll runs inside a `db.transaction` holding `FOR UPDATE SKIP
+LOCKED` locks on up to 100 rows and a pool connection: without a bound, a
+broker that accepts the connection but never answers ("grey failure") could
+hold that transaction, and the pool connection, open for kafkajs's normal
+retry budget (tens of seconds) on every poll, which starves the connection
+pool the whole API shares. `RELAY_DB_TX_TIMEOUT_MS` (default 10000ms) sets
+PostgreSQL's own `statement_timeout`/`idle_in_transaction_session_timeout` on
+that transaction as a second, independent backstop.

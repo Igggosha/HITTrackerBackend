@@ -135,8 +135,27 @@ export type EventEnvelope = {
   payload: OutboxEventPayloads[OutboxEventType];
 };
 
+/**
+ * Exhaustive over `OutboxEventType`: adding a new event type without adding it
+ * here fails `tsc`, not a 3am production surprise about an event silently
+ * routed to the wrong topic.
+ */
 export function topicFor(type: OutboxEventType): string {
-  return type.startsWith('workout.') ? 'hit.workout.v1' : 'hit.user.v1';
+  switch (type) {
+    case 'workout.started':
+    case 'workout.finished':
+    case 'workout.cancelled':
+      return 'hit.workout.v1';
+    case 'program.scheduled':
+    case 'body_metric.recorded':
+    case 'user.registered':
+    case 'user.deleted':
+      return 'hit.user.v1';
+    default: {
+      const exhaustive: never = type;
+      throw new Error(`Unhandled outbox event type: ${String(exhaustive)}`);
+    }
+  }
 }
 
 export function eventKey(payload: { userId: number }): string {

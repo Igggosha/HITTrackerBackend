@@ -290,11 +290,21 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       kafka-init: { condition: service_completed_successfully }
-    env_file: [.env]
+    # No `env_file: .env` here: the relay only ever touches PostgreSQL and
+    # Kafka, never SMTP/OAuth/S3/JWT secrets, so it gets an explicit, minimal
+    # environment instead of every app secret the API needs.
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
       KAFKA_BROKERS: kafka:9092
+      RELAY_POLL_INTERVAL_MS: ${RELAY_POLL_INTERVAL_MS:-500}
+      RELAY_PUBLISH_TIMEOUT_MS: ${RELAY_PUBLISH_TIMEOUT_MS:-5000}
+      RELAY_CONNECTION_TIMEOUT_MS: ${RELAY_CONNECTION_TIMEOUT_MS:-5000}
+      RELAY_DB_TX_TIMEOUT_MS: ${RELAY_DB_TX_TIMEOUT_MS:-10000}
+      # `/metrics` in this process only, on the private network (see
+      # src/relay/main.ts); no host port is published for it.
+      RELAY_METRICS_PORT: ${RELAY_METRICS_PORT:-9464}
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
     command: ["node", "dist/src/relay/main.js"]
     networks: [private]
     restart: unless-stopped
@@ -302,7 +312,9 @@ services:
   kafka-ui:
     image: kafbat/kafka-ui:v1.3.0
     profiles: [events]
-    depends_on: [kafka-init]
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
     environment:
       KAFKA_CLUSTERS_0_NAME: hit-tracker
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092

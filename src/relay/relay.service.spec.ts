@@ -122,4 +122,80 @@ describe('RelayService', () => {
     expect(metrics.outboxPublishFailures.inc).toHaveBeenCalledWith(1);
     expect(outbox.processBatch).toHaveBeenCalledTimes(1);
   });
+
+  describe('bounded broker calls', () => {
+    const priorTimeout = process.env.RELAY_PUBLISH_TIMEOUT_MS;
+    const priorPoll = process.env.RELAY_POLL_INTERVAL_MS;
+
+    afterEach(() => {
+      if (priorTimeout === undefined)
+        delete process.env.RELAY_PUBLISH_TIMEOUT_MS;
+      else process.env.RELAY_PUBLISH_TIMEOUT_MS = priorTimeout;
+      if (priorPoll === undefined) delete process.env.RELAY_POLL_INTERVAL_MS;
+      else process.env.RELAY_POLL_INTERVAL_MS = priorPoll;
+      // Restore the shared `send` mock so later tests in this file (if any
+      // are added) do not inherit a producer that never resolves.
+      send.mockReset();
+      send.mockResolvedValue(undefined);
+    });
+
+    it('rejects publish() within RELAY_PUBLISH_TIMEOUT_MS when the broker never answers', async () => {
+      process.env.KAFKA_BROKERS = 'kafka:9092';
+      process.env.RELAY_PUBLISH_TIMEOUT_MS = '20';
+      send.mockImplementation(() => new Promise(() => {}));
+      const relay = new RelayService({} as never, metrics as never);
+      relay.onModuleInit();
+
+      const started = Date.now();
+      await expect(
+        (
+          relay as unknown as {
+            publish: (event: typeof row, deadLetter: boolean) => Promise<void>;
+          }
+        ).publish(row, false),
+      ).rejects.toThrow('Kafka publish timed out after 20ms');
+      expect(Date.now() - started).toBeLessThan(200);
+
+      await relay.onModuleDestroy();
+    });
+
+    it('keeps polling and recording failures when every batch hangs at the broker', async () => {
+      process.env.KAFKA_BROKERS = 'kafka:9092';
+      process.env.RELAY_PUBLISH_TIMEOUT_MS = '20';
+      process.env.RELAY_POLL_INTERVAL_MS = '10';
+      send.mockImplementation(() => new Promise(() => {}));
+      const outbox = {
+        processDeadLetters: jest
+          .fn()
+          .mockResolvedValue({ claimed: 0, published: [], failed: null }),
+        processBatch: jest.fn(
+          async (publish: (event: typeof row) => Promise<void>) => {
+            try {
+              await publish(row);
+              return { claimed: 1, published: [row.id], failed: null };
+            } catch (error) {
+              return {
+                claimed: 1,
+                published: [],
+                failed: {
+                  id: row.id,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              };
+            }
+          },
+        ),
+      };
+      const relay = new RelayService(outbox as never, metrics as never);
+      relay.onModuleInit();
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await relay.onModuleDestroy();
+
+      // Every iteration's hung send settled (as a failure) within the
+      // timeout instead of wedging the loop, so the relay polled more than
+      // once in this window.
+      expect(outbox.processBatch.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(metrics.outboxPublishFailures.inc).toHaveBeenCalled();
+    });
+  });
 });

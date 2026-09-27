@@ -29,6 +29,15 @@ export type BatchResult = {
 export const DEFAULT_OUTBOX_BATCH_SIZE = 100;
 export const DEFAULT_OUTBOX_MAX_ATTEMPTS = 10;
 const MAX_ERROR_LENGTH = 1000;
+/**
+ * Backstop for `processBatch`/`processDeadLetters`: a batch holds up to 100
+ * rows locked `FOR UPDATE SKIP LOCKED` plus a pool connection for as long as
+ * the transaction is open. The relay bounds each broker call itself (see
+ * `RelayService.publish`), but `SET LOCAL` on the transaction is a second,
+ * independent line of defense in case a future caller's `publish` callback
+ * does not bound its own broker calls.
+ */
+const DEFAULT_TX_TIMEOUT_MS = 10_000;
 
 @Injectable()
 export class OutboxService {
@@ -94,6 +103,26 @@ export class OutboxService {
       );
   }
 
+  /**
+   * Bounds how long this transaction may hold its row locks and pool
+   * connection, independent of anything the caller's `publish` callback
+   * does. `SET LOCAL` only affects the current transaction and is undone
+   * automatically at commit/rollback. The value is trusted: it is read from
+   * the environment and validated as an integer at boot
+   * (`validateRelayEnvironment`), never from request input, so inlining it
+   * is safe even though `SET` does not accept bind parameters.
+   */
+  private async boundTransaction(tx: DbTransaction): Promise<void> {
+    const ms = Number(
+      process.env.RELAY_DB_TX_TIMEOUT_MS ?? DEFAULT_TX_TIMEOUT_MS,
+    );
+    const timeout = Number.isInteger(ms) && ms > 0 ? ms : DEFAULT_TX_TIMEOUT_MS;
+    await tx.execute(sql.raw(`SET LOCAL statement_timeout = ${timeout}`));
+    await tx.execute(
+      sql.raw(`SET LOCAL idle_in_transaction_session_timeout = ${timeout}`),
+    );
+  }
+
   async recordFailure(tx: DbTransaction, id: string, error: unknown) {
     await tx
       .update(outboxEvents)
@@ -119,6 +148,7 @@ export class OutboxService {
     options: ClaimOptions = {},
   ): Promise<BatchResult> {
     return db.transaction(async (tx) => {
+      await this.boundTransaction(tx);
       const events = await this.claimBatch(tx, options);
       const published: string[] = [];
       let failed: BatchResult['failed'] = null;
@@ -139,7 +169,12 @@ export class OutboxService {
     });
   }
 
-  /** Retry DLQ delivery until acknowledged; a failed DLQ send leaves the row intact. */
+  /**
+   * Retry DLQ delivery until acknowledged; a failed DLQ send leaves the row
+   * intact but records the error in `last_error` (via `recordFailure`), the
+   * same way a normal publish failure does, so it is visible without reading
+   * broker/relay logs.
+   */
   async processDeadLetters(
     publish: (event: ClaimedOutboxEvent) => Promise<void>,
     {
@@ -148,6 +183,7 @@ export class OutboxService {
     }: ClaimOptions = {},
   ): Promise<BatchResult> {
     return db.transaction(async (tx) => {
+      await this.boundTransaction(tx);
       const events = await tx
         .select()
         .from(outboxEvents)
@@ -167,6 +203,7 @@ export class OutboxService {
           await publish(event);
           published.push(event.id);
         } catch (error) {
+          await this.recordFailure(tx, event.id, error);
           failed = { id: event.id, error: describeError(error) };
           break;
         }
