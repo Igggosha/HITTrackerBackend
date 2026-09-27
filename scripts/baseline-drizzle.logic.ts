@@ -7,10 +7,10 @@ import { join } from 'node:path';
  * fake client instead of a live `pg.Client`.
  */
 export interface QueryableClient {
-  query<Row extends Record<string, unknown> = Record<string, unknown>>(
+  query: <Row extends Record<string, unknown> = Record<string, unknown>>(
     sql: string,
     params?: unknown[],
-  ): Promise<{ rows: Row[] }>;
+  ) => Promise<{ rows: Row[] }>;
 }
 
 /**

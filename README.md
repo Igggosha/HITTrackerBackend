@@ -80,9 +80,18 @@ users, workouts, and other local test data are not copied through Git.
 `sql/init.sql` is a `pg_dump` schema+data snapshot used only to bootstrap a
 brand-new Docker volume; `docker/init-db.sh` loads it before `migrate` runs.
 `scripts/baseline-drizzle.ts` (`npm run db:baseline`, run automatically before
-every `db:migrate`) records the two pre-Drizzle migrations
+every `db:migrate`) unconditionally records the two pre-Drizzle migrations
 (`20260810115352_robust_leopardon`, `20260815144508_curved_hannibal_king`) as
-already applied, because the dump always contains their table shapes.
+already applied. The dump does not fully contain `curved_hannibal_king`'s
+shape on its own — it is missing the `exercise_likes` table, the
+`exercises.difficulty` column, and the
+`users_current_workout_programs.day_in_program` column — but a fresh volume
+still ends up correct because the later, idempotent
+`drizzle/20260901013000_reconcile_docker_schema` migration recreates exactly
+those three gaps with `IF NOT EXISTS` guards and always runs (it is not
+baselined). If that reconcile migration is ever removed or stops covering the
+gap, baselining these two migrations unconditionally would need to be
+revisited.
 
 If you ever regenerate `sql/init.sql` from a database that had a migration
 applied out of sequence (directly, via `db:push`, or by dumping a database

@@ -19,7 +19,9 @@ async function main() {
       "select to_regclass('public.exercises') as exercises",
     );
     if (!tables.rows[0]?.exercises) {
-      throw new Error('The initial database schema is missing; cannot create a Drizzle baseline.');
+      throw new Error(
+        'The initial database schema is missing; cannot create a Drizzle baseline.',
+      );
     }
 
     await client.query('create schema if not exists drizzle');

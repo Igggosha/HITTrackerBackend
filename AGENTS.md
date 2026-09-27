@@ -46,8 +46,9 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 
 - Nearest test: `npx jest path/to/file.spec.ts --runInBand`.
 - All unit tests: `npm test -- --runInBand`.
-- Read-only lint: `npx eslint "{src,apps,libs,test}/**/*.ts"`. `npm run lint` contains `--fix` and mutates files.
+- Read-only lint: `npx eslint "{src,apps,libs,test,scripts}/**/*.ts"`. `npm run lint` contains `--fix` and mutates files.
 - Typecheck: `npx tsc --noEmit -p tsconfig.json`.
+- Typecheck scripts: `npx tsc --noEmit -p tsconfig.scripts.json` (`scripts/**/*.ts` is not in `tsconfig.json`'s `include`).
 - Production build: `npm run build`.
 - Integration smoke: `npm run test:e2e -- --runInBand`; database-backed cases require valid `.env` values and migrated PostgreSQL.
 

@@ -13,9 +13,9 @@ function fakeClient(rows: Record<string, unknown>[]): QueryableClient {
 
 describe('migrationTimestamp', () => {
   it('parses a migration folder name into its UTC creation time', () => {
-    expect(migrationTimestamp('20260924090000_add_body_metrics_analytics')).toBe(
-      Date.UTC(2026, 8, 24, 9, 0, 0),
-    );
+    expect(
+      migrationTimestamp('20260924090000_add_body_metrics_analytics'),
+    ).toBe(Date.UTC(2026, 8, 24, 9, 0, 0));
   });
 });
 
@@ -23,11 +23,17 @@ describe('recordMigrationIfMissing', () => {
   it('hashes the migration file and inserts a conditional row keyed by name', async () => {
     const client = fakeClient([{ id: 1 }]);
 
-    const inserted = await recordMigrationIfMissing(client, '20260810115352_robust_leopardon');
+    const inserted = await recordMigrationIfMissing(
+      client,
+      '20260810115352_robust_leopardon',
+    );
 
     expect(inserted).toBe(true);
     expect(client.query).toHaveBeenCalledTimes(1);
-    const [sql, params] = (client.query as jest.Mock).mock.calls[0];
+    const [sql, params] = (client.query as jest.Mock).mock.calls[0] as [
+      string,
+      unknown[],
+    ];
     expect(sql).toContain('insert into drizzle.__drizzle_migrations');
     expect(sql).toContain('where not exists');
     expect(params).toEqual([
@@ -48,7 +54,8 @@ describe('recordMigrationIfMissing', () => {
 
 describe('fingerprintedMigrations: 20260924090000_add_body_metrics_analytics', () => {
   const fingerprint = fingerprintedMigrations.find(
-    (migration) => migration.name === '20260924090000_add_body_metrics_analytics',
+    (migration) =>
+      migration.name === '20260924090000_add_body_metrics_analytics',
   );
 
   it('is registered', () => {
