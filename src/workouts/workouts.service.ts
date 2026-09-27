@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { db, primaryDb } from '../db/db';
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { db } from '../db/db';
 import { readerFor, recordWrite } from '../db/read-consistency';
 import {
   exercises,
@@ -33,16 +33,55 @@ import {
   historyKeywords,
   planCompletion,
 } from './history.utils';
+import { OutboxService } from '../outbox/outbox.service';
+import { performedSetsPayload } from '../outbox/events';
+import type { DbTransaction } from '../outbox/transaction';
+
+// Namespace of the per-user advisory lock that serializes workout starts
+// (42719 is the username lock in UsersService).
+export const WORKOUT_START_LOCK_NAMESPACE = 42720;
 
 @Injectable()
 export class WorkoutsService {
-  private async autoPauseIfInactive(workout: typeof workouts.$inferSelect, now = new Date()) {
+  constructor(private readonly outbox: OutboxService) {}
+
+  private openWorkoutCondition(workoutId: number, userId: number) {
+    return and(
+      eq(workouts.id, workoutId),
+      eq(workouts.userId, userId),
+      isNull(workouts.finishedAt),
+      inArray(workouts.status, [...openWorkoutStatuses]),
+    );
+  }
+
+  /**
+   * Locks an open workout row until the transaction ends. Every state change
+   * of a workout (sets, pause, finish) goes through this lock, so a set can no
+   * longer be written into a workout that is being finished, and two finishes
+   * cannot both see it as open.
+   */
+  private async lockOpenWorkout(tx: DbTransaction, workoutId: number, userId: number) {
+    const [workout] = await tx
+      .select()
+      .from(workouts)
+      .where(this.openWorkoutCondition(workoutId, userId))
+      .for('update')
+      .limit(1);
+    return workout;
+  }
+
+  private async autoPauseIfInactive(
+    workout: typeof workouts.$inferSelect,
+    now: Date,
+    tx: DbTransaction,
+  ) {
     if (workout.status !== 'active' || !isWorkoutInactive(workout.lastActivityAt, now)) {
       return { workout, autoPaused: false };
     }
 
+    // Compare-and-set: only one concurrent request can auto-pause the workout.
     const staleBefore = new Date(now.getTime() - WORKOUT_INACTIVITY_LIMIT_MS);
-    const [pausedWorkout] = await db
+    const [pausedWorkout] = await tx
       .update(workouts)
       .set({
         status: 'paused',
@@ -56,11 +95,10 @@ export class WorkoutsService {
       .returning();
 
     if (pausedWorkout) {
-      recordWrite(pausedWorkout.userId);
       return { workout: pausedWorkout, autoPaused: true };
     }
 
-    const [currentWorkout] = await primaryDb
+    const [currentWorkout] = await tx
       .select()
       .from(workouts)
       .where(eq(workouts.id, workout.id))
@@ -68,8 +106,8 @@ export class WorkoutsService {
     return { workout: currentWorkout ?? workout, autoPaused: false };
   }
 
-  private async touchActiveWorkout(workoutId: number, userId: number) {
-    const [updatedWorkout] = await db
+  private async touchActiveWorkout(tx: DbTransaction, workoutId: number, userId: number) {
+    const [updatedWorkout] = await tx
       .update(workouts)
       .set({ lastActivityAt: new Date() })
       .where(and(
@@ -79,215 +117,236 @@ export class WorkoutsService {
         isNull(workouts.finishedAt),
       ))
       .returning();
-    if (updatedWorkout) recordWrite(userId);
     return updatedWorkout;
   }
 
   /**
    * 1. Запуск нового тренування
+   *
+   * Safe to retry: starts of one user are serialized by an advisory lock, and
+   * a start that finds an open workout returns it instead of creating another.
    */
   async startWorkout(userId: number, userRole: UserRole, body: StartWorkoutDto) {
-    const [existingWorkout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
-      .limit(1);
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(${WORKOUT_START_LOCK_NAMESPACE}, ${userId})`,
+      );
 
-    if (existingWorkout) {
-      const { workout } = await this.autoPauseIfInactive(existingWorkout);
+      const [existingWorkout] = await tx
+        .select()
+        .from(workouts)
+        .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
+        .limit(1);
+
+      if (existingWorkout) {
+        const { workout } = await this.autoPauseIfInactive(existingWorkout, new Date(), tx);
+        return {
+          message: 'Active workout already in progress',
+          workout: {
+            ...workout,
+            // Переконуємось, що дата у строгому ISO-форматі UTC
+            createdAt: new Date(workout.createdAt).toISOString(),
+          },
+        };
+      }
+
+      const now = new Date();
+
+      let source: { programId: number; programName: string; scheduledFor: string | null } | null = null;
+
+      if (body?.scheduleId) {
+        const [assignment] = await tx
+          .select({
+            id: userProgramSchedule.id,
+            scheduledFor: userProgramSchedule.scheduledFor,
+            programId: workoutPrograms.id,
+            programName: workoutPrograms.name,
+          })
+          .from(userProgramSchedule)
+          .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
+          .where(and(eq(userProgramSchedule.id, body.scheduleId), eq(userProgramSchedule.userId, userId)))
+          .limit(1);
+        if (!assignment) throw new NotFoundException('Scheduled workout not found');
+        source = assignment;
+      } else if (body?.programId) {
+        const [program] = await tx
+          .select({
+            id: workoutPrograms.id,
+            name: workoutPrograms.name,
+            isActive: workoutPrograms.isActive,
+            isPersonal: workoutPrograms.isPersonal,
+            createdById: workoutPrograms.createdById,
+          })
+          .from(workoutPrograms)
+          .where(eq(workoutPrograms.id, body.programId))
+          .limit(1);
+        const canUse = program && (
+          hasMinimumRole(userRole, 'moderator')
+          || (program.isPersonal ? program.createdById === userId : program.isActive)
+        );
+        if (!canUse) throw new NotFoundException('Workout program not found');
+        source = { programId: program.id, programName: program.name, scheduledFor: null };
+      }
+
+      const planInput = body?.plan || [];
+      const exerciseIds = [...new Set(planInput.map((item) => item.exerciseId))];
+      const exerciseRows = exerciseIds.length
+        ? await tx.select({ id: exercises.id, name: exercises.name }).from(exercises).where(inArray(exercises.id, exerciseIds))
+        : [];
+      const exerciseNames = new Map(exerciseRows.map((exercise) => [exercise.id, exercise.name]));
+      if (exerciseNames.size !== exerciseIds.length) throw new NotFoundException('Planned exercise not found');
+
+      const historySnapshot: WorkoutHistorySnapshot = {
+        programId: source?.programId ?? null,
+        programName: source?.programName ?? null,
+        scheduledFor: source?.scheduledFor ?? null,
+        plan: planInput.map((item) => ({
+          exerciseId: item.exerciseId,
+          name: exerciseNames.get(item.exerciseId)!,
+          sets: item.sets,
+          reps: item.reps ?? null,
+          weight: item.weight ?? null,
+        })),
+      };
+
+      const [newWorkout] = await tx
+        .insert(workouts)
+        .values({
+          userId,
+          type: body?.type || 'HIT Session',
+          programContentId: body?.programContentId ?? null,
+          scheduleId: body?.scheduleId ?? null,
+          historySnapshot,
+          status: 'active',
+          createdAt: now,
+          lastActivityAt: now,
+        })
+        .returning();
+
+      await this.outbox.enqueue(tx, {
+        type: 'workout.started',
+        aggregateId: newWorkout.id,
+        payload: {
+          workoutId: newWorkout.id,
+          userId,
+          type: newWorkout.type,
+          programId: historySnapshot.programId,
+          scheduleId: newWorkout.scheduleId,
+          plannedExerciseIds: exerciseIds,
+          startedAt: newWorkout.createdAt.toISOString(),
+        },
+      });
+
       return {
-        message: 'Active workout already in progress',
+        message: 'Workout started',
         workout: {
-          ...workout,
-          // Переконуємось, що дата у строгому ISO-форматі UTC
-          createdAt: new Date(workout.createdAt).toISOString(),
+          ...newWorkout,
+          // Повертаємо стандартизовану ISO-дату, щоб уникнути зсуву таймера на фронтенді
+          createdAt: new Date(newWorkout.createdAt).toISOString(),
         },
       };
-    }
-
-    const now = new Date();
-
-    let source: { programId: number; programName: string; scheduledFor: string | null } | null = null;
-
-    if (body?.scheduleId) {
-      const [assignment] = await primaryDb
-        .select({
-          id: userProgramSchedule.id,
-          scheduledFor: userProgramSchedule.scheduledFor,
-          programId: workoutPrograms.id,
-          programName: workoutPrograms.name,
-        })
-        .from(userProgramSchedule)
-        .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
-        .where(and(eq(userProgramSchedule.id, body.scheduleId), eq(userProgramSchedule.userId, userId)))
-        .limit(1);
-      if (!assignment) throw new NotFoundException('Scheduled workout not found');
-      source = assignment;
-    } else if (body?.programId) {
-      const [program] = await primaryDb
-        .select({
-          id: workoutPrograms.id,
-          name: workoutPrograms.name,
-          isActive: workoutPrograms.isActive,
-          isPersonal: workoutPrograms.isPersonal,
-          createdById: workoutPrograms.createdById,
-        })
-        .from(workoutPrograms)
-        .where(eq(workoutPrograms.id, body.programId))
-        .limit(1);
-      const canUse = program && (
-        hasMinimumRole(userRole, 'moderator')
-        || (program.isPersonal ? program.createdById === userId : program.isActive)
-      );
-      if (!canUse) throw new NotFoundException('Workout program not found');
-      source = { programId: program.id, programName: program.name, scheduledFor: null };
-    }
-
-    const planInput = body?.plan || [];
-    const exerciseIds = [...new Set(planInput.map((item) => item.exerciseId))];
-    const exerciseRows = exerciseIds.length
-      ? await primaryDb.select({ id: exercises.id, name: exercises.name }).from(exercises).where(inArray(exercises.id, exerciseIds))
-      : [];
-    const exerciseNames = new Map(exerciseRows.map((exercise) => [exercise.id, exercise.name]));
-    if (exerciseNames.size !== exerciseIds.length) throw new NotFoundException('Planned exercise not found');
-
-    const historySnapshot: WorkoutHistorySnapshot = {
-      programId: source?.programId ?? null,
-      programName: source?.programName ?? null,
-      scheduledFor: source?.scheduledFor ?? null,
-      plan: planInput.map((item) => ({
-        exerciseId: item.exerciseId,
-        name: exerciseNames.get(item.exerciseId)!,
-        sets: item.sets,
-        reps: item.reps ?? null,
-        weight: item.weight ?? null,
-      })),
-    };
-
-    const [newWorkout] = await db
-      .insert(workouts)
-      .values({
-        userId,
-        type: body?.type || 'HIT Session',
-        programContentId: body?.programContentId ?? null,
-        scheduleId: body?.scheduleId ?? null,
-        historySnapshot,
-        status: 'active',
-        createdAt: now,
-        lastActivityAt: now,
-      })
-      .returning();
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-
-    return {
-      message: 'Workout started',
-      workout: {
-        ...newWorkout,
-        // Повертаємо стандартизовану ISO-дату, щоб уникнути зсуву таймера на фронтенді
-        createdAt: new Date(newWorkout.createdAt).toISOString(),
-      },
-    };
+    return result;
   }
 
   /**
    * 2. Отримання поточного активного тренування з його сетами
    */
   async getActiveWorkout(userId: number) {
-    const [openWorkout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(and(
-        eq(workouts.userId, userId),
-        isNull(workouts.finishedAt),
-        inArray(workouts.status, [...openWorkoutStatuses]),
-      ))
-      .limit(1);
+    const result = await db.transaction(async (tx) => {
+      const [openWorkout] = await tx
+        .select()
+        .from(workouts)
+        .where(and(
+          eq(workouts.userId, userId),
+          isNull(workouts.finishedAt),
+          inArray(workouts.status, [...openWorkoutStatuses]),
+        ))
+        .limit(1);
 
-    if (!openWorkout) return { workout: null, sets: [] };
+      if (!openWorkout) return { workout: null, sets: [] };
 
-    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
-    const rows = await primaryDb
-      .select({
-        workout: workouts,
-        set: sets,
-        exercise: exercises,
-        programId: userProgramSchedule.programId,
-      })
-      .from(workouts)
-      .leftJoin(sets, eq(workouts.id, sets.workoutId))
-      .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
-      .leftJoin(userProgramSchedule, eq(workouts.scheduleId, userProgramSchedule.id))
-      .where(eq(workouts.id, workout.id));
+      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const rows = await tx
+        .select({
+          workout: workouts,
+          set: sets,
+          exercise: exercises,
+          programId: userProgramSchedule.programId,
+        })
+        .from(workouts)
+        .leftJoin(sets, eq(workouts.id, sets.workoutId))
+        .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
+        .leftJoin(userProgramSchedule, eq(workouts.scheduleId, userProgramSchedule.id))
+        .where(eq(workouts.id, workout.id));
 
-    if (rows.length === 0) {
-      return { workout: null, sets: [] };
-    }
+      if (rows.length === 0) {
+        return { workout: null, sets: [] };
+      }
 
-    const activeWorkout = {
-      ...rows[0].workout,
-      programId: rows[0].programId ?? rows[0].workout.historySnapshot?.programId ?? null,
-      // Форматуємо createdAt для запобігання помилкам часу
-      createdAt: new Date(rows[0].workout.createdAt).toISOString(),
-    };
+      const activeWorkout = {
+        ...rows[0].workout,
+        programId: rows[0].programId ?? rows[0].workout.historySnapshot?.programId ?? null,
+        // Форматуємо createdAt для запобігання помилкам часу
+        createdAt: new Date(rows[0].workout.createdAt).toISOString(),
+      };
 
-    const loggedSets = rows
-      .filter((r) => r.set !== null)
-      .map((r) => ({
-        ...r.set,
-        exerciseName: r.exercise?.name,
-      }));
+      const loggedSets = rows
+        .filter((r) => r.set !== null)
+        .map((r) => ({
+          ...r.set,
+          exerciseName: r.exercise?.name,
+        }));
 
-    return {
-      workout: activeWorkout,
-      sets: loggedSets,
-      autoPaused,
-    };
+      return {
+        workout: activeWorkout,
+        sets: loggedSets,
+        autoPaused,
+      };
+    });
+    // Only an auto-pause writes here; marked after commit, never inside the tx.
+    if ('autoPaused' in result && result.autoPaused) recordWrite(userId);
+    return result;
   }
 
   /**
    * 3. Запис підходу (сету)
    */
   async recordSet(workoutId: number, userId: number, body: RecordSetDto) {
-    const [openWorkout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(
-        and(
-          eq(workouts.id, workoutId), 
-          eq(workouts.userId, userId),
-          isNull(workouts.finishedAt),
-          inArray(workouts.status, [...openWorkoutStatuses])
-        )
-      )
-      .limit(1);
+    const result = await db.transaction(async (tx) => {
+      const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
+      if (!openWorkout) {
+        throw new NotFoundException('Active workout not found or already finished');
+      }
 
-    if (!openWorkout) {
-      throw new NotFoundException('Active workout not found or already finished');
-    }
+      const { workout } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
 
-    const { workout } = await this.autoPauseIfInactive(openWorkout);
+      const [recordedSet] = await tx
+        .insert(sets)
+        .values({
+          workoutId,
+          exerciseId: body.exerciseId,
+          weight: body.weight,
+          reps: body.reps,
+          isFailure: body.isFailure ?? true,
+          isDropSet: body.isDropSet ?? false,
+          rpe: body.rpe,
+        })
+        .returning();
 
-    const [recordedSet] = await db
-      .insert(sets)
-      .values({
-        workoutId,
-        exerciseId: body.exerciseId,
-        weight: body.weight,
-        reps: body.reps,
-        isFailure: body.isFailure ?? true,
-        isDropSet: body.isDropSet ?? false,
-        rpe: body.rpe,
-      })
-      .returning();
+      const touchedWorkout = await this.touchActiveWorkout(tx, workout.id, userId);
+
+      return {
+        message: 'Set recorded successfully',
+        set: recordedSet,
+        workout: touchedWorkout ?? workout,
+      };
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-
-    const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
-
-    return {
-      message: 'Set recorded successfully',
-      set: recordedSet,
-      workout: touchedWorkout ?? workout,
-    };
+    return result;
   }
 
   async updateSet(
@@ -296,93 +355,132 @@ export class WorkoutsService {
     userId: number,
     body: UpdateSetDto,
   ) {
-    const [ownedSet] = await primaryDb
-      .select({ id: sets.id, workout: workouts })
-      .from(sets)
-      .innerJoin(workouts, eq(sets.workoutId, workouts.id))
-      .where(
-        and(
-          eq(sets.id, setId),
-          eq(sets.workoutId, workoutId),
-          eq(workouts.userId, userId),
-          isNull(workouts.finishedAt),
-          inArray(workouts.status, [...openWorkoutStatuses]),
-        ),
-      )
-      .limit(1);
+    const result = await db.transaction(async (tx) => {
+      const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
+      const [ownedSet] = openWorkout
+        ? await tx
+          .select({ id: sets.id })
+          .from(sets)
+          .where(and(eq(sets.id, setId), eq(sets.workoutId, workoutId)))
+          .limit(1)
+        : [];
 
-    if (!ownedSet) {
-      throw new NotFoundException('Active workout set not found');
-    }
+      if (!openWorkout || !ownedSet) {
+        throw new NotFoundException('Active workout set not found');
+      }
 
-    const { workout } = await this.autoPauseIfInactive(ownedSet.workout);
+      const { workout } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
 
-    const [updatedSet] = await db
-      .update(sets)
-      .set({
-        weight: body.weight,
-        reps: body.reps,
-        rpe: body.rpe,
-        isFailure: body.isFailure ?? false,
-      })
-      .where(eq(sets.id, setId))
-      .returning();
+      const [updatedSet] = await tx
+        .update(sets)
+        .set({
+          weight: body.weight,
+          reps: body.reps,
+          rpe: body.rpe,
+          isFailure: body.isFailure ?? false,
+        })
+        .where(eq(sets.id, setId))
+        .returning();
+
+      const touchedWorkout = await this.touchActiveWorkout(tx, workout.id, userId);
+
+      return { message: 'Set updated successfully', set: updatedSet, workout: touchedWorkout ?? workout };
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-
-    const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
-
-    return { message: 'Set updated successfully', set: updatedSet, workout: touchedWorkout ?? workout };
+    return result;
   }
 
   /**
    * 4. Завершення тренування
+   *
+   * Safe to retry: the row lock makes concurrent finishes run one after the
+   * other, and every finish after the first returns the stored result without
+   * rewriting it or emitting a second `workout.finished` event.
    */
   async finishWorkout(workoutId: number, userId: number, body: FinishWorkoutDto) {
-    const [openWorkout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
-      .limit(1);
+    const result = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(workouts)
+        .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+        .for('update')
+        .limit(1);
 
-    if (!openWorkout) {
-      throw new NotFoundException('Workout not found');
-    }
+      if (!current) {
+        throw new NotFoundException('Workout not found');
+      }
 
-    if (openWorkout.finishedAt) {
+      if (current.finishedAt) {
+        return {
+          message: 'Workout was already finished',
+          workout: current,
+        };
+      }
+
+      // A cancelled workout must never turn into completed history.
+      if (current.status === 'cancelled') {
+        throw new NotFoundException('Open workout not found');
+      }
+
+      const { workout } = await this.autoPauseIfInactive(current, new Date(), tx);
+      const finishedAt = new Date();
+      const durationSeconds = activeDurationSeconds(workout, finishedAt);
+
+      const [updatedWorkout] = await tx
+        .update(workouts)
+        .set({
+          notes: body?.notes || '',
+          durationSeconds,
+          finishedAt,
+          status: 'completed',
+          pausedAt: null,
+        })
+        .where(eq(workouts.id, workoutId))
+        .returning();
+
+      if (workout.scheduleId) {
+        await tx
+          .update(userProgramSchedule)
+          .set({ status: 'completed' })
+          .where(and(eq(userProgramSchedule.id, workout.scheduleId), eq(userProgramSchedule.userId, userId)));
+      }
+
+      // recordSet/updateSet hold the same row lock, so this is the final set list.
+      const performedSets = await tx
+        .select()
+        .from(sets)
+        .where(eq(sets.workoutId, workoutId))
+        .orderBy(sets.id);
+      const totalSeconds = Math.max(
+        0,
+        Math.floor((finishedAt.getTime() - workout.createdAt.getTime()) / 1000),
+      );
+
+      await this.outbox.enqueue(tx, {
+        type: 'workout.finished',
+        aggregateId: workoutId,
+        payload: {
+          workoutId,
+          userId,
+          programId: workout.historySnapshot?.programId ?? null,
+          scheduleId: workout.scheduleId,
+          startedAt: workout.createdAt.toISOString(),
+          finishedAt: finishedAt.toISOString(),
+          durationSeconds,
+          pausedSeconds: Math.max(0, totalSeconds - durationSeconds),
+          ...performedSetsPayload(performedSets),
+        },
+      });
+
       return {
-        message: 'Workout was already finished',
-        workout: openWorkout,
+        message: 'Workout finished successfully',
+        workout: updatedWorkout,
       };
-    }
-
-    const { workout } = await this.autoPauseIfInactive(openWorkout);
-    const finishedAt = new Date();
-    const durationSeconds = activeDurationSeconds(workout, finishedAt);
-
-    const [updatedWorkout] = await db
-      .update(workouts)
-      .set({
-        notes: body?.notes || '',
-        durationSeconds,
-        finishedAt,
-        status: 'completed',
-        pausedAt: null,
-      })
-      .where(eq(workouts.id, workoutId))
-      .returning();
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-
-    if (workout.scheduleId) {
-      await db
-        .update(userProgramSchedule)
-        .set({ status: 'completed' })
-        .where(and(eq(userProgramSchedule.id, workout.scheduleId), eq(userProgramSchedule.userId, userId)));
-    }
-
-    return {
-      message: 'Workout finished successfully',
-      workout: updatedWorkout,
-    };
+    return result;
   }
 
   /**
@@ -601,76 +699,106 @@ export class WorkoutsService {
   }
 
   async togglePause(workoutId: number, userId: number) {
-    const [openWorkout] = await primaryDb.select().from(workouts)
-      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
-      .limit(1);
-    if (!openWorkout) throw new NotFoundException('Open workout not found');
+    const result = await db.transaction(async (tx) => {
+      // Locked, so a double tap toggles twice instead of both requests pausing,
+      // and a finish that commits first is never overwritten back to open.
+      const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
+      if (!openWorkout) throw new NotFoundException('Open workout not found');
 
-    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
-    if (autoPaused) return { workout, autoPaused };
+      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      if (autoPaused) return { workout, autoPaused };
 
-    const now = new Date();
-    const isPausing = workout.status === 'active';
-    const pausedSeconds = isPausing
-      ? workout.pausedSeconds
-      : workout.pausedSeconds + Math.max(0, Math.floor((now.getTime() - new Date(workout.pausedAt!).getTime()) / 1000));
-    const [updatedWorkout] = await db.update(workouts).set({
-      status: isPausing ? 'paused' : 'active',
-      pausedAt: isPausing ? now : null,
-      pausedSeconds,
-      lastActivityAt: isPausing ? workout.lastActivityAt : now,
-    }).where(eq(workouts.id, workoutId)).returning();
+      const now = new Date();
+      const isPausing = workout.status === 'active';
+      const pausedSeconds = isPausing
+        ? workout.pausedSeconds
+        : workout.pausedSeconds + Math.max(0, Math.floor((now.getTime() - new Date(workout.pausedAt!).getTime()) / 1000));
+      const [updatedWorkout] = await tx.update(workouts).set({
+        status: isPausing ? 'paused' : 'active',
+        pausedAt: isPausing ? now : null,
+        pausedSeconds,
+        lastActivityAt: isPausing ? workout.lastActivityAt : now,
+      }).where(eq(workouts.id, workoutId)).returning();
+      return { workout: updatedWorkout };
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-    return { workout: updatedWorkout };
+    return result;
   }
 
   async heartbeat(workoutId: number, userId: number) {
-    const [openWorkout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(and(
-        eq(workouts.id, workoutId),
-        eq(workouts.userId, userId),
-        isNull(workouts.finishedAt),
-        inArray(workouts.status, [...openWorkoutStatuses]),
-      ))
-      .limit(1);
-    if (!openWorkout) throw new NotFoundException('Open workout not found');
+    // No row lock: both writes below are compare-and-set updates, and the
+    // heartbeat is too frequent to queue behind set writes.
+    const result = await db.transaction(async (tx) => {
+      const [openWorkout] = await tx
+        .select()
+        .from(workouts)
+        .where(this.openWorkoutCondition(workoutId, userId))
+        .limit(1);
+      if (!openWorkout) throw new NotFoundException('Open workout not found');
 
-    const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
-    if (workout.status !== 'active') return { workout, autoPaused };
+      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      if (workout.status !== 'active') return { workout, autoPaused };
 
-    return {
-      workout: await this.touchActiveWorkout(workout.id, userId),
-      autoPaused: false,
-    };
+      return {
+        workout: await this.touchActiveWorkout(tx, workout.id, userId),
+        autoPaused: false,
+      };
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
+    recordWrite(userId);
+    return result;
   }
 
   async cancelWorkout(workoutId: number, userId: number) {
-    const [workout] = await primaryDb.select().from(workouts)
-      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
-      .limit(1);
-    if (!workout) throw new NotFoundException('Open workout not found');
-    const [updatedWorkout] = await db.update(workouts).set({ status: 'cancelled', pausedAt: null }).where(eq(workouts.id, workoutId)).returning();
+    const result = await db.transaction(async (tx) => {
+      // One conditional statement: a finish that committed first makes this
+      // match nothing, so a completed workout is never flipped to cancelled.
+      const [updatedWorkout] = await tx
+        .update(workouts)
+        .set({ status: 'cancelled', pausedAt: null })
+        .where(this.openWorkoutCondition(workoutId, userId))
+        .returning();
+      if (!updatedWorkout) throw new NotFoundException('Open workout not found');
+
+      const [{ setCount }] = await tx
+        .select({ setCount: count() })
+        .from(sets)
+        .where(eq(sets.workoutId, workoutId));
+      await this.outbox.enqueue(tx, {
+        type: 'workout.cancelled',
+        aggregateId: workoutId,
+        payload: {
+          workoutId,
+          userId,
+          startedAt: updatedWorkout.createdAt.toISOString(),
+          cancelledAt: new Date().toISOString(),
+          setCount,
+        },
+      });
+      return { workout: updatedWorkout };
+    });
+    // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
-    return { workout: updatedWorkout };
+    return result;
   }
 
   /**
    * 6. Видалення / Скасування тренування
    */
   async deleteWorkout(workoutId: number, userId: number) {
-    const [workout] = await primaryDb
-      .select()
-      .from(workouts)
-      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
-      .limit(1);
-
-    if (!workout) {
-      throw new NotFoundException('Workout not found or access denied');
-    }
-
     await db.transaction(async (tx) => {
+      const [workout] = await tx
+        .select({ id: workouts.id })
+        .from(workouts)
+        .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+        .for('update')
+        .limit(1);
+
+      if (!workout) {
+        throw new NotFoundException('Workout not found or access denied');
+      }
+
       await tx.delete(sets).where(eq(sets.workoutId, workoutId));
       await tx.delete(workouts).where(eq(workouts.id, workoutId));
     });

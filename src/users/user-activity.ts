@@ -1,8 +1,7 @@
+import { Logger } from '@nestjs/common';
 import { db } from '../db/db';
-import {
-  userActivityEvents,
-  type UserActivityMetadata,
-} from '../db/schema';
+import { userActivityEvents, type UserActivityMetadata } from '../db/schema';
+import type { DbTransaction } from '../outbox/transaction';
 
 export type AdminUserActivityItem = {
   id: string;
@@ -13,21 +12,46 @@ export type AdminUserActivityItem = {
   actorUserId?: number | null;
 };
 
-export async function recordUserActivity(values: {
+type UserActivityValues = {
   userId: number;
   actorUserId?: number | null;
   type: string;
   metadata?: UserActivityMetadata;
-}) {
+};
+
+const logger = new Logger('UserActivity');
+
+/**
+ * Appends to the admin activity timeline.
+ *
+ * With a transaction the row is written inside it and errors propagate: the
+ * activity entry commits or rolls back together with the change it describes
+ * (and with that change's outbox event), so the timeline cannot show an edit
+ * that never happened or miss one that did.
+ *
+ * Without a transaction there is no business write left to protect: the change
+ * already committed on its own (for example after an object-storage call that
+ * cannot join a database transaction). The timeline is operational context,
+ * not a compliance ledger, so a logging outage there must not turn a
+ * successful request into an error; the failure is logged and swallowed.
+ */
+export async function recordUserActivity(
+  values: UserActivityValues,
+  tx?: DbTransaction,
+) {
+  const row = { ...values, metadata: values.metadata ?? {} };
+  if (tx) {
+    await tx.insert(userActivityEvents).values(row);
+    return;
+  }
   try {
-    await db.insert(userActivityEvents).values({
-      ...values,
-      metadata: values.metadata ?? {},
-    });
+    await db.insert(userActivityEvents).values(row);
   } catch (error) {
-    // This timeline is operational context, not a compliance ledger. A logging
-    // outage must not turn a successful profile or access change into an error.
-    console.error('Could not record user activity', error);
+    // Only the type is logged: metadata can hold personal profile values.
+    logger.error(
+      `Could not record user activity ${values.type}`,
+      error instanceof Error ? error.stack : undefined,
+    );
   }
 }
 

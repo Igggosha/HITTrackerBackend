@@ -3,6 +3,7 @@ import { validate } from 'class-validator';
 import { db } from '../db/db';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/auth.dto';
+import { OutboxService } from '../outbox/outbox.service';
 
 const mockLimit = jest.fn();
 const mockUpdateWhere = jest.fn();
@@ -13,9 +14,12 @@ const mockTxReturning = jest.fn();
 const mockTxDeleteWhere = jest.fn();
 const mockTxInsertValues = jest.fn();
 const mockTxUpdateReturning = jest.fn();
+const mockTxFor = jest.fn(() => ({ limit: mockTxLimit }));
+const mockUpsertReturning = jest.fn();
 const tx = {
+  rollback: jest.fn(),
   select: jest.fn(() => ({
-    from: () => ({ where: () => ({ limit: mockTxLimit }) }),
+    from: () => ({ where: () => ({ limit: mockTxLimit, for: mockTxFor }) }),
   })),
   insert: jest.fn(() => ({
     values: mockTxInsertValues,
@@ -57,6 +61,7 @@ describe('AuthService registration', () => {
     jwtService as any,
     mailerService as any,
     {} as any,
+    new OutboxService(),
   );
 
   beforeEach(() => {
@@ -77,6 +82,9 @@ describe('AuthService registration', () => {
     mockInsertValues.mockReturnValue({
       onConflictDoUpdate: mockOnConflictDoUpdate,
     });
+    mockUpsertReturning.mockReset();
+    mockUpsertReturning.mockResolvedValue([{ email: 'stored@example.com' }]);
+    mockOnConflictDoUpdate.mockReturnValue({ returning: mockUpsertReturning });
   });
 
   it('accepts a legacy payload without fullName', async () => {
@@ -93,8 +101,6 @@ describe('AuthService registration', () => {
     (bcrypt.hash as jest.Mock)
       .mockResolvedValueOnce('password-hash')
       .mockResolvedValueOnce('verification-code-hash');
-    mockOnConflictDoUpdate.mockResolvedValue(undefined);
-
     await service.register({
       email: ' Legacy@Example.com ',
       password: 'password123',
@@ -131,7 +137,7 @@ describe('AuthService registration', () => {
   });
 
   it('AUTH-VERIFY-004 identifies an expired code', async () => {
-    mockLimit.mockResolvedValue([
+    mockTxLimit.mockResolvedValueOnce([
       { email: 'user@example.com', expiresAt: new Date(0), lockedUntil: null },
     ]);
 
@@ -144,7 +150,7 @@ describe('AuthService registration', () => {
   });
 
   it('AUTH-VERIFY-002 identifies an incorrect code', async () => {
-    mockLimit.mockResolvedValue([
+    mockTxLimit.mockResolvedValueOnce([
       {
         email: 'user@example.com',
         expiresAt: new Date(Date.now() + 60_000),
@@ -199,9 +205,10 @@ describe('AuthService registration', () => {
       attempts: 0,
       verificationCodeHash: 'verification-code-hash',
     };
-    mockLimit.mockResolvedValueOnce([pending]);
-    mockTxLimit.mockResolvedValueOnce([]);
-    mockTxReturning.mockResolvedValueOnce([{ id: 1 }]);
+    mockTxLimit.mockResolvedValueOnce([pending]).mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValueOnce([
+      { id: 1, createdAt: new Date('2026-09-27T10:00:00Z') },
+    ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
     await expect(
@@ -210,6 +217,206 @@ describe('AuthService registration', () => {
     expect(tx.insert).toHaveBeenCalled();
     expect(mockTxReturning).toHaveBeenCalled();
     expect(mockTxDeleteWhere).toHaveBeenCalled();
+    expect(mockTxInsertValues).toHaveBeenLastCalledWith({
+      aggregateType: 'user',
+      aggregateId: '1',
+      eventType: 'user.registered',
+      eventVersion: 1,
+      payload: {
+        userId: 1,
+        method: 'email',
+        registeredAt: '2026-09-27T10:00:00.000Z',
+      },
+    });
+  });
+
+  it('AUTH-VERIFY-005 locks the pending row and commits a failed attempt', async () => {
+    mockTxLimit.mockResolvedValueOnce([
+      {
+        email: 'user@example.com',
+        expiresAt: new Date(Date.now() + 60_000),
+        lockedUntil: null,
+        attempts: 3,
+        verificationCodeHash: 'hash',
+      },
+    ]);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      service.verifyRegistration({ email: 'user@example.com', code: '000000' }),
+    ).rejects.toMatchObject({
+      response: { attemptsRemaining: 1 },
+      status: 400,
+    });
+    // Parallel guesses queue on this lock instead of all reading attempts=3.
+    expect(mockTxFor).toHaveBeenCalledWith('update');
+    // The callback resolved, so the incremented counter was committed.
+    await expect(
+      (db.transaction as jest.Mock).mock.results[0].value,
+    ).resolves.toEqual({ kind: 'invalid_code', attempts: 4 });
+  });
+
+  it('AUTH-VERIFY-006 commits the lockout on the fifth failed attempt', async () => {
+    mockTxLimit.mockResolvedValueOnce([
+      {
+        email: 'user@example.com',
+        expiresAt: new Date(Date.now() + 60_000),
+        lockedUntil: null,
+        attempts: 4,
+        verificationCodeHash: 'hash',
+      },
+    ]);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      service.verifyRegistration({ email: 'user@example.com', code: '000000' }),
+    ).rejects.toMatchObject({ status: 429 });
+    await expect(
+      (db.transaction as jest.Mock).mock.results[0].value,
+    ).resolves.toEqual({ kind: 'too_many_attempts' });
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
+
+  it('AUTH-REG-004 does not reset a lockout set by a concurrent verification', async () => {
+    mockLimit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hash');
+    // ON CONFLICT ... DO UPDATE WHERE <not locked> matched nothing.
+    mockUpsertReturning.mockResolvedValueOnce([]);
+
+    await expect(
+      service.register({ email: 'user@example.com', password: 'Password1' }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(mockOnConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ setWhere: expect.anything() }),
+    );
+    expect(mailerService.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('AUTH-RESET-001 consumes a reset token only once under concurrency', async () => {
+    mockLimit.mockResolvedValueOnce([{ id: 1 }]);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('new-hash');
+    // A concurrent reset with the same link already cleared the token.
+    mockTxUpdateReturning.mockResolvedValueOnce([]);
+
+    await expect(
+      service.resetPassword({
+        token: 't'.repeat(64),
+        newPassword: 'Password1',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    // Sessions are not revoked and no activity is written for the loser.
+    expect(tx.update).toHaveBeenCalledTimes(1);
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
+
+  it('AUTH-GOOGLE-001 emits user.registered with the new Google account', async () => {
+    mockLimit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValueOnce([
+      {
+        id: 4,
+        email: 'g@example.com',
+        username: null,
+        displayName: 'g',
+        role: 'user',
+        createdAt: new Date('2026-09-27T10:00:00Z'),
+      },
+    ]);
+
+    await service.loginWithGoogle({ email: 'g@example.com', googleId: 'gid' });
+
+    const event = mockTxInsertValues.mock.calls.at(-1)[0];
+    expect(event).toMatchObject({
+      eventType: 'user.registered',
+      payload: { userId: 4, method: 'google' },
+    });
+    expect(JSON.stringify(event)).not.toContain('g@example.com');
+  });
+
+  it('AUTH-GOOGLE-002 completes as a login when a concurrent duplicate Google sign-up races the insert', async () => {
+    mockLimit
+      .mockResolvedValueOnce([]) // userByGoogleId: none yet
+      .mockResolvedValueOnce([]) // userByEmail: none yet
+      .mockResolvedValueOnce([
+        // Re-read by googleId after the 23505: the winning concurrent
+        // request already created this exact account.
+        {
+          id: 9,
+          email: 'race@example.com',
+          username: null,
+          displayName: 'race',
+          role: 'user',
+          googleId: 'gid-race',
+        },
+      ]);
+    (db.transaction as jest.Mock).mockRejectedValueOnce({
+      code: '23505',
+      constraint: 'users_google_id_key',
+    });
+
+    await expect(
+      service.loginWithGoogle({
+        email: 'race@example.com',
+        googleId: 'gid-race',
+      }),
+    ).resolves.toEqual({
+      message: 'Google login successful',
+      user: {
+        id: 9,
+        email: 'race@example.com',
+        username: null,
+        displayName: 'race',
+        role: 'user',
+      },
+    });
+  });
+
+  it('AUTH-GOOGLE-003 links by email when the race conflict was on email alone', async () => {
+    mockLimit
+      .mockResolvedValueOnce([]) // userByGoogleId: none yet
+      .mockResolvedValueOnce([]) // userByEmail: none yet
+      .mockResolvedValueOnce([]) // re-read by googleId: no such account
+      .mockResolvedValueOnce([
+        // An account with this email was created in between (e.g. a
+        // concurrent email registration), but isn't linked to Google yet.
+        {
+          id: 10,
+          email: 'race2@example.com',
+          username: null,
+          displayName: 'race2',
+          role: 'user',
+          googleId: null,
+        },
+      ]);
+    (db.transaction as jest.Mock).mockRejectedValueOnce({
+      code: '23505',
+      constraint: 'users_email_key',
+    });
+    mockTxUpdateReturning.mockResolvedValueOnce([
+      {
+        id: 10,
+        email: 'race2@example.com',
+        username: null,
+        displayName: 'race2',
+        role: 'user',
+        googleId: 'gid-race2',
+      },
+    ]);
+
+    await expect(
+      service.loginWithGoogle({
+        email: 'race2@example.com',
+        googleId: 'gid-race2',
+      }),
+    ).resolves.toEqual({
+      message: 'Google account linked successfully',
+      user: {
+        id: 10,
+        email: 'race2@example.com',
+        username: null,
+        displayName: 'race2',
+        role: 'user',
+      },
+    });
   });
 
   it('AUTH-LOGIN-001 returns an auth response for valid credentials', async () => {
