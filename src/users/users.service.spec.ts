@@ -39,7 +39,7 @@ const tx = {
       where: () => ({
         limit: mockTxLimit,
         for: () => ({ limit: mockTxLimit }),
-        orderBy: () => ({ for: mockTxLockRows }),
+        orderBy: () => ({ for: mockTxLockRows, limit: mockTxLimit }),
       }),
     }),
   })),
@@ -221,9 +221,7 @@ describe('UsersService profile identity', () => {
     jest.useFakeTimers().setSystemTime(now);
     mockTxLimit
       .mockResolvedValueOnce([{ username: 'current_name' }])
-      .mockResolvedValueOnce([]);
-    mockTxReturning.mockResolvedValue([{ id: 1 }]);
-    mockDbLimit
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -234,6 +232,7 @@ describe('UsersService profile identity', () => {
         },
       ])
       .mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
 
     await service.updateUsername(1, 'New_Name');
 
@@ -248,9 +247,7 @@ describe('UsersService profile identity', () => {
   it('PROFILE-USERNAME-009 lets the owner reclaim a reserved username', async () => {
     mockTxLimit
       .mockResolvedValueOnce([{ username: 'new_name' }])
-      .mockResolvedValueOnce([{ userId: 1 }]);
-    mockTxReturning.mockResolvedValue([{ id: 1 }]);
-    mockDbLimit
+      .mockResolvedValueOnce([{ userId: 1 }])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -261,6 +258,7 @@ describe('UsersService profile identity', () => {
         },
       ])
       .mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
 
     await expect(service.updateUsername(1, 'old_name')).resolves.toMatchObject({
       username: 'old_name',
@@ -270,17 +268,17 @@ describe('UsersService profile identity', () => {
 
   it('PROFILE-USERNAME-012 preserves the legacy profile-name contract', async () => {
     mockTxReturning.mockResolvedValue([{ id: 1 }]);
-    mockTxLimit.mockResolvedValueOnce([
-      {
-        email: 'user@example.com',
-        displayName: 'Before',
-        age: null,
-        gender: null,
-        height: null,
-        goal: null,
-      },
-    ]);
-    mockDbLimit
+    mockTxLimit
+      .mockResolvedValueOnce([
+        {
+          email: 'user@example.com',
+          displayName: 'Before',
+          age: null,
+          gender: null,
+          height: null,
+          goal: null,
+        },
+      ])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -334,10 +332,8 @@ describe('UsersService profile identity', () => {
       width: 512,
       height: 512,
     });
-    mockTxLimit.mockResolvedValueOnce([
-      { avatarKey: 'uploads/avatars/1/old.webp' },
-    ]);
-    mockDbLimit
+    mockTxLimit
+      .mockResolvedValueOnce([{ avatarKey: 'uploads/avatars/1/old.webp' }])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -378,10 +374,8 @@ describe('UsersService profile identity', () => {
   });
 
   it('AVATAR-003 clears the key and deletes the object on removal', async () => {
-    mockTxLimit.mockResolvedValueOnce([
-      { avatarKey: 'uploads/avatars/1/old.webp' },
-    ]);
-    mockDbLimit
+    mockTxLimit
+      .mockResolvedValueOnce([{ avatarKey: 'uploads/avatars/1/old.webp' }])
       .mockResolvedValueOnce([
         {
           id: 1,

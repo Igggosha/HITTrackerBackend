@@ -385,47 +385,89 @@ export class AuthService {
       .limit(1);
 
     if (userByEmail) {
-      const linkedUser = await db.transaction(async (tx) => {
-        const [linked] = await tx
-          .update(users)
-          .set({ googleId: googleUser.googleId })
-          .where(eq(users.id, userByEmail.id))
-          .returning();
+      return this.linkGoogleAccount(userByEmail, googleUser.googleId);
+    }
 
-        await recordUserActivity(
-          {
-            userId: userByEmail.id,
-            actorUserId: userByEmail.id,
-            type: 'account.google_linked',
-          },
-          tx,
-        );
-        return linked;
+    try {
+      const newUser = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(users)
+          .values({
+            email: googleUser.email,
+            username: null,
+            displayName: googleUser.email.split('@', 1)[0],
+            googleId: googleUser.googleId,
+          })
+          .returning();
+        await this.enqueueUserRegistered(tx, created, 'google');
+        return created;
       });
 
       return {
-        message: 'Google account linked successfully',
-        user: this.toPublicUser(linkedUser),
+        message: 'Google registration successful',
+        user: this.toPublicUser(newUser),
       };
-    }
+    } catch (error: unknown) {
+      const databaseError = error as { code?: string; constraint?: string };
+      if (databaseError.code !== '23505') throw error;
 
-    const newUser = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(users)
-        .values({
-          email: googleUser.email,
-          username: null,
-          displayName: googleUser.email.split('@', 1)[0],
-          googleId: googleUser.googleId,
-        })
+      // Two concurrent first-time Google sign-ins for the same new account
+      // both pass the checks above and race on the insert; the loser lands
+      // here. Re-read on the primary rather than trusting the (possibly
+      // lagging) replica: if the winner's row already carries this Google
+      // id, this is the same identity, so complete the login exactly like
+      // the userByGoogleId branch above.
+      const [raced] = await db
+        .select()
+        .from(users)
+        .where(eq(users.googleId, googleUser.googleId))
+        .limit(1);
+      if (raced) {
+        return {
+          message: 'Google login successful',
+          user: this.toPublicUser(raced),
+        };
+      }
+
+      // Otherwise the conflict was on the email alone: an account with this
+      // email exists (created between our two lookups above) but isn't
+      // linked to this Google id yet. Link it, consistent with the
+      // userByEmail branch above, instead of failing the request.
+      const [existing] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, googleUser.email))
+        .limit(1);
+      if (!existing) throw error;
+      return this.linkGoogleAccount(existing, googleUser.googleId);
+    }
+  }
+
+  private async linkGoogleAccount(
+    userByEmail: typeof users.$inferSelect,
+    googleId: string,
+  ) {
+    const linkedUser = await db.transaction(async (tx) => {
+      const [linked] = await tx
+        .update(users)
+        .set({ googleId })
+        .where(eq(users.id, userByEmail.id))
         .returning();
-      await this.enqueueUserRegistered(tx, created, 'google');
-      return created;
+
+      await recordUserActivity(
+        {
+          userId: userByEmail.id,
+          actorUserId: userByEmail.id,
+          type: 'account.google_linked',
+        },
+        tx,
+      );
+      return linked;
     });
 
     return {
-      message: 'Google registration successful',
-      user: this.toPublicUser(newUser),
+      message: 'Google account linked successfully',
+      user: this.toPublicUser(linkedUser),
     };
   }
 

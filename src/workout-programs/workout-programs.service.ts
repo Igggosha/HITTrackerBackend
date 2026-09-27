@@ -23,6 +23,7 @@ import { hasSameExerciseMultiset } from './sharing.utils';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
 import { OutboxService } from '../outbox/outbox.service';
+import type { DbTransaction } from '../outbox/transaction';
 
 @Injectable()
 export class WorkoutProgramsService {
@@ -173,29 +174,34 @@ export class WorkoutProgramsService {
   }
 
   async getCalendar(userId: number, { from, to }: ListScheduleDto) {
-    await this.materializeWeeklyAssignments(userId, from, to);
     const today = new Date().toISOString().slice(0, 10);
-    const assignments = await db
-      .select({
-        id: userProgramSchedule.id,
-        scheduledFor: userProgramSchedule.scheduledFor,
-        storedStatus: userProgramSchedule.status,
-        programId: workoutPrograms.id,
-        programName: workoutPrograms.name,
-        programDescription: workoutPrograms.description,
-        isPersonal: workoutPrograms.isPersonal,
-        seriesId: userProgramSchedule.seriesId,
-        completedAt: workouts.finishedAt,
-      })
-      .from(userProgramSchedule)
-      .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
-      .leftJoin(workouts, and(eq(workouts.scheduleId, userProgramSchedule.id), eq(workouts.status, 'completed')))
-      .where(and(
-        eq(userProgramSchedule.userId, userId),
-        gte(userProgramSchedule.scheduledFor, from),
-        lte(userProgramSchedule.scheduledFor, to),
-      ))
-      .orderBy(asc(userProgramSchedule.scheduledFor), asc(userProgramSchedule.id));
+    // The read runs in the same transaction as the materialization below, so
+    // it reaches the primary too: a plain `db.select` here could hit a
+    // lagging replica and miss the rows this request just inserted.
+    const assignments = await db.transaction(async (tx: DbTransaction) => {
+      await this.materializeWeeklyAssignments(tx, userId, from, to);
+      return tx
+        .select({
+          id: userProgramSchedule.id,
+          scheduledFor: userProgramSchedule.scheduledFor,
+          storedStatus: userProgramSchedule.status,
+          programId: workoutPrograms.id,
+          programName: workoutPrograms.name,
+          programDescription: workoutPrograms.description,
+          isPersonal: workoutPrograms.isPersonal,
+          seriesId: userProgramSchedule.seriesId,
+          completedAt: workouts.finishedAt,
+        })
+        .from(userProgramSchedule)
+        .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
+        .leftJoin(workouts, and(eq(workouts.scheduleId, userProgramSchedule.id), eq(workouts.status, 'completed')))
+        .where(and(
+          eq(userProgramSchedule.userId, userId),
+          gte(userProgramSchedule.scheduledFor, from),
+          lte(userProgramSchedule.scheduledFor, to),
+        ))
+        .orderBy(asc(userProgramSchedule.scheduledFor), asc(userProgramSchedule.id));
+    });
 
     return assignments.map(({ storedStatus, ...assignment }) => ({
       ...assignment,
@@ -204,7 +210,7 @@ export class WorkoutProgramsService {
   }
 
   async removeScheduledProgram(userId: number, id: number) {
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx: DbTransaction) => {
       const [assignment] = await tx.select({ seriesId: userProgramSchedule.seriesId })
         .from(userProgramSchedule)
         .where(and(eq(userProgramSchedule.id, id), eq(userProgramSchedule.userId, userId)))
@@ -408,7 +414,7 @@ export class WorkoutProgramsService {
   }
 
   private async createOfficialRevision(userId: number, loaded: typeof workoutPrograms.$inferSelect, dto: UpdateWorkoutProgramDto) {
-    const result = await db.transaction(async (tx: any) => {
+    const result = await db.transaction(async (tx: DbTransaction) => {
       // Two moderators editing the same revision would otherwise both fork it
       // and leave two active copies. The lock serializes them; the second one
       // sees the revision already retired and gets a conflict to reload.
@@ -584,26 +590,24 @@ export class WorkoutProgramsService {
     ))?.id ?? null;
   }
 
-  private async materializeWeeklyAssignments(userId: number, from: string, to: string) {
-    await db.transaction(async (tx: any) => {
-      // FOR SHARE keeps a concurrent series removal from deleting a series
-      // between this read and the insert that references it.
-      const series = await tx.select().from(userProgramScheduleSeries).where(and(
-        eq(userProgramScheduleSeries.userId, userId),
-        lte(userProgramScheduleSeries.startsOn, to),
-        or(isNull(userProgramScheduleSeries.endsOn), gte(userProgramScheduleSeries.endsOn, from)),
-      )).for('share');
-      const assignments = series.flatMap((item: typeof userProgramScheduleSeries.$inferSelect) => weeklyDatesInRange(
-        item.startsOn,
-        from,
-        item.endsOn && item.endsOn < to ? item.endsOn : to,
-      ).map((scheduledFor) => ({
-        userId,
-        programId: item.programId,
-        scheduledFor,
-        seriesId: item.id,
-      })));
-      if (assignments.length) await tx.insert(userProgramSchedule).values(assignments).onConflictDoNothing();
-    });
+  private async materializeWeeklyAssignments(tx: DbTransaction, userId: number, from: string, to: string) {
+    // FOR SHARE keeps a concurrent series removal from deleting a series
+    // between this read and the insert that references it.
+    const series = await tx.select().from(userProgramScheduleSeries).where(and(
+      eq(userProgramScheduleSeries.userId, userId),
+      lte(userProgramScheduleSeries.startsOn, to),
+      or(isNull(userProgramScheduleSeries.endsOn), gte(userProgramScheduleSeries.endsOn, from)),
+    )).for('share');
+    const assignments = series.flatMap((item: typeof userProgramScheduleSeries.$inferSelect) => weeklyDatesInRange(
+      item.startsOn,
+      from,
+      item.endsOn && item.endsOn < to ? item.endsOn : to,
+    ).map((scheduledFor) => ({
+      userId,
+      programId: item.programId,
+      scheduledFor,
+      seriesId: item.id,
+    })));
+    if (assignments.length) await tx.insert(userProgramSchedule).values(assignments).onConflictDoNothing();
   }
 }

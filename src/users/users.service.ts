@@ -59,6 +59,8 @@ import {
 import { OutboxService } from '../outbox/outbox.service';
 import type { DbTransaction } from '../outbox/transaction';
 
+type AvatarProfile = Awaited<ReturnType<UsersService['getProfile']>>;
+
 const bodyMetricFields = {
   id: userBodyMetrics.id,
   weight: userBodyMetrics.weight,
@@ -520,8 +522,17 @@ export class UsersService {
     return { user: deletedUser };
   }
 
-  async getProfile(userId: number, useIdentityContractV2 = false) {
-    const [user] = await db
+  /**
+   * Reads the profile. Pass the transaction a preceding write just committed
+   * to, so this reaches the primary in the same request instead of a plain
+   * `db.select` that could hit a lagging replica and miss that write.
+   */
+  async getProfile(
+    userId: number,
+    useIdentityContractV2 = false,
+    executor: DbTransaction | typeof db = db,
+  ) {
+    const [user] = await executor
       .select({
         id: users.id,
         email: users.email,
@@ -540,7 +551,7 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    const [latestMetric] = await db
+    const [latestMetric] = await executor
       .select({ weight: userBodyMetrics.weight })
       .from(userBodyMetrics)
       .where(
@@ -584,35 +595,42 @@ export class UsersService {
       square: true,
     });
 
-    let replacedKey: string | null;
+    let result: { replacedKey: string | null; profile: AvatarProfile };
     try {
-      replacedKey = await this.setAvatarKey(userId, stored.key);
+      result = await this.setAvatarKey(
+        userId,
+        stored.key,
+        useIdentityContractV2,
+      );
     } catch (error) {
       // The row was not updated, so nothing points at the new object.
       await this.storageService.remove(stored.key);
       throw error;
     }
 
-    await this.storageService.remove(replacedKey);
+    await this.storageService.remove(result.replacedKey);
 
-    return this.getProfile(userId, useIdentityContractV2);
+    return result.profile;
   }
 
   async removeAvatar(userId: number, useIdentityContractV2 = false) {
-    const replacedKey = await this.setAvatarKey(userId, null);
-    await this.storageService.remove(replacedKey);
+    const result = await this.setAvatarKey(userId, null, useIdentityContractV2);
+    await this.storageService.remove(result.replacedKey);
 
-    return this.getProfile(userId, useIdentityContractV2);
+    return result.profile;
   }
 
   /**
-   * Swaps the stored avatar key and returns the one that was replaced, so the
-   * caller can clean up an object that nothing references any more.
+   * Swaps the stored avatar key and returns the one that was replaced (so the
+   * caller can clean up an object that nothing references any more) together
+   * with the fresh profile, read on the primary inside the same transaction
+   * as the swap.
    */
   private async setAvatarKey(
     userId: number,
     avatarKey: string | null,
-  ): Promise<string | null> {
+    useIdentityContractV2 = false,
+  ): Promise<{ replacedKey: string | null; profile: AvatarProfile }> {
     return db.transaction(async (tx) => {
       const [current] = await tx
         .select({ avatarKey: users.avatarKey })
@@ -635,7 +653,11 @@ export class UsersService {
         );
       }
 
-      return current.avatarKey === avatarKey ? null : current.avatarKey;
+      const profile = await this.getProfile(userId, useIdentityContractV2, tx);
+      return {
+        replacedKey: current.avatarKey === avatarKey ? null : current.avatarKey,
+        profile,
+      };
     });
   }
   async getUsernameAvailability(userId: number, value: unknown) {
@@ -798,8 +820,9 @@ export class UsersService {
     try {
       // Profile fields, the optional weight entry, its outbox event and the
       // activity row commit together. The row lock keeps the "from" values in
-      // the activity entry exact when two edits race.
-      await db.transaction(async (tx) => {
+      // the activity entry exact when two edits race. The response is read
+      // back in the same transaction, on the primary.
+      return await db.transaction(async (tx) => {
         const [previous] = hasChanges
           ? await tx
               .select({
@@ -856,6 +879,8 @@ export class UsersService {
             );
           }
         }
+
+        return this.getProfile(userId, useIdentityContractV2, tx);
       });
     } catch (error: unknown) {
       const databaseError = error as { code?: string };
@@ -867,14 +892,13 @@ export class UsersService {
       }
       throw error;
     }
-
-    return this.getProfile(userId, useIdentityContractV2);
   }
 
   async updateUsername(userId: number, value: unknown) {
     const normalizedUsername = this.validateUsername(value);
     try {
-      await db.transaction(async (tx) => {
+      // The response is read back in the same transaction, on the primary.
+      return await db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(42719, ${userId})`);
 
         const [currentUser] = await tx
@@ -961,6 +985,8 @@ export class UsersService {
             tx,
           );
         }
+
+        return this.getProfile(userId, true, tx);
       });
     } catch (error: unknown) {
       const databaseError = error as { code?: string };
@@ -972,8 +998,6 @@ export class UsersService {
       }
       throw error;
     }
-
-    return this.getProfile(userId, true);
   }
 
   private validateUsername(value: unknown): string {

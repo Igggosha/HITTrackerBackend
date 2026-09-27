@@ -22,7 +22,7 @@ reads move to a replica.
 | `workouts.delete` | Ownership read outside the tx. | Read moved into the tx with `FOR UPDATE`, so an in-flight finish completes first. |
 | `programs.schedule` (one-off / weekly) | — (unique `(user, date, program)` + `ON CONFLICT DO NOTHING`). | Already safe; now one tx with `program.scheduled`. A retried one-off is a no-op and emits no second event. |
 | `programs.removeScheduled` | Read and delete in separate statements. | Tx + `FOR UPDATE`; deletes are idempotent. |
-| Calendar materialization | A series deleted between the read and the insert → FK error (500). | Tx + `FOR SHARE` on the series rows. |
+| Calendar materialization | A series deleted between the read and the insert → FK error (500). The calendar read that followed was a plain `db.select` outside any tx, so against a read replica it could miss the rows this same request just materialized. | Tx + `FOR SHARE` on the series rows; the calendar read for the response now runs in that same tx, on the primary. |
 | `programs.update` (official revision) | Two moderators editing the same revision both fork it → two active copies. | Tx + `FOR UPDATE` on the source; if it was retired meanwhile → `409 PROGRAM_REVISION_CONFLICT`. |
 | `programs.update` (personal), media swaps, `createProgram` | — | Already safe: tx + `FOR UPDATE` (existing). |
 | `programs.createShareToken`, `importSharedProgram` | — | Already safe: conditional `WHERE share_token IS NULL`; unique index + `23505` retry path. |
@@ -30,16 +30,16 @@ reads move to a replica.
 | `exercises.create` | Two identical creates both pass the pre-check → unhandled `23505` (500). | `23505` mapped to `409`. (Case-only duplicates still pass: no `lower(name)` index; see limits.) |
 | `exercises.update` | — | Already safe: one tx, `23505` → 409. |
 | `users.updateRole` / `deleteUser` | Authorization decided on unlocked reads: an admin could demote someone promoted to `super_admin` a moment earlier; activity "from" role could be stale. | Tx locks actor + target (`ORDER BY id FOR UPDATE`, no deadlock) and decides on the locked roles; activity row / `user.deleted` in the same tx; avatar object removed after commit. |
-| `users.updateProfile` | Profile update, weight entry and activity were three autocommits (partial writes). | One tx; previous values read `FOR UPDATE`; weight entry + `body_metric.recorded` + activity inside it. |
+| `users.updateProfile` | Profile update, weight entry and activity were three autocommits (partial writes). The profile returned to the caller was then a plain `db.select` (`getProfile`) after the tx committed — a replica read that could miss the update it is reporting on. | One tx; previous values read `FOR UPDATE`; weight entry + `body_metric.recorded` + activity inside it; `getProfile` for the response now runs inside the same tx, on the primary. |
 | `users.createBodyMetric` | — | Single insert; now in a tx with `body_metric.recorded`. |
-| `users.updateUsername` | — | Already safe (advisory locks + unique index); activity moved inside the tx. |
-| `users.updateAvatar` / `removeAvatar` | Activity written after the tx. | Activity inside the key-swap tx. |
+| `users.updateUsername` | The profile returned to the caller was a plain `db.select` after the tx committed (same read-after-write gap as `updateProfile`). | Already safe (advisory locks + unique index); activity moved inside the tx; `getProfile` for the response now runs inside the same tx. |
+| `users.updateAvatar` / `removeAvatar` | Activity written after the tx. Same read-after-write gap: the profile response came from a `db.select` after commit. | Activity inside the key-swap tx; the profile for the response is now read inside that same tx. |
 | `auth.verifyRegistration` | Parallel wrong codes all read `attempts = n`: the 5-attempt lockout could be bypassed (reproduced: 12 parallel guesses were all evaluated). | Tx + `FOR UPDATE` on the pending row; attempts, lockout and cleanup are committed, the HTTP error is thrown after commit. User + `user.registered` in the same tx. |
 | `auth.register` | Upsert could reset a lockout set concurrently by a failed verification. | `ON CONFLICT DO UPDATE … WHERE locked_until IS NULL OR locked_until <= now()`; no row → 429. |
 | `auth.resetPassword` | Token checked, then consumed by `id`: two concurrent resets with one link both succeeded. | Conditional update on `id + token hash + expiry`; the loser gets 400 and revokes nothing. |
 | `auth.refreshSession` | — | Already safe: rotation is a conditional `UPDATE … WHERE revoked_at IS NULL AND expires_at > now() RETURNING` inside a tx. |
 | `auth.exchangeMobileOAuthCode`, `revokeRefreshSession` | — | Already safe: single `DELETE/UPDATE … RETURNING`. |
-| `auth.loginWithGoogle` | Link + activity were separate. | Link + activity in one tx; new account + `user.registered` in one tx. |
+| `auth.loginWithGoogle` | Link + activity were separate. The new-account branch also lacked the `23505` handling its siblings have: two concurrent first-time Google sign-ins for the same account both pass the `googleId`/email lookups and race on the insert, so the loser got a raw 500. | Link + activity in one tx; new account + `user.registered` in one tx. The loser of the insert race catches `23505` and re-reads on the primary: found by `googleId` → same identity, complete the login like the `userByGoogleId` branch; found only by email → link it, like the `userByEmail` branch; otherwise rethrow. |
 
 ## Idempotency of retry-prone mobile writes
 

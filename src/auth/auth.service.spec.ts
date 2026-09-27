@@ -324,6 +324,93 @@ describe('AuthService registration', () => {
     expect(JSON.stringify(event)).not.toContain('g@example.com');
   });
 
+  it('AUTH-GOOGLE-002 completes as a login when a concurrent duplicate Google sign-up races the insert', async () => {
+    mockLimit
+      .mockResolvedValueOnce([]) // userByGoogleId: none yet
+      .mockResolvedValueOnce([]) // userByEmail: none yet
+      .mockResolvedValueOnce([
+        // Re-read by googleId after the 23505: the winning concurrent
+        // request already created this exact account.
+        {
+          id: 9,
+          email: 'race@example.com',
+          username: null,
+          displayName: 'race',
+          role: 'user',
+          googleId: 'gid-race',
+        },
+      ]);
+    (db.transaction as jest.Mock).mockRejectedValueOnce({
+      code: '23505',
+      constraint: 'users_google_id_key',
+    });
+
+    await expect(
+      service.loginWithGoogle({
+        email: 'race@example.com',
+        googleId: 'gid-race',
+      }),
+    ).resolves.toEqual({
+      message: 'Google login successful',
+      user: {
+        id: 9,
+        email: 'race@example.com',
+        username: null,
+        displayName: 'race',
+        role: 'user',
+      },
+    });
+  });
+
+  it('AUTH-GOOGLE-003 links by email when the race conflict was on email alone', async () => {
+    mockLimit
+      .mockResolvedValueOnce([]) // userByGoogleId: none yet
+      .mockResolvedValueOnce([]) // userByEmail: none yet
+      .mockResolvedValueOnce([]) // re-read by googleId: no such account
+      .mockResolvedValueOnce([
+        // An account with this email was created in between (e.g. a
+        // concurrent email registration), but isn't linked to Google yet.
+        {
+          id: 10,
+          email: 'race2@example.com',
+          username: null,
+          displayName: 'race2',
+          role: 'user',
+          googleId: null,
+        },
+      ]);
+    (db.transaction as jest.Mock).mockRejectedValueOnce({
+      code: '23505',
+      constraint: 'users_email_key',
+    });
+    mockTxUpdateReturning.mockResolvedValueOnce([
+      {
+        id: 10,
+        email: 'race2@example.com',
+        username: null,
+        displayName: 'race2',
+        role: 'user',
+        googleId: 'gid-race2',
+      },
+    ]);
+
+    await expect(
+      service.loginWithGoogle({
+        email: 'race2@example.com',
+        googleId: 'gid-race2',
+      }),
+    ).resolves.toEqual({
+      message: 'Google account linked successfully',
+      user: {
+        id: 10,
+        email: 'race2@example.com',
+        username: null,
+        displayName: 'race2',
+        role: 'user',
+      },
+    });
+  });
+
   it('AUTH-LOGIN-001 returns an auth response for valid credentials', async () => {
     mockLimit.mockResolvedValueOnce([
       {
