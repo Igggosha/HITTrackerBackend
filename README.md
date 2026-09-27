@@ -94,14 +94,41 @@ users, workouts, and other local test data are not copied through Git.
 
 ### Local observability
 
-Prometheus and Grafana are opt-in: set a unique `METRICS_TOKEN` (at least 24
-characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in `.env`,
-then run `docker compose --profile observability up --build`. Open Grafana at
-`http://localhost:3001` (admin / your configured password); Prometheus is at
-`http://localhost:9090`. Both ports bind to localhost and can be changed with
-`GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the bearer token and
-remains protected if the API is reachable through the tunnel. Demo details are
-in [docs/diploma/observability.md](docs/diploma/observability.md).
+Prometheus, Grafana, and Loki are opt-in: set a unique `METRICS_TOKEN` (at
+least 24 characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in
+`.env`, then run `docker compose --profile observability up --build`. Open
+Grafana at `http://localhost:3001` (admin / your configured password);
+Prometheus is at `http://localhost:9090`. Both ports bind to localhost and can
+be changed with `GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the
+bearer token and remains protected if the API is reachable through the
+tunnel.
+
+Every container's logs (api, postgres, minio, ...) are collected by Grafana
+Alloy and shipped to Loki, and are searchable in Grafana's provisioned
+**Logs** dashboard next to the metrics dashboards, filterable by service,
+level, and request ID; the API Overview dashboard's 5xx panel links straight
+there. Loki has no host port at all — unlike Grafana/Prometheus above, it is
+reachable only from Grafana and Alloy over the internal `observability`
+network — so query it through Grafana Explore or the Logs dashboard; see
+"Debugging Loki directly" in
+[docs/diploma/observability.md](docs/diploma/observability.md) for how to
+query it from the host if you ever need to. Demo details, including how to
+correlate a specific `X-Request-Id` across every service, are in the same
+file.
+
+Before your first `docker compose up`, replace every `change_me`-style value
+in `.env`. Three of them are enforced at boot and the API refuses to start
+(crash-looping instead of serving traffic) until they are changed:
+`JWT_SECRET` and `OAUTH_SESSION_SECRET` (`src/config/environment.ts` requires
+24+ characters and rejects the `.env.example` placeholder text), and
+`S3_SECRET_ACCESS_KEY` (`src/storage/storage.config.ts` rejects
+`change_me_storage_secret`, `minioadmin`, and empty values whenever
+`S3_BUCKET` is set, which it is by default). Nothing else in the app code
+checks for a placeholder, but leaving these unchanged is still a real
+security/foot-gun risk and should be replaced too: `DB_PASSWORD`,
+`REPLICATION_PASSWORD`, `MINIO_ROOT_PASSWORD`, and, only for the
+observability profile, `METRICS_DB_PASSWORD`, `METRICS_TOKEN` (24+
+characters), and `GRAFANA_ADMIN_PASSWORD`.
 
 #### Refreshing `sql/init.sql`
 
@@ -151,7 +178,6 @@ guards (see `drizzle/20260901013000_reconcile_docker_schema`) when the gap is
 small and self-contained; reach for a `fingerprintedMigrations` entry when the
 dump itself jumped ahead of the migration history. Either way, never edit an
 existing migration file under `drizzle/` to add such guards after the fact.
->>>>>>> feat/diploma-platform
 
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 

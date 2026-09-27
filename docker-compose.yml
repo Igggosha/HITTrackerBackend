@@ -1,3 +1,12 @@
+# Pinned so the Compose project name never depends on the checkout directory
+# name: Alloy (docker/observability/alloy/config.alloy) filters discovered
+# containers by `com.docker.compose.project`, and that label's value is this
+# pinned name unless overridden by `-p <name>` or `COMPOSE_PROJECT_NAME` in
+# the environment/.env, both of which still take precedence over `name:`
+# here. Keep this in sync with the `ALLOY_COMPOSE_PROJECT` default on the
+# `alloy` service below.
+name: hittrackerbackend
+
 services:
   postgres:
     image: postgres:17
@@ -470,6 +479,8 @@ services:
     profiles: [observability]
     depends_on:
       - prometheus
+      - loki
+      - jaeger
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
@@ -497,6 +508,70 @@ services:
     networks: [private, observability]
     restart: unless-stopped
 
+  # Log storage. Filesystem-backed, single binary, 7-day retention (matches
+  # Prometheus's --storage.tsdb.retention.time above). Reachable only from
+  # Grafana and Alloy on the internal `observability` network; auth is
+  # disabled because nothing outside that network can reach it. No host port
+  # is published at all (unlike Grafana/Prometheus above) since nothing on
+  # the host needs to query Loki directly; see "Debugging Loki directly" in
+  # docs/diploma/observability.md for how to query it anyway when needed.
+  loki:
+    image: grafana/loki:3.7.8
+    profiles: [observability]
+    command: ["-config.file=/etc/loki/loki.yml"]
+    mem_limit: 512m
+    volumes:
+      - ./docker/observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    # The grafana/loki image ships only the `loki` binary (no shell, no
+    # wget/curl), so there is no CMD/CMD-SHELL healthcheck to run inside it;
+    # `alloy`'s `loki.write` component retries pushes with backoff until Loki
+    # is actually accepting writes, so no health-gated dependency is needed.
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # Log collector (Alloy is Grafana's supported successor to Promtail).
+  # Reads container logs through the Docker socket and ships only THIS
+  # Compose project's containers to Loki. Needs no network but
+  # `observability` (to reach loki:3100); it talks to Docker over the
+  # bind-mounted socket, not over a Compose network.
+  #
+  # SECURITY: the read-only Docker socket mount below is still effectively
+  # root-on-the-host access (list/inspect every container, read their logs).
+  # Runs as root so it can read the socket; see the comment in
+  # docker/observability/alloy/config.alloy for the full rationale.
+  alloy:
+    image: grafana/alloy:v1.20.0
+    profiles: [observability]
+    user: "0:0"
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "--storage.path=/var/lib/alloy/data",
+        "/etc/alloy/config.alloy",
+      ]
+    mem_limit: 256m
+    environment:
+      # Which Compose project's containers to collect (see config.alloy).
+      # Tracks whatever project name Compose itself resolved: the top-level
+      # `name: hittrackerbackend` above unless overridden by a custom
+      # `-p <name>` or `COMPOSE_PROJECT_NAME` (also export/set it here so
+      # this default matches). If the Logs dashboard or
+      # `{project="..."}` queries come back empty, verify what Alloy is
+      # actually shipping with the `project` label values check described in
+      # docs/diploma/observability.md ("Verifying container discovery").
+      ALLOY_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-hittrackerbackend}
+    volumes:
+      - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      - observability
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   postgres_replica_data:
@@ -505,6 +580,7 @@ volumes:
   prometheus_data:
   grafana_data:
   metrics_token:
+  loki_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
