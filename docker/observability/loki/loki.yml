@@ -1,0 +1,71 @@
+# Single-binary Loki for local/dev observability. Auth is disabled because
+# Loki is only reachable on the internal `observability` Compose network
+# (Grafana and Alloy); it has no host port at all (see "Debugging Loki
+# directly" in docs/diploma/observability.md for how to query it without
+# one). Everything is stored under /loki, which is the named volume
+# `loki_data` mounted by docker-compose.yml.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+# TSDB is the current recommended index for single-binary/filesystem Loki.
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Keep a dev machine's disk bounded: 7 days of logs, matching the
+  # Prometheus metrics retention already used for this stack.
+  retention_period: 168h
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  # Small, dev-sized ingestion limits; this is a single low-traffic API, not
+  # a production multi-tenant Loki.
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+  max_cache_freshness_per_query: 10m
+  # Powers the log-volume panels on the Logs dashboard
+  # (sum by (service, level) (count_over_time(...))).
+  volume_enabled: true
+  # Alloy attaches requestId/req.method/req.url/res.statusCode as structured
+  # metadata (see docker/observability/alloy/config.alloy) instead of labels;
+  # this bounds how much of that per-line metadata Loki keeps.
+  max_structured_metadata_size: 64KB
+
+# The compactor is what actually enforces retention_period above by deleting
+# chunks/index past that age; without retention_enabled it only compacts.
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+
+# No querier-side alerting rules are configured (see docs/diploma/observability.md):
+# the "api error logs" alert is a Grafana-managed alert querying this Loki
+# datasource directly, so the ruler does not need its own storage/alertmanager
+# wiring, mirroring how Prometheus's alerts.yml rules are evaluated without an
+# Alertmanager in this dev stack.
+
+analytics:
+  reporting_enabled: false

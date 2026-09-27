@@ -1,0 +1,105 @@
+{
+  "title": "Logs",
+  "uid": "logs",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(service)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "level",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(level)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "requestId",
+        "type": "textbox",
+        "label": "Request ID contains",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log volume by service and level",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum by (service, level) (count_over_time({service=~\"$service\", level=~\"$level\"}[1m]))",
+          "legendFormat": "{{service}} / {{level}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error log rate (errors / all lines)",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate({service=~\"$service\"} | level=\"error\" [5m])) / clamp_min(sum(rate({service=~\"$service\"}[5m])), 0.001)",
+          "legendFormat": "error ratio"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Error log count",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (service) (count_over_time({service=~\"$service\"} | level=\"error\" [5m]))",
+          "legendFormat": "{{service}} errors/5m"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Logs (filter by service/level, search by requestId)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 14 },
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{service=~\"$service\", level=~\"$level\"} | requestId=~\".*$requestId.*\"",
+          "queryType": "range"
+        }
+      ]
+    }
+  ]
+}
