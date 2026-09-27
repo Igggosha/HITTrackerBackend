@@ -44,14 +44,24 @@ const tx = {
   })),
 };
 
-jest.mock('../db/db', () => ({
-  db: {
+jest.mock('../db/db', () => {
+  // `db` and `primaryDb` are deliberately distinct mocks (mirrors
+  // auth.service.spec.ts): db.select throws so a read that is supposed to go
+  // through primaryDb (auth/authorization checks, profile reads, username
+  // availability) but was accidentally changed to use the replica fails the
+  // test instead of silently passing against the same double.
+  const db = {
     transaction: jest.fn((callback) => callback(tx)),
     update: jest.fn(() => ({ set: mockDbSet })),
     delete: jest.fn(() => ({
       where: () => ({ returning: mockDbDeleteReturning }),
     })),
     insert: jest.fn(() => ({ values: jest.fn() })),
+    select: jest.fn(() => {
+      throw new Error('Read used the replica instead of primaryDb');
+    }),
+  };
+  const primaryDb = {
     select: jest.fn(() => ({
       from: () => ({
         where: () => ({
@@ -60,8 +70,9 @@ jest.mock('../db/db', () => ({
         }),
       }),
     })),
-  },
-}));
+  };
+  return { db, primaryDb };
+});
 
 describe('UsersService profile identity', () => {
   const service = new UsersService({ get: jest.fn(() => 25) } as any, storage);
@@ -256,6 +267,14 @@ describe('UsersService profile identity', () => {
   });
 
   it('PROFILE-USERNAME-012 preserves the legacy profile-name contract', async () => {
+    // updateProfile's own "previous values" read legitimately uses the
+    // replica (it only feeds an activity-log diff, not an auth decision), so
+    // this test gives db.select() a working chain for that one call; every
+    // other test leaves it throwing to catch a primary read wrongly moved
+    // onto the replica.
+    (db.select as jest.Mock).mockImplementationOnce(() => ({
+      from: () => ({ where: () => ({ limit: mockDbLimit }) }),
+    }));
     mockDbReturning.mockResolvedValue([{ id: 1 }]);
     mockDbLimit
       .mockResolvedValueOnce([

@@ -29,7 +29,6 @@ export class WorkoutsController {
 
   @Get('exercise-ids')
   async getUniqueExerciseIds(@Req() req) {
-    console.log('req exercise ids')
     return this.workoutsService.getUniqueExerciseIds(req.user.id);
   }
   @Get('exercise/:exerciseId/sets')

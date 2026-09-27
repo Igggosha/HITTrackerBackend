@@ -27,7 +27,7 @@
 
 ## Run the backend and PostgreSQL with Docker
 
-Docker Compose starts the API and PostgreSQL together. The containers use the
+Docker Compose starts the API, PostgreSQL primary, and a streaming replica. The containers use the
 internal `hit-tracker-network`; the API connects to PostgreSQL through the
 service name `postgres`, not through a host port. Only the API is published to
 the host on port `3000` by default.
@@ -54,14 +54,31 @@ the host on port `3000` by default.
 3. Check the API at `http://localhost:3000/` and stop the stack with
    `docker compose down`.
 
-The PostgreSQL volume persists between restarts. The initial UTF-16 SQL dump is
+The primary and replica have separate persistent volumes. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
-first time. The `migrate` service records the SQL-dump baseline and then runs
+first time. `replication-init` ensures the replication role and host rule on every
+startup, including with an older primary volume. The `migrate` service records
+the SQL-dump baseline and then runs
 the versioned Drizzle migrations before the API starts, including for an
 existing volume. The `seed` service then idempotently adds the shared exercise
 library and starter programs; it never deletes personal data. Use `docker
 compose logs -f api`, `docker compose logs -f postgres`, `docker compose logs
 migrate`, or `docker compose logs seed` to inspect startup problems.
+
+Compose sets `DATABASE_REPLICA_URL` for the API. Plain selects use the replica;
+writes, transactions, OAuth sessions, auth checks, and read-after-write paths use
+the primary. Outside Compose, leave `DATABASE_REPLICA_URL` unset for a single
+database. A configured but unavailable replica makes ordinary replica reads fail;
+restart without the URL to route all reads to the primary. See
+[`docs/diploma/read-replica.md`](docs/diploma/read-replica.md) for demo and lag SQL.
+
+Streaming replication uses its own `replicator` role and `REPLICATION_PASSWORD`
+(never the app's `DB_PASSWORD`), and its `pg_hba.conf` rule is scoped to the
+`private` network's subnet (`PRIVATE_NETWORK_SUBNET`, default `172.28.40.0/24`)
+instead of `0.0.0.0/0`. Changing that subnet also changes the Docker network,
+so run `docker compose down` first, then `docker compose up --build`; this
+recreates the network but keeps the named volumes (`postgres_data`,
+`postgres_replica_data`).
 
 To add the shared starter library again without resetting users or workouts,
 run `npm run db:seed` from this folder.
@@ -78,13 +95,63 @@ users, workouts, and other local test data are not copied through Git.
 ### Local observability
 
 Prometheus and Grafana are opt-in: set a unique `METRICS_TOKEN` (at least 24
-characters) and `GRAFANA_ADMIN_PASSWORD` in `.env`, then run
-`docker compose --profile observability up --build`. Open Grafana at
+characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in `.env`,
+then run `docker compose --profile observability up --build`. Open Grafana at
 `http://localhost:3001` (admin / your configured password); Prometheus is at
 `http://localhost:9090`. Both ports bind to localhost and can be changed with
 `GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the bearer token and
 remains protected if the API is reachable through the tunnel. Demo details are
 in [docs/diploma/observability.md](docs/diploma/observability.md).
+
+#### Refreshing `sql/init.sql`
+
+`sql/init.sql` is a `pg_dump` schema+data snapshot used only to bootstrap a
+brand-new Docker volume; `docker/init-db.sh` loads it before `migrate` runs.
+`scripts/baseline-drizzle.ts` (`npm run db:baseline`, run automatically before
+every `db:migrate`) unconditionally records the two pre-Drizzle migrations
+(`20260810115352_robust_leopardon`, `20260815144508_curved_hannibal_king`) as
+already applied. The dump does not fully contain `curved_hannibal_king`'s
+shape on its own — it is missing the `exercise_likes` table, the
+`exercises.difficulty` column, and the
+`users_current_workout_programs.day_in_program` column — but a fresh volume
+still ends up correct because the later, idempotent
+`drizzle/20260901013000_reconcile_docker_schema` migration recreates exactly
+those three gaps with `IF NOT EXISTS` guards and always runs (it is not
+baselined). If that reconcile migration is ever removed or stops covering the
+gap, baselining these two migrations unconditionally would need to be
+revisited.
+
+If you ever regenerate `sql/init.sql` from a database that had a migration
+applied out of sequence (directly, via `db:push`, or by dumping a database
+that skipped ahead), the fresh dump can already contain a later migration's
+columns/constraints/indexes even though earlier migrations were never run
+against it. `db:migrate` would then fail on a fresh volume with an
+"already exists" error the first time that migration's plain `ALTER`/`CREATE`
+DDL runs against a dump that already has it.
+
+Before committing a refreshed `sql/init.sql`:
+
+1. Diff the new dump's schema against `src/db/schema.ts` and against each
+   migration under `drizzle/` in order, to find exactly which migrations'
+   changes the dump already contains.
+2. For each such migration (anything beyond the two pre-Drizzle ones),
+   add an entry to `fingerprintedMigrations` in
+   `scripts/baseline-drizzle.logic.ts`: a query that checks for that
+   migration's specific columns/constraints/indexes, so `db:baseline` records
+   it as applied instead of letting `db:migrate` re-run its DDL. Prefer this
+   fingerprint approach over hardcoding a migration name, so the check keeps
+   working (or fails loudly) if the dump changes again later.
+3. Verify both paths still work: a brand-new volume (`docker compose up` on a
+   fresh `_postgres_data` volume ends with `migrate`/`seed` exiting 0 and the
+   same schema as `src/db/schema.ts`), and an existing volume that already
+   ran every migration (`db:baseline && db:migrate` again is a no-op).
+
+Prefer making an ordinary new migration idempotent with `IF NOT EXISTS`
+guards (see `drizzle/20260901013000_reconcile_docker_schema`) when the gap is
+small and self-contained; reach for a `fingerprintedMigrations` entry when the
+dump itself jumped ahead of the migration history. Either way, never edit an
+existing migration file under `drizzle/` to add such guards after the fact.
+>>>>>>> feat/diploma-platform
 
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 

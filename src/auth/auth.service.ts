@@ -15,7 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { db } from '../db/db';
+import { db, primaryDb } from '../db/db';
 import {
   authRefreshSessions,
   oauthLoginCodes,
@@ -68,7 +68,7 @@ export class AuthService {
     const displayName =
       dto.displayName?.trim() || dto.fullName?.trim() || email.split('@', 1)[0];
 
-    const [existingUser] = await db
+    const [existingUser] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.email, email))
@@ -81,7 +81,7 @@ export class AuthService {
       });
     }
 
-    const [pending] = await db
+    const [pending] = await primaryDb
       .select()
       .from(pendingRegistrations)
       .where(eq(pendingRegistrations.email, email))
@@ -142,7 +142,7 @@ export class AuthService {
 
   async verifyRegistration(dto: VerifyRegistrationDto) {
     const email = dto.email.trim().toLowerCase();
-    const [pending] = await db
+    const [pending] = await primaryDb
       .select()
       .from(pendingRegistrations)
       .where(eq(pendingRegistrations.email, email))
@@ -250,14 +250,14 @@ export class AuthService {
 
   async validateUser(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
-    const [user] = await db
+    const [user] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (!user) {
-      const [pending] = await db
+      const [pending] = await primaryDb
         .select({ email: pendingRegistrations.email })
         .from(pendingRegistrations)
         .where(eq(pendingRegistrations.email, normalizedEmail))
@@ -300,7 +300,7 @@ export class AuthService {
   }
 
   async loginWithGoogle(googleUser: GoogleUser) {
-    const [userByGoogleId] = await db
+    const [userByGoogleId] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.googleId, googleUser.googleId))
@@ -313,7 +313,7 @@ export class AuthService {
       };
     }
 
-    const [userByEmail] = await db
+    const [userByEmail] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.email, googleUser.email))
@@ -355,7 +355,7 @@ export class AuthService {
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const [user] = await db
+    const [user] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.email, dto.email))
@@ -398,7 +398,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const [user] = await db
+    const [user] = await primaryDb
       .select()
       .from(users)
       .where(
@@ -583,7 +583,7 @@ export class AuthService {
       );
     }
 
-    const [user] = await db
+    const [user] = await primaryDb
       .select()
       .from(users)
       .where(eq(users.id, loginCode.userId))
