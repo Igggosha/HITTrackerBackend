@@ -271,6 +271,34 @@ services:
     volumes:
       - metrics_token:/token
     restart: "no"
+    # Only writes to the `metrics_token` volume; it never talks to another
+    # container or the network.
+    network_mode: none
+
+  # Idempotently creates/updates a least-privilege `metrics_reader` role for
+  # postgres-exporter, instead of handing the exporter the superuser
+  # credentials the API itself uses. Runs every startup of the
+  # `observability` profile (not gated behind docker-entrypoint-initdb.d, so
+  # it also fixes up a volume that already existed before this role did) and
+  # keeps the role's password synced with METRICS_DB_PASSWORD.
+  metrics-role-init:
+    image: postgres:17
+    profiles: [observability]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:-change_me}
+    volumes:
+      - ./docker/observability/metrics-role-init.sh:/docker-entrypoint-init.d/metrics-role-init.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/metrics-role-init.sh"]
+    restart: "no"
+    networks:
+      - private
 
   prometheus:
     image: prom/prometheus:v3.5.0
@@ -298,10 +326,14 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.17.1
     profiles: [observability]
     environment:
-      DATA_SOURCE_NAME: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}?sslmode=disable
+      # metrics_reader only holds pg_monitor (read-only), never the
+      # application superuser credentials postgres/DB_PASSWORD.
+      DATA_SOURCE_NAME: postgresql://metrics_reader:${METRICS_DB_PASSWORD:-change_me}@postgres:5432/${DB_NAME:-nestdb}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+      metrics-role-init:
+        condition: service_completed_successfully
     networks:
       - private
     restart: unless-stopped
