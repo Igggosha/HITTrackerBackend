@@ -1,0 +1,16 @@
+{
+  "title": "API Overview",
+  "uid": "api-overview",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {"id": 1, "title": "Requests per second", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "sum by (route) (rate(http_requests_total{job=\"api\"}[5m]))", "legendFormat": "{{route}}"}]},
+    {"id": 2, "title": "5xx error rate", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "sum(rate(http_requests_total{job=\"api\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"api\"}[5m])), 0.001)", "legendFormat": "5xx ratio"}]},
+    {"id": 3, "title": "Latency quantiles by route", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 24, "h": 9}, "targets": [{"expr": "histogram_quantile(0.5, sum by (route, le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))", "legendFormat": "p50 {{route}}"}, {"expr": "histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))", "legendFormat": "p95 {{route}}"}, {"expr": "histogram_quantile(0.99, sum by (route, le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))", "legendFormat": "p99 {{route}}"}]},
+    {"id": 4, "title": "Process memory", "type": "timeseries", "gridPos": {"x": 0, "y": 17, "w": 12, "h": 8}, "targets": [{"expr": "process_resident_memory_bytes{job=\"api\"}", "legendFormat": "RSS"}]},
+    {"id": 5, "title": "Process CPU", "type": "timeseries", "gridPos": {"x": 12, "y": 17, "w": 12, "h": 8}, "targets": [{"expr": "rate(process_cpu_seconds_total{job=\"api\"}[5m])", "legendFormat": "CPU seconds/s"}]},
+    {"id": 6, "title": "Event loop lag", "type": "timeseries", "gridPos": {"x": 0, "y": 25, "w": 12, "h": 8}, "targets": [{"expr": "nodejs_eventloop_lag_seconds", "legendFormat": "lag"}]},
+    {"id": 7, "title": "Active workouts", "type": "stat", "gridPos": {"x": 12, "y": 25, "w": 12, "h": 8}, "targets": [{"expr": "active_workouts", "legendFormat": "active"}]}
+  ]
+}

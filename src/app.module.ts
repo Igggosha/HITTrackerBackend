@@ -10,6 +10,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   controllers: [AppController],
@@ -44,6 +45,7 @@ import { validateEnvironment } from './config/environment';
     WorkoutsModule,
     ExercisesModule,
     UsersModule,
+    MetricsModule,
   ],
   providers: [
     {

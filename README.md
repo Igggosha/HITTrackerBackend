@@ -75,6 +75,17 @@ After pulling the branch, each developer runs `docker compose up --build`; the
 schema only. Shared starter data belongs in the versioned seed/dump; personal
 users, workouts, and other local test data are not copied through Git.
 
+### Local observability
+
+Prometheus and Grafana are opt-in: set a unique `METRICS_TOKEN` (at least 24
+characters) and `GRAFANA_ADMIN_PASSWORD` in `.env`, then run
+`docker compose --profile observability up --build`. Open Grafana at
+`http://localhost:3001` (admin / your configured password); Prometheus is at
+`http://localhost:9090`. Both ports bind to localhost and can be changed with
+`GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the bearer token and
+remains protected if the API is reachable through the tunnel. Demo details are
+in [docs/diploma/observability.md](docs/diploma/observability.md).
+
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 
 For a deployment outside Docker Compose, run the versioned migrations after
