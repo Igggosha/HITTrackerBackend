@@ -525,3 +525,10 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Distributed tracing
+
+Tracing is disabled by default. With the Compose `observability` profile,
+set `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318` in the Compose env file,
+then open Jaeger at `http://127.0.0.1:16686` (override `JAEGER_UI_PORT`).
+See [the tracing demo](docs/diploma/tracing.md) for sampling and context flow.

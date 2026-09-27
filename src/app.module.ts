@@ -15,8 +15,10 @@ import { RelayModule } from './relay/relay.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 import { MetricsModule } from './metrics/metrics.module';
+import { TracingShutdownModule } from './tracing/tracing-shutdown.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
+import { context, trace } from '@opentelemetry/api';
 
 @Module({
   controllers: [AppController],
@@ -25,7 +27,14 @@ import { requestIds } from './common/request-id';
     LoggerModule.forRoot({
       pinoHttp: {
         genReqId: (req) => req.id,
-        mixin: () => ({ requestId: requestIds.getStore() ?? 'system' }),
+        mixin: () => {
+          const span = trace.getSpanContext(context.active());
+          return {
+            requestId: requestIds.getStore() ?? 'system',
+            traceId: span?.traceId ?? null,
+            spanId: span?.spanId ?? null,
+          };
+        },
         // The Prometheus scrape hits GET /metrics every 15s (see
         // docker/observability/prometheus/prometheus.yml); logging each of
         // those requests would drown real traffic in access-log noise. The
@@ -103,6 +112,7 @@ import { requestIds } from './common/request-id';
     ExercisesModule,
     UsersModule,
     MetricsModule,
+    TracingShutdownModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

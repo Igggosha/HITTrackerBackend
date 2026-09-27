@@ -547,6 +547,7 @@ export const outboxEvents = pgTable(
         eventType: text("event_type").notNull(),
         eventVersion: integer("event_version").notNull(),
         payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+        traceContext: jsonb("trace_context").$type<{ traceparent: string; tracestate?: string }>(),
         occurredAt: timestamp("occurred_at", { withTimezone: true })
             .defaultNow()
             .notNull(),

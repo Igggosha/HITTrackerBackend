@@ -12,6 +12,10 @@ import {
 } from '../../packages/event-contracts/events';
 import { MetricsService } from '../metrics/metrics.service';
 import {
+  activeTraceContext,
+  producerSpan,
+} from '../../packages/tracing/tracing';
+import {
   OutboxService,
   DEFAULT_OUTBOX_BATCH_SIZE,
   type ClaimedOutboxEvent,
@@ -141,28 +145,34 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
 
   private async publish(event: ClaimedOutboxEvent, deadLetter: boolean) {
     const envelope = envelopeFrom(event);
-    await this.withTimeout(
-      this.producer!.send({
-        topic: deadLetter ? 'hit.events.dlq' : topicFor(envelope.type),
-        acks: -1,
-        messages: [
-          {
-            key: eventKey(envelope.payload),
-            value: JSON.stringify(envelope),
-            headers: {
-              'event-id': envelope.id,
-              'event-type': envelope.type,
-              'event-version': String(envelope.version),
-              'occurred-at': envelope.occurredAt,
-              ...(deadLetter
-                ? { 'last-error': event.lastError ?? 'unknown' }
-                : {}),
-            },
-          },
-        ],
-      }),
-      this.publishTimeoutMs,
-      `Kafka publish timed out after ${this.publishTimeoutMs}ms`,
+    await producerSpan(
+      `publish ${deadLetter ? 'hit.events.dlq' : topicFor(envelope.type)}`,
+      event.traceContext,
+      async () =>
+        this.withTimeout(
+          this.producer!.send({
+            topic: deadLetter ? 'hit.events.dlq' : topicFor(envelope.type),
+            acks: -1,
+            messages: [
+              {
+                key: eventKey(envelope.payload),
+                value: JSON.stringify(envelope),
+                headers: {
+                  'event-id': envelope.id,
+                  'event-type': envelope.type,
+                  'event-version': String(envelope.version),
+                  'occurred-at': envelope.occurredAt,
+                  ...activeTraceContext(),
+                  ...(deadLetter
+                    ? { 'last-error': event.lastError ?? 'unknown' }
+                    : {}),
+                },
+              },
+            ],
+          }),
+          this.publishTimeoutMs,
+          `Kafka publish timed out after ${this.publishTimeoutMs}ms`,
+        ),
     );
   }
 

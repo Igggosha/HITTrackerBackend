@@ -74,7 +74,7 @@ export function configureApp(app: INestApplication): void {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
       'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, X-Request-Id, ngrok-skip-browser-warning',
-    exposeHeaders: 'Retry-After, X-Request-Id',
+    exposeHeaders: 'Retry-After, X-Request-Id, X-Trace-Id',
     credentials: true,
   });
 }

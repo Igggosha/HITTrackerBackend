@@ -99,6 +99,7 @@ loki.process "containers" {
       expressions = {
         level      = "level",
         requestId  = "requestId",
+        traceId    = "traceId",
         req_method = "req.method",
         req_url    = "req.url",
         res_status = "res.statusCode",
@@ -122,13 +123,19 @@ loki.process "containers" {
       }
     }
 
-    // requestId is unique per request (unbounded cardinality) and
-    // req.method/req.url/res.statusCode are per-request too, so all four go
-    // into structured metadata: queryable with `| requestId="..."` etc.
-    // without ever becoming index labels. See docs/diploma/observability.md.
+    // requestId/traceId are unique per request/trace (unbounded cardinality)
+    // and req.method/req.url/res.statusCode are per-request too, so all five
+    // go into structured metadata: queryable with `| requestId="..."` or
+    // `| traceId="..."` etc. without ever becoming index labels. traceId is
+    // `null` (extracted as empty) on lines logged while tracing is disabled
+    // (no OTEL_EXPORTER_OTLP_ENDPOINT) or outside any span; that is
+    // harmless here precisely because it is metadata, not a label — an
+    // empty label value would instead fragment the `level` label's stream.
+    // See docs/diploma/observability.md and docs/diploma/tracing.md.
     stage.structured_metadata {
       values = {
         requestId  = "",
+        traceId    = "",
         method     = "req_method",
         path       = "req_url",
         statusCode = "res_status",

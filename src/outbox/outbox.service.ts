@@ -8,6 +8,7 @@ import {
   type OutboxEventType,
 } from './events';
 import type { DbTransaction } from './transaction';
+import { activeTraceContext } from '../../packages/tracing/tracing';
 
 export type ClaimedOutboxEvent = typeof outboxEvents.$inferSelect;
 
@@ -55,12 +56,14 @@ export class OutboxService {
       throw new Error('OutboxService.enqueue requires the caller transaction');
     }
     const definition = outboxEventDefinitions[event.type];
+    const traceContext = activeTraceContext();
     await tx.insert(outboxEvents).values({
       aggregateType: definition.aggregateType,
       aggregateId: String(event.aggregateId),
       eventType: event.type,
       eventVersion: definition.version,
       payload: event.payload,
+      ...(traceContext ? { traceContext } : {}),
     });
   }
 

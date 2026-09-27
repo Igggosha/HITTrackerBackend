@@ -246,6 +246,9 @@ services:
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
       KAFKA_BROKERS: ""
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -306,6 +309,10 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
       KAFKA_BROKERS: kafka:9092
+      OTEL_SERVICE_NAME: hit-relay
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
       RELAY_POLL_INTERVAL_MS: ${RELAY_POLL_INTERVAL_MS:-500}
       RELAY_PUBLISH_TIMEOUT_MS: ${RELAY_PUBLISH_TIMEOUT_MS:-5000}
       RELAY_CONNECTION_TIMEOUT_MS: ${RELAY_CONNECTION_TIMEOUT_MS:-5000}
@@ -473,6 +480,7 @@ services:
     depends_on:
       - prometheus
       - loki
+      - jaeger
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
@@ -486,6 +494,18 @@ services:
       - grafana_data:/var/lib/grafana
     networks:
       - observability
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    profiles: [observability]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      MEMORY_MAX_TRACES: "10000"
+    ports:
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+    mem_limit: 512m
+    networks: [private, observability]
     restart: unless-stopped
 
   # Log storage. Filesystem-backed, single binary, 7-day retention (matches
