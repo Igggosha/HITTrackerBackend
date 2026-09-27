@@ -45,4 +45,20 @@ describe('environment validation', () => {
       }),
     ).not.toThrow();
   });
+
+  it('accepts an optional PostgreSQL replica URL and rejects invalid values', () => {
+    expect(() => validateEnvironment(secureEnvironment)).not.toThrow();
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        DATABASE_REPLICA_URL: 'postgresql://user:pass@replica:5432/app',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        DATABASE_REPLICA_URL: 'https://replica/app',
+      }),
+    ).toThrow('DATABASE_REPLICA_URL');
+  });
 });

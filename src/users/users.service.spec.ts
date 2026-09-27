@@ -44,8 +44,8 @@ const tx = {
   })),
 };
 
-jest.mock('../db/db', () => ({
-  db: {
+jest.mock('../db/db', () => {
+  const db = {
     transaction: jest.fn((callback) => callback(tx)),
     update: jest.fn(() => ({ set: mockDbSet })),
     delete: jest.fn(() => ({
@@ -60,8 +60,9 @@ jest.mock('../db/db', () => ({
         }),
       }),
     })),
-  },
-}));
+  };
+  return { db, primaryDb: db };
+});
 
 describe('UsersService profile identity', () => {
   const service = new UsersService({ get: jest.fn(() => 25) } as any, storage);

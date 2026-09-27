@@ -47,6 +47,23 @@ export function validateEnvironment(
     throw new Error('CORS_ORIGINS is required in production.');
   }
 
+  if (environment.DATABASE_REPLICA_URL) {
+    try {
+      const replicaUrl = new URL(environment.DATABASE_REPLICA_URL);
+      if (
+        !['postgres:', 'postgresql:'].includes(replicaUrl.protocol) ||
+        !replicaUrl.hostname ||
+        !replicaUrl.pathname.slice(1)
+      ) {
+        throw new Error();
+      }
+    } catch {
+      throw new Error(
+        'DATABASE_REPLICA_URL must be a PostgreSQL connection URL.',
+      );
+    }
+  }
+
   // Object storage is optional, but a partially configured one must not boot.
   validateStorageEnvironment(environment);
 

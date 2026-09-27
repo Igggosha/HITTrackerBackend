@@ -20,7 +20,7 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
-import { db } from '../db/db';
+import { db, primaryDb } from '../db/db';
 import {
   sets,
   userActivityEvents,
@@ -101,12 +101,12 @@ export class UsersService {
 
   private async getInspectableUser(actorUserId: number, targetUserId: number) {
     const [[actor], [target]] = await Promise.all([
-      db
+      primaryDb
         .select({ role: users.role })
         .from(users)
         .where(eq(users.id, actorUserId))
         .limit(1),
-      db.select().from(users).where(eq(users.id, targetUserId)).limit(1),
+      primaryDb.select().from(users).where(eq(users.id, targetUserId)).limit(1),
     ]);
     if (!actor || !hasMinimumRole(actor.role, 'admin')) {
       throw new ForbiddenException('Insufficient permissions');
@@ -375,12 +375,12 @@ export class UsersService {
     role: UserRole,
   ) {
     const [[actor], [target]] = await Promise.all([
-      db
+      primaryDb
         .select({ role: users.role })
         .from(users)
         .where(eq(users.id, actorUserId))
         .limit(1),
-      db
+      primaryDb
         .select({ id: users.id, role: users.role })
         .from(users)
         .where(eq(users.id, targetUserId))
@@ -433,12 +433,12 @@ export class UsersService {
 
   async deleteUser(actorUserId: number, targetUserId: number) {
     const [[actor], [target]] = await Promise.all([
-      db
+      primaryDb
         .select({ role: users.role })
         .from(users)
         .where(eq(users.id, actorUserId))
         .limit(1),
-      db
+      primaryDb
         .select({ id: users.id, role: users.role })
         .from(users)
         .where(eq(users.id, targetUserId))
@@ -478,7 +478,7 @@ export class UsersService {
   }
 
   async getProfile(userId: number, useIdentityContractV2 = false) {
-    const [user] = await db
+    const [user] = await primaryDb
       .select({
         id: users.id,
         email: users.email,
@@ -497,7 +497,7 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    const [latestMetric] = await db
+    const [latestMetric] = await primaryDb
       .select({ weight: userBodyMetrics.weight })
       .from(userBodyMetrics)
       .where(
@@ -601,12 +601,12 @@ export class UsersService {
   async getUsernameAvailability(userId: number, value: unknown) {
     const username = this.validateUsername(value);
     const [[owner], [reservation]] = await Promise.all([
-      db
+      primaryDb
         .select({ id: users.id })
         .from(users)
         .where(sql`lower(${users.username}) = ${username}`)
         .limit(1),
-      db
+      primaryDb
         .select({ userId: usernameReservations.userId })
         .from(usernameReservations)
         .where(

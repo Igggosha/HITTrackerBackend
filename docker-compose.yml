@@ -19,6 +19,47 @@ services:
     networks:
       - private
 
+  replication-init:
+    image: postgres:17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/enable-replication.sh:/enable-replication.sh:ro
+    command: ["sh", "/enable-replication.sh"]
+    restart: "no"
+    networks:
+      - private
+
+  postgres-replica:
+    image: postgres:17
+    restart: unless-stopped
+    depends_on:
+      replication-init:
+        condition: service_completed_successfully
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      PGPASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./docker/start-replica.sh:/start-replica.sh:ro
+    entrypoint: ["sh", "/start-replica.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} && test \"$(psql -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -tAc 'SELECT pg_is_in_recovery()')\" = t"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - private
+
   migrate:
     build:
       context: .
@@ -77,7 +118,7 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:9000/minio/health/live"]
       interval: 5s
@@ -117,6 +158,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-replica:
+        condition: service_healthy
       migrate:
         condition: service_completed_successfully
       seed:
@@ -134,6 +177,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_REPLICA_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres-replica:5432/${DB_NAME:-nestdb}
       # Inside Compose the API reaches MinIO by service name; presigned URLs
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
@@ -210,6 +254,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_replica_data:
   minio_data:
 
 networks:

@@ -28,17 +28,25 @@ const tx = {
   delete: jest.fn(() => ({ where: mockTxDeleteWhere })),
 };
 
-jest.mock('../db/db', () => ({
-  db: {
-    select: jest.fn(() => ({
-      from: () => ({ where: () => ({ limit: mockLimit }) }),
-    })),
+jest.mock('../db/db', () => {
+  const db = {
+    select: jest.fn(() => {
+      throw new Error('Auth read used the replica');
+    }),
     delete: jest.fn(() => ({ where: jest.fn() })),
     update: jest.fn(() => ({ set: () => ({ where: mockUpdateWhere }) })),
     insert: jest.fn(() => ({ values: mockInsertValues })),
     transaction: jest.fn(),
-  },
-}));
+  };
+  return {
+    db,
+    primaryDb: {
+      select: jest.fn(() => ({
+        from: () => ({ where: () => ({ limit: mockLimit }) }),
+      })),
+    },
+  };
+});
 
 jest.mock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn() }));
 
