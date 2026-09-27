@@ -1,4 +1,4 @@
-import { validateEnvironment } from './environment';
+import { validateEnvironment, validateRelayEnvironment } from './environment';
 
 const secureEnvironment = {
   JWT_SECRET: 'a'.repeat(24),
@@ -60,5 +60,56 @@ describe('environment validation', () => {
         DATABASE_REPLICA_URL: 'https://replica/app',
       }),
     ).toThrow('DATABASE_REPLICA_URL');
+  });
+
+  it('rejects an out-of-range relay poll interval and accepts a valid one', () => {
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        RELAY_POLL_INTERVAL_MS: '10',
+      }),
+    ).toThrow('RELAY_POLL_INTERVAL_MS');
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        RELAY_POLL_INTERVAL_MS: '500',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('validateRelayEnvironment', () => {
+  it('leaves every optional relay variable unset alone', () => {
+    expect(() => validateRelayEnvironment({})).not.toThrow();
+  });
+
+  it('accepts values in range for every relay tuning variable', () => {
+    expect(() =>
+      validateRelayEnvironment({
+        RELAY_POLL_INTERVAL_MS: '500',
+        RELAY_PUBLISH_TIMEOUT_MS: '5000',
+        RELAY_CONNECTION_TIMEOUT_MS: '5000',
+        RELAY_DB_TX_TIMEOUT_MS: '10000',
+        RELAY_METRICS_PORT: '9464',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects a non-integer or out-of-range value for each variable', () => {
+    expect(() =>
+      validateRelayEnvironment({ RELAY_PUBLISH_TIMEOUT_MS: '99' }),
+    ).toThrow('RELAY_PUBLISH_TIMEOUT_MS');
+    expect(() =>
+      validateRelayEnvironment({ RELAY_CONNECTION_TIMEOUT_MS: 'abc' }),
+    ).toThrow('RELAY_CONNECTION_TIMEOUT_MS');
+    expect(() =>
+      validateRelayEnvironment({ RELAY_DB_TX_TIMEOUT_MS: '999' }),
+    ).toThrow('RELAY_DB_TX_TIMEOUT_MS');
+    expect(() =>
+      validateRelayEnvironment({ RELAY_METRICS_PORT: '70000' }),
+    ).toThrow('RELAY_METRICS_PORT');
+    expect(() => validateRelayEnvironment({ RELAY_METRICS_PORT: '0' })).toThrow(
+      'RELAY_METRICS_PORT',
+    );
   });
 });

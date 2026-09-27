@@ -170,6 +170,70 @@ describe('OutboxService', () => {
     expect(publish).not.toHaveBeenCalled();
     expect(fake.find('update')).toHaveLength(0);
   });
+
+  it('bounds the transaction with SET LOCAL statement/idle timeouts', async () => {
+    const prior = process.env.RELAY_DB_TX_TIMEOUT_MS;
+    process.env.RELAY_DB_TX_TIMEOUT_MS = '2500';
+    try {
+      fake.returns('select', outboxEvents, []);
+      await outbox.processBatch(jest.fn());
+      const rendered = fake
+        .find('execute')
+        .map((query) => renderSql(query.args[0]));
+      expect(rendered).toContain('SET LOCAL statement_timeout = 2500');
+      expect(rendered).toContain(
+        'SET LOCAL idle_in_transaction_session_timeout = 2500',
+      );
+    } finally {
+      if (prior === undefined) delete process.env.RELAY_DB_TX_TIMEOUT_MS;
+      else process.env.RELAY_DB_TX_TIMEOUT_MS = prior;
+    }
+  });
+
+  it('sends max-attempt rows to the DLQ and marks only acknowledged rows', async () => {
+    fake.returns('select', outboxEvents, [
+      {
+        ...event('a', '2026-09-27T10:00:00Z'),
+        attempts: 10,
+        lastError: 'broker down',
+      },
+    ]);
+    const publish = jest.fn().mockResolvedValue(undefined);
+    expect(await outbox.processDeadLetters(publish)).toEqual({
+      claimed: 1,
+      published: ['a'],
+      failed: null,
+    });
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', lastError: 'broker down' }),
+    );
+    const where = renderSql(
+      calledWith(fake.find('select', outboxEvents)[0], 'where')[0].args[0],
+    );
+    expect(where).toContain('"attempts" >=');
+    expect(fake.committed('update', outboxEvents)).toHaveLength(1);
+  });
+
+  it('keeps a row unpublished but records the error when DLQ delivery fails', async () => {
+    fake.returns('select', outboxEvents, [
+      { ...event('a', '2026-09-27T10:00:00Z'), attempts: 10 },
+    ]);
+    const result = await outbox.processDeadLetters(() => {
+      throw new Error('dlq down');
+    });
+    expect(result.failed?.id).toBe('a');
+
+    const updates = fake.committed('update', outboxEvents);
+    expect(updates).toHaveLength(1);
+    const set = calledWith(updates[0], 'set')[0].args[0] as Record<
+      string,
+      unknown
+    >;
+    expect(set.lastError).toBe('Error: dlq down');
+    // The failure update touches `attempts`/`last_error` only; it never sets
+    // `published_at`, so the row stays unpublished for the next attempt.
+    expect(set).not.toHaveProperty('publishedAt');
+  });
 });
 
 describe('performedSetsPayload', () => {

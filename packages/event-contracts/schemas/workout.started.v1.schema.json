@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workout.started v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "workout.started"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "workoutId": {
+          "type": "integer"
+        },
+        "userId": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "programId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "scheduleId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "plannedExerciseIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "startedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workoutId",
+        "userId",
+        "type",
+        "programId",
+        "scheduleId",
+        "plannedExerciseIds",
+        "startedAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

@@ -67,5 +67,45 @@ export function validateEnvironment(
   // Object storage is optional, but a partially configured one must not boot.
   validateStorageEnvironment(environment);
 
+  // Shared with the standalone relay bootstrap (`src/relay/main.ts`), which
+  // has no ConfigModule of its own and must fail fast the same way.
+  validateRelayEnvironment(environment);
+
   return environment;
+}
+
+function assertOptionalIntInRange(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+  minimum: number,
+  maximum?: number,
+): void {
+  const raw = environment[name];
+  if (raw === undefined) return;
+  const value = Number(raw);
+  if (
+    !Number.isInteger(value) ||
+    value < minimum ||
+    (maximum !== undefined && value > maximum)
+  ) {
+    throw new Error(
+      maximum === undefined
+        ? `${name} must be an integer of at least ${minimum}.`
+        : `${name} must be an integer between ${minimum} and ${maximum}.`,
+    );
+  }
+}
+
+/**
+ * Validates the relay's own tuning variables. Every one of them is optional
+ * (the relay falls back to a safe default), so this only rejects a value that
+ * was set but is out of range - it never requires KAFKA_BROKERS, which stays
+ * unset for hosts that never run the relay.
+ */
+export function validateRelayEnvironment(environment: NodeJS.ProcessEnv): void {
+  assertOptionalIntInRange(environment, 'RELAY_POLL_INTERVAL_MS', 100);
+  assertOptionalIntInRange(environment, 'RELAY_PUBLISH_TIMEOUT_MS', 100);
+  assertOptionalIntInRange(environment, 'RELAY_CONNECTION_TIMEOUT_MS', 100);
+  assertOptionalIntInRange(environment, 'RELAY_DB_TX_TIMEOUT_MS', 1000);
+  assertOptionalIntInRange(environment, 'RELAY_METRICS_PORT', 1, 65535);
 }

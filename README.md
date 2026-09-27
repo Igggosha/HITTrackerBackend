@@ -410,6 +410,24 @@ targets.
 Детальне налаштування Google Cloud Console, змінних середовища, міграції та
 фронтенду: [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md).
 
+## Kafka event relay
+
+`docker compose --profile events up --build` starts a private single-node Kafka,
+creates the three topics, runs the outbox relay separately from the API, and
+serves Kafka UI on `http://127.0.0.1:8085`. The default profile starts no Kafka.
+For an in-process relay outside Compose, set `KAFKA_BROKERS` to a comma-separated
+broker list before starting the API. For a separate process, set it and run
+`node dist/src/relay/main.js`; the standalone process validates its own
+`RELAY_*` variables at boot the same way the API does. The optional
+`RELAY_POLL_INTERVAL_MS` defaults to 500; `RELAY_PUBLISH_TIMEOUT_MS` and
+`RELAY_CONNECTION_TIMEOUT_MS` (both default 5000) bound every broker call so a
+grey-failing broker cannot hold the relay's database transaction open, and
+`RELAY_DB_TX_TIMEOUT_MS` (default 10000) backstops that transaction with
+PostgreSQL's own `statement_timeout`. The standalone relay also serves its own
+`/metrics` (`outbox_published_total`, `outbox_publish_failures_total`) on
+`RELAY_METRICS_PORT` (default 9464), Bearer-protected the same way as the
+API's. See [the Kafka guide](docs/diploma/kafka.md) for contracts and a demo.
+
 ## Project setup
 
 ```bash

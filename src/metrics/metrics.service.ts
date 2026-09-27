@@ -35,6 +35,16 @@ export class MetricsService {
     labelNames: ['method', 'route'] as const,
     registers: [this.registry],
   });
+  readonly outboxPublished = new Counter({
+    name: 'outbox_published_total',
+    help: 'Outbox events published to their normal topic.',
+    registers: [this.registry],
+  });
+  readonly outboxPublishFailures = new Counter({
+    name: 'outbox_publish_failures_total',
+    help: 'Outbox or DLQ publish failures.',
+    registers: [this.registry],
+  });
 
   private activeWorkoutsGauge: Gauge<string>;
   private activeWorkouts = 0;
@@ -42,6 +52,21 @@ export class MetricsService {
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
+    new Gauge({
+      name: 'outbox_unpublished_events',
+      help: 'Outbox rows awaiting normal or DLQ delivery.',
+      registers: [this.registry],
+      collect: async function () {
+        try {
+          const result = await pool.query<{ count: string }>(
+            'select count(*) as count from outbox_events where published_at is null',
+          );
+          this.set(Number(result.rows[0]?.count ?? 0));
+        } catch {
+          /* retain last value during database outages */
+        }
+      },
+    });
     this.activeWorkoutsGauge = new Gauge({
       name: 'active_workouts',
       help: 'Workouts currently active.',

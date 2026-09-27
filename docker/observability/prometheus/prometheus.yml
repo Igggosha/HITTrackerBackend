@@ -17,3 +17,14 @@ scrape_configs:
     static_configs:
       - targets: [postgres-exporter:9187]
   # Add a separate job here when postgres-replica is introduced.
+  # Standalone Kafka relay (docker-compose `events` profile). This target
+  # only resolves when both `events` and `observability` profiles are
+  # running together; otherwise Prometheus simply marks it down, which is
+  # fine for a profile pair that is opt-in by design.
+  - job_name: relay
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /run/metrics/metrics-token
+    static_configs:
+      - targets: [relay:9464]
