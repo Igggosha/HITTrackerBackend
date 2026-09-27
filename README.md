@@ -72,6 +72,14 @@ database. A configured but unavailable replica makes ordinary replica reads fail
 restart without the URL to route all reads to the primary. See
 [`docs/diploma/read-replica.md`](docs/diploma/read-replica.md) for demo and lag SQL.
 
+Streaming replication uses its own `replicator` role and `REPLICATION_PASSWORD`
+(never the app's `DB_PASSWORD`), and its `pg_hba.conf` rule is scoped to the
+`private` network's subnet (`PRIVATE_NETWORK_SUBNET`, default `172.28.40.0/24`)
+instead of `0.0.0.0/0`. Changing that subnet also changes the Docker network,
+so run `docker compose down` first, then `docker compose up --build`; this
+recreates the network but keeps the named volumes (`postgres_data`,
+`postgres_replica_data`).
+
 To add the shared starter library again without resetting users or workouts,
 run `npm run db:seed` from this folder.
 

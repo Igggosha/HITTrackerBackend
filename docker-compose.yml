@@ -30,6 +30,12 @@ services:
       POSTGRES_DB: ${DB_NAME:-nestdb}
       PGPASSWORD: ${DB_PASSWORD:-password}
       PGDATA: /var/lib/postgresql/data
+      # Dedicated replication credential; never the superuser password. Rotate
+      # it here and in `postgres-replica` together.
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-change_me}
+      # Must match the `private` network's `ipam.config.subnet` below; changing
+      # either requires `docker compose down` (recreates the network, keeps volumes).
+      PRIVATE_NETWORK_SUBNET: ${PRIVATE_NETWORK_SUBNET:-172.28.40.0/24}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/enable-replication.sh:/enable-replication.sh:ro
@@ -46,7 +52,11 @@ services:
         condition: service_completed_successfully
     environment:
       PGDATA: /var/lib/postgresql/data
-      PGPASSWORD: ${DB_PASSWORD:-password}
+      # The replicator role's own password, never the superuser password.
+      # pg_basebackup authenticates with it, and start-replica.sh also uses it
+      # to refresh an already-stored primary_conninfo after a rotation.
+      PGPASSWORD: ${REPLICATION_PASSWORD:-change_me}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-change_me}
     volumes:
       - postgres_replica_data:/var/lib/postgresql/data
       - ./docker/start-replica.sh:/start-replica.sh:ro
@@ -259,8 +269,14 @@ volumes:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
+  # The subnet is pinned (rather than Docker-assigned) so the replication pg_hba
+  # rule can scope to it instead of 0.0.0.0/0. Override with PRIVATE_NETWORK_SUBNET;
+  # a change requires `docker compose down` to recreate the network (volumes are kept).
   private:
     internal: true
+    ipam:
+      config:
+        - subnet: ${PRIVATE_NETWORK_SUBNET:-172.28.40.0/24}
   # Reserved for the API and a future HTTPS tunnel/reverse proxy.
   edge:
     driver: bridge

@@ -38,6 +38,7 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 
 - `src/db/schema.ts` is the schema source; services use the shared Drizzle `db` and transactions.
 - Plain `db` selects use the replica when configured; writes and transactions use the primary. Use `primaryDb` for auth, authorization, and reads that must see a write from the same user flow.
+- For a busy module's plain browsing reads, prefer `readerFor(userId)` from `src/db/read-consistency.ts` over always-primary: it returns `primaryDb` only within a short window after that user's own write (see `docs/diploma/read-replica.md`).
 - `pool` is the primary PostgreSQL pool and backs OAuth sessions. Replica lag is acceptable only for eventually consistent reads.
 - For a schema change create a new migration under `drizzle/`; never rewrite an applied migration. Review SQL, constraints, defaults, foreign keys, recovery/rollback, and compatibility with existing data.
 - Follow the workflow in `README.md`: update schema and add/review a versioned migration. `sql/init.sql` is for first-time Docker-volume initialization; `seed.sql` is only for idempotent shared starter data, never user data.
