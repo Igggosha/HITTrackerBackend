@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { db } from '../db/db';
+import { db, primaryDb } from '../db/db';
+import { readerFor, recordWrite } from '../db/read-consistency';
 import {
   exercises,
   sets,
@@ -54,9 +55,12 @@ export class WorkoutsService {
       ))
       .returning();
 
-    if (pausedWorkout) return { workout: pausedWorkout, autoPaused: true };
+    if (pausedWorkout) {
+      recordWrite(pausedWorkout.userId);
+      return { workout: pausedWorkout, autoPaused: true };
+    }
 
-    const [currentWorkout] = await db
+    const [currentWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(eq(workouts.id, workout.id))
@@ -75,6 +79,7 @@ export class WorkoutsService {
         isNull(workouts.finishedAt),
       ))
       .returning();
+    if (updatedWorkout) recordWrite(userId);
     return updatedWorkout;
   }
 
@@ -82,7 +87,7 @@ export class WorkoutsService {
    * 1. Запуск нового тренування
    */
   async startWorkout(userId: number, userRole: UserRole, body: StartWorkoutDto) {
-    const [existingWorkout] = await db
+    const [existingWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
@@ -105,7 +110,7 @@ export class WorkoutsService {
     let source: { programId: number; programName: string; scheduledFor: string | null } | null = null;
 
     if (body?.scheduleId) {
-      const [assignment] = await db
+      const [assignment] = await primaryDb
         .select({
           id: userProgramSchedule.id,
           scheduledFor: userProgramSchedule.scheduledFor,
@@ -119,7 +124,7 @@ export class WorkoutsService {
       if (!assignment) throw new NotFoundException('Scheduled workout not found');
       source = assignment;
     } else if (body?.programId) {
-      const [program] = await db
+      const [program] = await primaryDb
         .select({
           id: workoutPrograms.id,
           name: workoutPrograms.name,
@@ -141,7 +146,7 @@ export class WorkoutsService {
     const planInput = body?.plan || [];
     const exerciseIds = [...new Set(planInput.map((item) => item.exerciseId))];
     const exerciseRows = exerciseIds.length
-      ? await db.select({ id: exercises.id, name: exercises.name }).from(exercises).where(inArray(exercises.id, exerciseIds))
+      ? await primaryDb.select({ id: exercises.id, name: exercises.name }).from(exercises).where(inArray(exercises.id, exerciseIds))
       : [];
     const exerciseNames = new Map(exerciseRows.map((exercise) => [exercise.id, exercise.name]));
     if (exerciseNames.size !== exerciseIds.length) throw new NotFoundException('Planned exercise not found');
@@ -172,6 +177,7 @@ export class WorkoutsService {
         lastActivityAt: now,
       })
       .returning();
+    recordWrite(userId);
 
     return {
       message: 'Workout started',
@@ -187,7 +193,7 @@ export class WorkoutsService {
    * 2. Отримання поточного активного тренування з його сетами
    */
   async getActiveWorkout(userId: number) {
-    const [openWorkout] = await db
+    const [openWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(and(
@@ -200,7 +206,7 @@ export class WorkoutsService {
     if (!openWorkout) return { workout: null, sets: [] };
 
     const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout);
-    const rows = await db
+    const rows = await primaryDb
       .select({
         workout: workouts,
         set: sets,
@@ -242,7 +248,7 @@ export class WorkoutsService {
    * 3. Запис підходу (сету)
    */
   async recordSet(workoutId: number, userId: number, body: RecordSetDto) {
-    const [openWorkout] = await db
+    const [openWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(
@@ -273,6 +279,7 @@ export class WorkoutsService {
         rpe: body.rpe,
       })
       .returning();
+    recordWrite(userId);
 
     const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
 
@@ -289,7 +296,7 @@ export class WorkoutsService {
     userId: number,
     body: UpdateSetDto,
   ) {
-    const [ownedSet] = await db
+    const [ownedSet] = await primaryDb
       .select({ id: sets.id, workout: workouts })
       .from(sets)
       .innerJoin(workouts, eq(sets.workoutId, workouts.id))
@@ -320,6 +327,7 @@ export class WorkoutsService {
       })
       .where(eq(sets.id, setId))
       .returning();
+    recordWrite(userId);
 
     const touchedWorkout = await this.touchActiveWorkout(workout.id, userId);
 
@@ -330,7 +338,7 @@ export class WorkoutsService {
    * 4. Завершення тренування
    */
   async finishWorkout(workoutId: number, userId: number, body: FinishWorkoutDto) {
-    const [openWorkout] = await db
+    const [openWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
@@ -362,6 +370,7 @@ export class WorkoutsService {
       })
       .where(eq(workouts.id, workoutId))
       .returning();
+    recordWrite(userId);
 
     if (workout.scheduleId) {
       await db
@@ -412,7 +421,9 @@ export class WorkoutsService {
       )`);
     }
 
-    const query = db
+    // Pure browsing read: session consistency (readerFor), not always-primary.
+    const reader = readerFor(userId);
+    const query = reader
       .select({ workout: workouts })
       .from(workouts)
       .where(and(...conditions))
@@ -423,7 +434,7 @@ export class WorkoutsService {
 
     if (!selected.length) return { items: [], nextCursor: null };
     const selectedIds = selected.map(({ workout }) => workout.id);
-    const actualRows = await db
+    const actualRows = await reader
       .select({
         workoutId: sets.workoutId,
         exerciseId: sets.exerciseId,
@@ -465,7 +476,8 @@ export class WorkoutsService {
   }
 
   async getHistoryDates(userId: number, dto: WorkoutHistoryDatesDto) {
-    const rows = await db
+    // Pure browsing read: session consistency (readerFor), not always-primary.
+    const rows = await readerFor(userId)
       .select({ finishedAt: workouts.finishedAt })
       .from(workouts)
       .where(and(
@@ -479,7 +491,9 @@ export class WorkoutsService {
   }
 
   async getHistoryDetails(userId: number, userRole: UserRole, workoutId: number) {
-    const [workout] = await db
+    // Pure browsing read: session consistency (readerFor), not always-primary.
+    const reader = readerFor(userId);
+    const [workout] = await reader
       .select()
       .from(workouts)
       .where(and(
@@ -491,7 +505,7 @@ export class WorkoutsService {
       .limit(1);
     if (!workout) throw new NotFoundException('Completed workout not found');
 
-    const actualRows = await db
+    const actualRows = await reader
       .select({ set: sets, exerciseName: exercises.name })
       .from(sets)
       .innerJoin(exercises, eq(exercises.id, sets.exerciseId))
@@ -537,7 +551,7 @@ export class WorkoutsService {
       ? { id: snapshot.programId, name: snapshot.programName, available: false }
       : null;
     if (programSource?.id) {
-      const [program] = await db.select({
+      const [program] = await reader.select({
         id: workoutPrograms.id,
         isActive: workoutPrograms.isActive,
         isPersonal: workoutPrograms.isPersonal,
@@ -548,7 +562,7 @@ export class WorkoutsService {
         || (program.isPersonal ? program.createdById === userId : program.isActive)
       );
       if (program && !program.isPersonal && !program.isActive && !available) {
-        const [assignment] = await db.select({ id: userProgramSchedule.id })
+        const [assignment] = await reader.select({ id: userProgramSchedule.id })
           .from(userProgramSchedule)
           .where(and(eq(userProgramSchedule.userId, userId), eq(userProgramSchedule.programId, program.id)))
           .limit(1);
@@ -587,7 +601,7 @@ export class WorkoutsService {
   }
 
   async togglePause(workoutId: number, userId: number) {
-    const [openWorkout] = await db.select().from(workouts)
+    const [openWorkout] = await primaryDb.select().from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
       .limit(1);
     if (!openWorkout) throw new NotFoundException('Open workout not found');
@@ -606,11 +620,12 @@ export class WorkoutsService {
       pausedSeconds,
       lastActivityAt: isPausing ? workout.lastActivityAt : now,
     }).where(eq(workouts.id, workoutId)).returning();
+    recordWrite(userId);
     return { workout: updatedWorkout };
   }
 
   async heartbeat(workoutId: number, userId: number) {
-    const [openWorkout] = await db
+    const [openWorkout] = await primaryDb
       .select()
       .from(workouts)
       .where(and(
@@ -632,11 +647,12 @@ export class WorkoutsService {
   }
 
   async cancelWorkout(workoutId: number, userId: number) {
-    const [workout] = await db.select().from(workouts)
+    const [workout] = await primaryDb.select().from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
       .limit(1);
     if (!workout) throw new NotFoundException('Open workout not found');
     const [updatedWorkout] = await db.update(workouts).set({ status: 'cancelled', pausedAt: null }).where(eq(workouts.id, workoutId)).returning();
+    recordWrite(userId);
     return { workout: updatedWorkout };
   }
 
@@ -644,7 +660,7 @@ export class WorkoutsService {
    * 6. Видалення / Скасування тренування
    */
   async deleteWorkout(workoutId: number, userId: number) {
-    const [workout] = await db
+    const [workout] = await primaryDb
       .select()
       .from(workouts)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
@@ -658,6 +674,7 @@ export class WorkoutsService {
       await tx.delete(sets).where(eq(sets.workoutId, workoutId));
       await tx.delete(workouts).where(eq(workouts.id, workoutId));
     });
+    recordWrite(userId);
 
     return {
       message: 'Workout deleted successfully',
@@ -666,7 +683,8 @@ export class WorkoutsService {
   }
 
   async getUniqueExerciseIds(userId: number) {
-    const rows = await db
+    // Pure browsing read: session consistency (readerFor), not always-primary.
+    const rows = await readerFor(userId)
       .select({
         exerciseId: sets.exerciseId,
         exerciseName: exercises.name,
@@ -690,7 +708,8 @@ export class WorkoutsService {
   }
 
   async getUserSetsByExercise(userId: number, exerciseId: number) {
-    const rows = await db
+    // Pure browsing read: session consistency (readerFor), not always-primary.
+    const rows = await readerFor(userId)
       .select({
         set: sets,
         exercise: exercises,

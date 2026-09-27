@@ -27,7 +27,7 @@
 
 ## Run the backend and PostgreSQL with Docker
 
-Docker Compose starts the API and PostgreSQL together. The containers use the
+Docker Compose starts the API, PostgreSQL primary, and a streaming replica. The containers use the
 internal `hit-tracker-network`; the API connects to PostgreSQL through the
 service name `postgres`, not through a host port. Only the API is published to
 the host on port `3000` by default.
@@ -54,14 +54,31 @@ the host on port `3000` by default.
 3. Check the API at `http://localhost:3000/` and stop the stack with
    `docker compose down`.
 
-The PostgreSQL volume persists between restarts. The initial UTF-16 SQL dump is
+The primary and replica have separate persistent volumes. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
-first time. The `migrate` service records the SQL-dump baseline and then runs
+first time. `replication-init` ensures the replication role and host rule on every
+startup, including with an older primary volume. The `migrate` service records
+the SQL-dump baseline and then runs
 the versioned Drizzle migrations before the API starts, including for an
 existing volume. The `seed` service then idempotently adds the shared exercise
 library and starter programs; it never deletes personal data. Use `docker
 compose logs -f api`, `docker compose logs -f postgres`, `docker compose logs
 migrate`, or `docker compose logs seed` to inspect startup problems.
+
+Compose sets `DATABASE_REPLICA_URL` for the API. Plain selects use the replica;
+writes, transactions, OAuth sessions, auth checks, and read-after-write paths use
+the primary. Outside Compose, leave `DATABASE_REPLICA_URL` unset for a single
+database. A configured but unavailable replica makes ordinary replica reads fail;
+restart without the URL to route all reads to the primary. See
+[`docs/diploma/read-replica.md`](docs/diploma/read-replica.md) for demo and lag SQL.
+
+Streaming replication uses its own `replicator` role and `REPLICATION_PASSWORD`
+(never the app's `DB_PASSWORD`), and its `pg_hba.conf` rule is scoped to the
+`private` network's subnet (`PRIVATE_NETWORK_SUBNET`, default `172.28.40.0/24`)
+instead of `0.0.0.0/0`. Changing that subnet also changes the Docker network,
+so run `docker compose down` first, then `docker compose up --build`; this
+recreates the network but keeps the named volumes (`postgres_data`,
+`postgres_replica_data`).
 
 To add the shared starter library again without resetting users or workouts,
 run `npm run db:seed` from this folder.
