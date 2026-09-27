@@ -306,11 +306,110 @@ services:
     networks:
       - private
 
+  metrics-token:
+    image: alpine:3.22.1
+    profiles: [observability]
+    environment:
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+    command: ["sh", "-c", "umask 077; printf '%s' \"$$METRICS_TOKEN\" > /token/metrics-token; chmod 0444 /token/metrics-token"]
+    volumes:
+      - metrics_token:/token
+    restart: "no"
+    # Only writes to the `metrics_token` volume; it never talks to another
+    # container or the network.
+    network_mode: none
+
+  # Idempotently creates/updates a least-privilege `metrics_reader` role for
+  # postgres-exporter, instead of handing the exporter the superuser
+  # credentials the API itself uses. Runs every startup of the
+  # `observability` profile (not gated behind docker-entrypoint-initdb.d, so
+  # it also fixes up a volume that already existed before this role did) and
+  # keeps the role's password synced with METRICS_DB_PASSWORD.
+  metrics-role-init:
+    image: postgres:17
+    profiles: [observability]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:-change_me}
+    volumes:
+      - ./docker/observability/metrics-role-init.sh:/docker-entrypoint-init.d/metrics-role-init.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/metrics-role-init.sh"]
+    restart: "no"
+    networks:
+      - private
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [observability]
+    depends_on:
+      metrics-token:
+        condition: service_completed_successfully
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - metrics_token:/run/metrics:ro
+      - prometheus_data:/prometheus
+    networks:
+      - private
+      - observability
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    profiles: [observability]
+    environment:
+      # metrics_reader only holds pg_monitor (read-only), never the
+      # application superuser credentials postgres/DB_PASSWORD.
+      DATA_SOURCE_NAME: postgresql://metrics_reader:${METRICS_DB_PASSWORD:-change_me}@postgres:5432/${DB_NAME:-nestdb}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      metrics-role-init:
+        condition: service_completed_successfully
+    networks:
+      - private
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    profiles: [observability]
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - observability
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   postgres_replica_data:
   minio_data:
   backups_data:
+  prometheus_data:
+  grafana_data:
+  metrics_token:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
@@ -327,4 +426,7 @@ networks:
     driver: bridge
   # Dedicated path from cloudflared to MinIO; PostgreSQL is not on this network.
   storage-edge:
+    driver: bridge
+  # Local-only observability UI/API; not shared with the tunnel network.
+  observability:
     driver: bridge

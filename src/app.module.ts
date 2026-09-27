@@ -13,6 +13,7 @@ import { UsersModule } from './users/users.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
+import { MetricsModule } from './metrics/metrics.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
 
@@ -24,6 +25,15 @@ import { requestIds } from './common/request-id';
       pinoHttp: {
         genReqId: (req) => req.id,
         mixin: () => ({ requestId: requestIds.getStore() ?? 'system' }),
+        // The Prometheus scrape hits GET /metrics every 15s (see
+        // docker/observability/prometheus/prometheus.yml); logging each of
+        // those requests would drown real traffic in access-log noise. The
+        // req/res serializers below never emit a `headers` key, so the
+        // scrape's `Authorization: Bearer <token>` is never logged either
+        // way, but the request is still excluded outright.
+        autoLogging: {
+          ignore: (req) => req.url?.split('?')[0] === '/metrics',
+        },
         serializers: {
           req: (req: Request) => ({
             method: req.method,
@@ -90,6 +100,7 @@ import { requestIds } from './common/request-id';
     WorkoutsModule,
     ExercisesModule,
     UsersModule,
+    MetricsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

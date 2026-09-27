@@ -92,6 +92,17 @@ After pulling the branch, each developer runs `docker compose up --build`; the
 schema only. Shared starter data belongs in the versioned seed/dump; personal
 users, workouts, and other local test data are not copied through Git.
 
+### Local observability
+
+Prometheus and Grafana are opt-in: set a unique `METRICS_TOKEN` (at least 24
+characters), `METRICS_DB_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` in `.env`,
+then run `docker compose --profile observability up --build`. Open Grafana at
+`http://localhost:3001` (admin / your configured password); Prometheus is at
+`http://localhost:9090`. Both ports bind to localhost and can be changed with
+`GRAFANA_PORT` and `PROMETHEUS_PORT`. `/metrics` requires the bearer token and
+remains protected if the API is reachable through the tunnel. Demo details are
+in [docs/diploma/observability.md](docs/diploma/observability.md).
+
 #### Refreshing `sql/init.sql`
 
 `sql/init.sql` is a `pg_dump` schema+data snapshot used only to bootstrap a
@@ -140,6 +151,7 @@ guards (see `drizzle/20260901013000_reconcile_docker_schema`) when the gap is
 small and self-contained; reach for a `fingerprintedMigrations` entry when the
 dump itself jumped ahead of the migration history. Either way, never edit an
 existing migration file under `drizzle/` to add such guards after the fact.
+>>>>>>> feat/diploma-platform
 
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 
