@@ -151,7 +151,6 @@ guards (see `drizzle/20260901013000_reconcile_docker_schema`) when the gap is
 small and self-contained; reach for a `fingerprintedMigrations` entry when the
 dump itself jumped ahead of the migration history. Either way, never edit an
 existing migration file under `drizzle/` to add such guards after the fact.
->>>>>>> feat/diploma-platform
 
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 
