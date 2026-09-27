@@ -292,12 +292,106 @@ curl -X POST http://localhost:3000/users/me/avatar \
 
 Keep the object key server-side. Responses expose a URL, never a key.
 
-### Backups / Резервне копіювання
+### Backups
 
-The bucket lives in the `minio_data` Docker volume and is **not** covered by a
-PostgreSQL dump. A database backup taken on its own restores rows whose
-`avatar_key` points at objects that no longer exist. Back up the volume
-alongside the database, or re-run `mc mirror` to a second location.
+The optional `backup` Compose profile makes a daily PostgreSQL custom-format
+dump and mirrors the full MinIO bucket into the same timestamped backup set.
+This matters because database rows can reference avatars and exercise images
+stored in MinIO. Each complete set contains `db.dump`, `minio/`, and a
+`manifest.json` with sizes, object count, the dump SHA-256, the pg_dump client
+version, the PostgreSQL server version, migration count, and duration.
+Incomplete runs are discarded and do not trigger rotation. Backup set files
+and directories are created with `umask 077` (600/700): only the container's
+user can read them.
+
+Backup and restore never use the MinIO root credentials. The always-on
+`backup` service authenticates with a dedicated **read-only** bucket-scoped
+account (`BACKUP_S3_ACCESS_KEY_ID` / `BACKUP_S3_SECRET_ACCESS_KEY`), created
+by `docker/minio-init.sh` the same way as the API account. `restore` and
+`verify-restore` write objects, so they use a separate **write-capable**
+bucket-scoped account (`RESTORE_S3_ACCESS_KEY_ID` /
+`RESTORE_S3_SECRET_ACCESS_KEY`). That credential is intentionally left out of
+the always-on service's environment in `docker-compose.yml`; supply it only
+when you invoke `restore`/`verify-restore`:
+
+```sh
+docker compose --profile backup run --rm \
+  -e RESTORE_S3_ACCESS_KEY_ID=hit-tracker-restore \
+  -e RESTORE_S3_SECRET_ACCESS_KEY=change_me_restore_readwrite_secret \
+  backup restore 20260927T030000Z
+```
+
+Both accounts are optional: leaving either pair unset in `.env` makes
+`docker/minio-init.sh` skip provisioning that account (the API account
+remains required, as before).
+
+Copy `.env.example` to `.env`, then set `DB_PASSWORD`, `MINIO_ROOT_PASSWORD`,
+`BACKUP_S3_ACCESS_KEY_ID`/`BACKUP_S3_SECRET_ACCESS_KEY`,
+`RESTORE_S3_ACCESS_KEY_ID`/`RESTORE_S3_SECRET_ACCESS_KEY`, and the other local
+secrets as usual. Enable the scheduled service with:
+
+```sh
+docker compose --profile backup up -d backup
+```
+
+It runs once per UTC day, as soon as the clock reaches `BACKUP_TIME` (`03:00`
+by default) — a catch-up check on every 30-second tick, not an exact-minute
+match, so a delayed tick cannot cause a whole day to be skipped. A
+`.last-scheduled-date` marker guards against running twice in the same day.
+Set `BACKUP_TIME=HH:MM` to change the time and `BACKUP_KEEP_DAILY`,
+`BACKUP_KEEP_WEEKLY`, or `BACKUP_KEEP_MONTHLY` to change GFS retention
+(defaults 7, 4, and 12). The default `backups_data` named volume is
+independent from `postgres_data` and `minio_data`. To use a host directory
+instead, set `BACKUP_HOST_PATH` to an absolute path before starting the
+service. On startup the scheduler also sweeps (and logs) any `.inprogress-*`
+working directory older than six hours, left behind by a container that was
+killed mid-backup.
+
+Run a backup immediately, without waiting for the schedule:
+
+```sh
+docker compose --profile backup run --rm backup run-now
+```
+
+A manual `run-now` does not touch `.last-scheduled-date`, so it neither
+consumes nor blocks that day's scheduled run; if both happen on the same UTC
+day, `rotate.sh`'s GFS classes still count each successful set as its own
+daily (and, if applicable, weekly/monthly) slot, up to the configured limits.
+
+Restore a set into a new scratch database by default; use `--database NAME` to
+choose a different new database. Restoring over `DB_NAME` requires the explicit
+`--force-live` option and prints a warning. MinIO restore merges and overwrites
+matching keys in the configured bucket; it leaves unrelated existing keys.
+Before touching the database or bucket, `restore` parses `manifest.json` and
+recomputes `sha256sum db.dump`; it aborts with a clear error if the checksum
+does not match or the manifest has no recorded checksum, and it does the same
+cheap check against the manifest's recorded MinIO object count/bytes.
+
+```sh
+docker compose --profile backup run --rm \
+  -e RESTORE_S3_ACCESS_KEY_ID=hit-tracker-restore \
+  -e RESTORE_S3_SECRET_ACCESS_KEY=change_me_restore_readwrite_secret \
+  backup restore 20260927T030000Z
+docker compose --profile backup run --rm \
+  -e RESTORE_S3_ACCESS_KEY_ID=hit-tracker-restore \
+  -e RESTORE_S3_SECRET_ACCESS_KEY=change_me_restore_readwrite_secret \
+  backup verify-restore
+```
+
+The restore drill picks the newest successful set, creates a scratch database,
+restores the bucket, checks that users/workouts/exercises and the Drizzle
+migration table can be queried, then prints row counts. On success
+`verify-restore` drops its own scratch database automatically; on failure it
+leaves the database in place (and prints its name) for inspection.
+
+Backups on the same machine protect against mistakes, not machine loss. Copy
+complete timestamped directories from `backups_data` (or `BACKUP_HOST_PATH`)
+to separate storage, such as an encrypted off-site bucket or removable disk;
+for a simple off-host copy, configure `BACKUP_HOST_PATH` to a host directory
+and run `scp -r /srv/hit-tracker/backups/<set> backupuser@backup-host:/srv/offsite/hit-tracker/`.
+Keep access credentials outside the backup archive. See
+[`docs/diploma/backups.md`](docs/diploma/backups.md) for the demo and recovery
+targets.
 
 ## Google OAuth
 
