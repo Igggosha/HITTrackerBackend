@@ -9,6 +9,8 @@ import { configureTrustProxy } from './trust-proxy';
 import { pool } from '../db/db';
 import { createValidationPipe } from '../users/body-metrics-validation';
 import { requestIdMiddleware } from '../common/request-id';
+import { createMetricsMiddleware } from '../metrics/metrics.middleware';
+import { MetricsService } from '../metrics/metrics.service';
 
 /**
  * Applies every request-handling middleware/pipe the API needs, in the exact
@@ -21,9 +23,15 @@ import { requestIdMiddleware } from '../common/request-id';
  * here, first, guarantees a request id (and the matching `X-Request-Id`
  * response header) even for requests that fail in helmet or the body
  * parsers, before any routing happens.
+ *
+ * The metrics middleware is registered immediately after it, still ahead of
+ * helmet and the body parsers, so a request that never reaches Nest's guards
+ * or router — rejected by helmet, an oversized/malformed body, an unmatched
+ * path — is still counted (see `src/metrics/metrics.middleware.ts`).
  */
 export function configureApp(app: INestApplication): void {
   app.use(requestIdMiddleware);
+  app.use(createMetricsMiddleware(app.get(MetricsService)));
 
   // Cloudflare Tunnel is the only public hop; secure OAuth cookies need its HTTPS signal.
   configureTrustProxy(

@@ -8,6 +8,8 @@ import { AppController } from '../src/app.controller';
 import { HttpExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIds } from '../src/common/request-id';
 import { configureApp } from '../src/config/configure-app';
+import { MetricsModule } from '../src/metrics/metrics.module';
+import { MetricsService } from '../src/metrics/metrics.service';
 
 // This app boots via the same `configureApp` that `main.ts` uses, so the
 // request-id-first / helmet / body-parser / session middleware order it
@@ -33,13 +35,32 @@ process.env.OAUTH_SESSION_SECRET ??= 'e2e-bootstrap-order-test-secret';
         autoLogging: false,
       },
     }),
+    // `configureApp` fetches `MetricsService` to wire up the metrics
+    // middleware right after the request-id middleware; without this import
+    // that `app.get(MetricsService)` call would throw.
+    MetricsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: HttpExceptionFilter }],
 })
 class BootstrapOrderTestModule {}
 
+async function counterValue(
+  metrics: MetricsService,
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await metrics.requests.get();
+  return (
+    snapshot.values.find((entry) =>
+      Object.entries(labels).every(
+        ([key, value]) => entry.labels[key] === value,
+      ),
+    )?.value ?? 0
+  );
+}
+
 describe('bootstrap middleware order (e2e)', () => {
   let app: INestApplication<App>;
+  let metrics: MetricsService;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -50,6 +71,7 @@ describe('bootstrap middleware order (e2e)', () => {
     app.useLogger(app.get(Logger));
     configureApp(app);
     await app.init();
+    metrics = app.get(MetricsService);
   });
 
   afterAll(async () => {
@@ -83,6 +105,39 @@ describe('bootstrap middleware order (e2e)', () => {
       code: 'PAYLOAD_TOO_LARGE',
       requestId: headerRequestId,
     });
+
+    // The metrics middleware sits ahead of the body parser (right after the
+    // request-id middleware), so a failure the body parser raises before
+    // Nest's router ever runs is still counted, unlike the old
+    // APP_INTERCEPTOR-based recorder it replaced.
+    expect(
+      await counterValue(metrics, {
+        method: 'POST',
+        route: 'unmatched',
+        status: '413',
+      }),
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('labels an unknown path "unmatched" and still counts the 404', async () => {
+    await request(app.getHttpServer()).get('/this-route-does-not-exist').expect(404);
+
+    expect(
+      await counterValue(metrics, {
+        method: 'GET',
+        route: 'unmatched',
+        status: '404',
+      }),
+    ).toBe(1);
+  });
+
+  it('never records the /metrics scrape path itself', async () => {
+    await request(app.getHttpServer()).get('/metrics').expect(401);
+
+    const snapshot = await metrics.requests.get();
+    expect(snapshot.values.some((entry) => entry.labels.route === '/metrics')).toBe(
+      false,
+    );
   });
 
   it('returns 400 for malformed JSON, with a request id', async () => {

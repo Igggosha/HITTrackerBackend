@@ -25,6 +25,16 @@ export class MetricsService {
     buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
     registers: [this.registry],
   });
+  // A connection that closes before the response finishes (client
+  // disconnect, proxy reset, ...) never gets a status code, so it is kept
+  // out of `http_requests_total`/`http_request_duration_seconds` and counted
+  // here instead of being guessed into some status bucket.
+  readonly aborted = new Counter({
+    name: 'http_requests_aborted_total',
+    help: 'HTTP requests whose connection closed before the response finished.',
+    labelNames: ['method', 'route'] as const,
+    registers: [this.registry],
+  });
 
   private activeWorkoutsGauge: Gauge<string>;
   private activeWorkouts = 0;
