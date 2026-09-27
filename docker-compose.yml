@@ -112,6 +112,41 @@ services:
     networks:
       - private
 
+  # Opt-in daily PostgreSQL + bucket backups. Run immediately with
+  # `docker compose --profile backup run --rm backup run-now`.
+  backup:
+    profiles: ["backup"]
+    build:
+      context: ./docker/backup
+      args:
+        MC_IMAGE: quay.io/minio/mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      PGDATABASE: ${DB_NAME:-nestdb}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-hit-tracker}
+      BACKUP_TIME: ${BACKUP_TIME:-03:00}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-12}
+    volumes:
+      - ${BACKUP_HOST_PATH:-backups_data}:/backups
+      - ./docker/backup:/scripts:ro
+    restart: unless-stopped
+    networks:
+      - private
+      - storage-edge
+
   api:
     build: .
     depends_on:
@@ -211,6 +246,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  backups_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.

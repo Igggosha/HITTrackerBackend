@@ -226,12 +226,60 @@ curl -X POST http://localhost:3000/users/me/avatar \
 
 Keep the object key server-side. Responses expose a URL, never a key.
 
-### Backups / Резервне копіювання
+### Backups
 
-The bucket lives in the `minio_data` Docker volume and is **not** covered by a
-PostgreSQL dump. A database backup taken on its own restores rows whose
-`avatar_key` points at objects that no longer exist. Back up the volume
-alongside the database, or re-run `mc mirror` to a second location.
+The optional `backup` Compose profile makes a daily PostgreSQL custom-format
+dump and mirrors the full MinIO bucket into the same timestamped backup set.
+This matters because database rows can reference avatars and exercise images
+stored in MinIO. Each complete set contains `db.dump`, `minio/`, and a
+`manifest.json` with sizes, the dump SHA-256, PostgreSQL version, migration
+count, and duration. Incomplete runs are discarded and do not trigger rotation.
+The backup container uses MinIO root credentials because the API account can
+read only managed prefixes; the root access is needed to mirror the full bucket.
+
+Copy `.env.example` to `.env`, then set `DB_PASSWORD`, `MINIO_ROOT_PASSWORD`,
+and the other local secrets as usual. Enable the scheduled service with:
+
+```sh
+docker compose --profile backup up -d backup
+```
+
+It runs daily at `03:00` UTC by default. Set `BACKUP_TIME=HH:MM` to change the
+time and `BACKUP_KEEP_DAILY`, `BACKUP_KEEP_WEEKLY`, or
+`BACKUP_KEEP_MONTHLY` to change GFS retention (defaults 7, 4, and 12). The
+default `backups_data` named volume is independent from `postgres_data` and
+`minio_data`. To use a host directory instead, set `BACKUP_HOST_PATH` to an
+absolute path before starting the service.
+
+Run a backup immediately, without waiting for the schedule:
+
+```sh
+docker compose --profile backup run --rm backup run-now
+```
+
+Restore a set into a new scratch database by default; use `--database NAME` to
+choose a different new database. Restoring over `DB_NAME` requires the explicit
+`--force-live` option and prints a warning. MinIO restore merges and overwrites
+matching keys in the configured bucket; it leaves unrelated existing keys.
+
+```sh
+docker compose --profile backup run --rm backup restore 20260927T030000Z
+docker compose --profile backup run --rm backup verify-restore
+```
+
+The restore drill picks the newest successful set, creates a scratch database,
+restores the bucket, checks that users/workouts/exercises and the Drizzle
+migration table can be queried, then prints row counts. Scratch databases are
+left in place for inspection and may be dropped manually after the drill.
+
+Backups on the same machine protect against mistakes, not machine loss. Copy
+complete timestamped directories from `backups_data` (or `BACKUP_HOST_PATH`)
+to separate storage, such as an encrypted off-site bucket or removable disk;
+for a simple off-host copy, configure `BACKUP_HOST_PATH` to a host directory
+and run `scp -r /srv/hit-tracker/backups/<set> backupuser@backup-host:/srv/offsite/hit-tracker/`.
+Keep access credentials outside the backup archive. See
+[`docs/diploma/backups.md`](docs/diploma/backups.md) for the demo and recovery
+targets.
 
 ## Google OAuth
 
