@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -13,7 +13,7 @@ import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 import { HttpExceptionFilter } from './common/http-exception.filter';
-import { requestIdMiddleware, requestIds } from './common/request-id';
+import { requestIds } from './common/request-id';
 
 @Module({
   controllers: [AppController],
@@ -31,6 +31,12 @@ import { requestIdMiddleware, requestIds } from './common/request-id';
           res: (res: Response) => ({ statusCode: res.statusCode }),
         },
         redact: {
+          // The `req`/`res` serializers above never emit a `headers` key, so
+          // the `req.headers.*`/`res.headers.*` paths below are currently
+          // unreachable dead config. They stay anyway, as defense in depth
+          // in case a serializer is ever changed or removed; the field-name
+          // paths cover password/token/code wherever they surface in other
+          // logged objects (e.g. request bodies passed to `logger.error`).
           paths: [
             'req.headers.authorization',
             'req.headers.cookie',
@@ -91,8 +97,11 @@ import { requestIdMiddleware, requestIds } from './common/request-id';
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(requestIdMiddleware).forRoutes('*');
-  }
-}
+// The request-id middleware is registered directly in `configureApp`
+// (`src/config/configure-app.ts`), as the very first `app.use(...)` in
+// bootstrap — before helmet and the body parsers. Nest only applies
+// module-bound middleware (what `NestModule.configure` would add here) once
+// the app initialises, which happens after every explicit `app.use(...)`
+// call in `main.ts`. Binding it here too would run it a second time, too
+// late to cover pre-routing failures.
+export class AppModule {}

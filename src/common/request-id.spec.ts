@@ -36,4 +36,23 @@ describe('requestIdMiddleware', () => {
       expect(next).toHaveBeenCalled();
     },
   );
+
+  it('is idempotent when bound twice: a second pass keeps the same id', () => {
+    const req = { headers: {} } as unknown as Request;
+    const setHeader = jest.fn();
+    const res = { setHeader } as unknown as Response;
+
+    requestIdMiddleware(req, res, () => {
+      const firstId = (req as Request & { id: string }).id;
+      expect(setHeader).toHaveBeenCalledTimes(1);
+
+      requestIdMiddleware(req, res, () => {
+        expect(requestIds.getStore()).toBe(firstId);
+      });
+
+      expect((req as Request & { id: string }).id).toBe(firstId);
+      // The header must not be reassigned to a different, second id.
+      expect(setHeader).toHaveBeenCalledTimes(1);
+    });
+  });
 });
