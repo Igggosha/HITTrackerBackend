@@ -13,6 +13,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -526,4 +527,43 @@ export const sets = pgTable(
 
         rpe: integer("rpe"),
     }
+);
+
+
+// ================= TRANSACTIONAL OUTBOX =================
+
+// Domain events written in the same transaction as the change they describe.
+// A relay later claims unpublished rows and forwards them to the broker, so an
+// event exists if and only if its business change committed. There are no
+// foreign keys on purpose: events must outlive the rows they describe (for
+// example `user.deleted`), and the table is meant to be range-partitioned by
+// `occurred_at` later.
+export const outboxEvents = pgTable(
+    "outbox_events",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        aggregateType: text("aggregate_type").notNull(),
+        aggregateId: text("aggregate_id").notNull(),
+        eventType: text("event_type").notNull(),
+        eventVersion: integer("event_version").notNull(),
+        payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+        occurredAt: timestamp("occurred_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+        publishedAt: timestamp("published_at", { withTimezone: true }),
+        attempts: integer("attempts").notNull().default(0),
+        lastError: text("last_error"),
+    },
+    (table) => [
+        check("outbox_events_event_version_positive", sql`${table.eventVersion} > 0`),
+        check("outbox_events_attempts_non_negative", sql`${table.attempts} >= 0`),
+        index("outbox_events_unpublished_idx")
+            .on(table.occurredAt)
+            .where(sql`${table.publishedAt} is null`),
+        index("outbox_events_aggregate_idx").on(
+            table.aggregateType,
+            table.aggregateId,
+            table.occurredAt,
+        ),
+    ],
 );

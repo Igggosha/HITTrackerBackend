@@ -8,6 +8,7 @@ import { WorkoutProgramsModule } from './workout-programs/workout-programs.modul
 import { WorkoutsModule } from './workouts/workouts.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { UsersModule } from './users/users.module';
+import { OutboxModule } from './outbox/outbox.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 
@@ -39,6 +40,7 @@ import { validateEnvironment } from './config/environment';
         },
       }),
     }),
+    OutboxModule,
     AuthModule,
     WorkoutProgramsModule,
     WorkoutsModule,
