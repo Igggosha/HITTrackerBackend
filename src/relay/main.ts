@@ -1,4 +1,4 @@
-import '../tracing/register';
+import './register';
 import { NestFactory } from '@nestjs/core';
 import { ConsoleLogger } from '@nestjs/common';
 import * as http from 'node:http';

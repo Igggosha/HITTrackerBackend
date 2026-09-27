@@ -15,6 +15,7 @@ import { RelayModule } from './relay/relay.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 import { MetricsModule } from './metrics/metrics.module';
+import { TracingShutdownModule } from './tracing/tracing-shutdown.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
 import { context, trace } from '@opentelemetry/api';
@@ -111,6 +112,7 @@ import { context, trace } from '@opentelemetry/api';
     ExercisesModule,
     UsersModule,
     MetricsModule,
+    TracingShutdownModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

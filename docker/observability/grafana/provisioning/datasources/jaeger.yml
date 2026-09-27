@@ -1,0 +1,38 @@
+apiVersion: 1
+datasources:
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false
+    jsonData:
+      # "Trace to logs": jump from a span in a Jaeger trace to its matching
+      # log lines in Loki. structured metadata, not a label (see
+      # docker/observability/alloy/config.alloy and "Why labels must be
+      # low-cardinality" in docs/diploma/observability.md), so this can only
+      # be a `customQuery`, not the tag-mapping shortcut: LogQL's `| traceId=
+      # "..."` filters on structured metadata, which the tag-mapping form
+      # (label matchers built from `tags`) cannot express. `${__trace.traceId}`
+      # is Grafana's built-in variable for the open trace's ID. See "Traces
+      # (Jaeger)" in docs/diploma/observability.md for the demo script.
+      #
+      # `$$` (not `$`) before `{__trace.traceId}` below is required: Grafana's
+      # provisioning loader expands `${VAR}`/`$VAR` as OS environment
+      # variables while reading THIS file, before jsonData is even stored —
+      # an un-escaped `${__trace.traceId}` silently becomes an empty string
+      # (no such env var), breaking the link with no error anywhere. `$$`
+      # escapes to a literal `$`, so the stored jsonData (and what Grafana's
+      # own template engine later expands at click time) is the intended
+      # `${__trace.traceId}`. Verify with `GET /api/datasources/uid/jaeger`
+      # — `jsonData.tracesToLogsV2.query` must show `${__trace.traceId}`,
+      # never `""`.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: false
+        filterBySpanID: false
+        customQuery: true
+        query: '{service=~".+"} | traceId="$${__trace.traceId}"'
+        tags: []

@@ -8,7 +8,7 @@ import {
   type OutboxEventType,
 } from './events';
 import type { DbTransaction } from './transaction';
-import { activeTraceContext } from '../tracing/tracing';
+import { activeTraceContext } from '../../packages/tracing/tracing';
 
 export type ClaimedOutboxEvent = typeof outboxEvents.$inferSelect;
 

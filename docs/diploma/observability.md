@@ -65,17 +65,22 @@ populate route-level latency and request panels.
   (a line per event vs. a handful of aggregated buckets), so they get a much
   shorter retention (7 days here) and a separate store (Loki) rather than
   living in Prometheus.
-- **Traces** (not implemented) would follow one request's causal chain
-  *across* services with parent/child spans and timing per hop. With a
-  single API service and no downstream calls of its own, a request ID
-  threaded through logs already gives the same correlation a trace would;
-  traces become worth adding once there is more than one hop to see.
+- **Traces** (`docs/diploma/tracing.md`) follow one request's causal chain
+  *across* processes — the API and the standalone outbox relay, so far —
+  with parent/child spans and per-hop timing that a request ID threaded
+  through logs cannot show on its own (e.g. exactly how long the pg span
+  inside one HTTP request took, or that a later Kafka publish in a different
+  process was caused by this same request). Off by default
+  (`OTEL_EXPORTER_OTLP_ENDPOINT` unset); Jaeger is provisioned as a Grafana
+  datasource the same way Prometheus and Loki are, and is linked to/from
+  Loki (see "Jumping between metrics, logs, and traces" below).
 
 ### Pipeline
 
 ```
 nestjs-pino (api container)
-  -> JSON line on stdout (requestId, level, req, res, msg, time, ...)
+  -> JSON line on stdout (requestId, traceId, spanId, level, req, res, msg,
+     time, ...)
   -> Docker's container log driver (json-file)
   -> Grafana Alloy (discovery.docker + loki.source.docker, via the
      read-only Docker socket mount)
@@ -83,11 +88,12 @@ nestjs-pino (api container)
        -> stage.json parses the api's pino line
        -> stage.template maps numeric pino levels to names
        -> stage.labels promotes only `level` to a label
-       -> stage.structured_metadata attaches requestId/req.method/req.url/
-          res.statusCode without indexing them
+       -> stage.structured_metadata attaches requestId/traceId/req.method/
+          req.url/res.statusCode without indexing them
   -> Loki (grafana/loki, filesystem storage, 7d retention via the compactor)
-  -> Grafana (Loki datasource with a requestId derived field; Logs dashboard
-     provisioned next to API Overview/PostgreSQL)
+  -> Grafana (Loki datasource with requestId/traceId derived fields, the
+     latter linking to Jaeger; Logs dashboard provisioned next to API
+     Overview/PostgreSQL)
 ```
 
 Every container in the stack (`postgres`, `minio`, `grafana`, `prometheus`,
@@ -103,12 +109,14 @@ Every distinct combination of Loki label values gets its own log **stream**
 with its own chunk/index bookkeeping — the same reason Prometheus labels
 must not carry raw IDs (see "What and why" above). `service` and `level` are
 labels because they each take a handful of fixed values (one per Compose
-service; `trace`..`fatal`). `requestId` is one-per-request — effectively
-unbounded cardinality — so making it a label would create a new stream per
-request and blow up Loki's index for no query benefit. Instead it (and
-`req.method`/`req.url`/`res.statusCode`, also per-request) is attached as
+service; `trace`..`fatal`). `requestId`/`traceId` are one-per-request/trace —
+effectively unbounded cardinality — so making either a label would create a
+new stream per request and blow up Loki's index for no query benefit.
+Instead they (and `req.method`/`req.url`/`res.statusCode`, also per-request)
+are attached as
 **structured metadata**: stored alongside each line, filterable with
-`| requestId="..."`, but never indexed as a stream label. This is exactly
+`| requestId="..."` or `| traceId="..."`, but never indexed as a stream
+label. This is exactly
 the boundary Loki's own docs draw between "labels" and "structured
 metadata", and it is enforced here in the Alloy pipeline (`stage.labels` vs.
 `stage.structured_metadata`), not in application code.
@@ -166,6 +174,26 @@ Then, in Grafana (`http://localhost:3001`):
    lines," since a hand-built Explore deep link would otherwise have to
    encode Explore's pane state by hand and is fragile across Grafana
    versions.
+
+### Jumping between metrics, logs, and traces
+
+With tracing enabled (`OTEL_EXPORTER_OTLP_ENDPOINT` set; see
+`docs/diploma/tracing.md`), the same request also has a `traceId` in its log
+lines and a trace in Jaeger, and Grafana links all three:
+
+1. Metrics -> logs: the "5xx error rate" jump above.
+2. Logs -> traces: copy a `traceId` from a log line (or `X-Trace-Id` from an
+   API response) and either run `{service=~".+"} | traceId="<id>"` in
+   **Explore** (Loki datasource), or click the highlighted `traceId` value on
+   a logs panel — its derived field
+   (`docker/observability/grafana/provisioning/datasources/loki.yml`) opens
+   that trace directly in the `jaeger` datasource, the same way the
+   `requestId` derived field opens another Loki query, except the target
+   datasource is a trace store.
+3. Traces -> logs: from an open trace in Jaeger (embedded in Grafana, or
+   `http://127.0.0.1:16686` directly), "Logs for this span" jumps back to
+   the matching Loki lines via `jaeger.yml`'s `jsonData.tracesToLogsV2`
+   (`docker/observability/grafana/provisioning/datasources/jaeger.yml`).
 
 ### Verifying container discovery
 

@@ -11,7 +11,10 @@ import {
   topicFor,
 } from '../../packages/event-contracts/events';
 import { MetricsService } from '../metrics/metrics.service';
-import { activeTraceContext, producerSpan } from '../tracing/tracing';
+import {
+  activeTraceContext,
+  producerSpan,
+} from '../../packages/tracing/tracing';
 import {
   OutboxService,
   DEFAULT_OUTBOX_BATCH_SIZE,

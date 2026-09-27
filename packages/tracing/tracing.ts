@@ -102,8 +102,42 @@ export function initTracing(serviceName: string): void {
     ],
   });
   sdk.start();
+}
+
+/**
+ * Flushes and shuts down the OpenTelemetry SDK. `initTracing` itself no
+ * longer registers SIGTERM/SIGINT handlers: in a Nest process, shutting the
+ * SDK down as soon as a signal arrives would close the trace exporter while
+ * Nest is still running `onModuleDestroy`/`beforeApplicationShutdown` hooks
+ * on other providers (e.g. `RelayService` flushing a final Kafka publish,
+ * which opens a producer span) — those spans would end after the exporter
+ * had already stopped accepting them and be lost. Callers are expected to
+ * invoke this only once every other provider has torn down; see
+ * `src/tracing/tracing-shutdown.hook.ts` (`onApplicationShutdown` is the
+ * last of Nest's shutdown hooks) and `docs/diploma/tracing.md`.
+ *
+ * Safety net for a process with no Nest application/context at all (e.g. a
+ * future standalone analytics consumer): such a process gets no
+ * `onApplicationShutdown` ordering for free and must opt into
+ * `installShutdownSignalHandlers` below, or call `shutdownTracing` from its
+ * own signal handler, or it will simply lose in-flight spans on SIGTERM/
+ * SIGINT (the process exiting is otherwise harmless — no data is
+ * corrupted, only unflushed spans are dropped).
+ */
+export async function shutdownTracing(): Promise<void> {
+  await sdk?.shutdown();
+}
+
+/**
+ * Opt-in safety net for non-Nest processes only. A Nest app/application
+ * context must NOT call this: it already gets correct ordering via
+ * `onApplicationShutdown` (see `shutdownTracing` above), and registering a
+ * second, independent signal handler here would shut the SDK down too
+ * early, racing the app's own shutdown hooks.
+ */
+export function installShutdownSignalHandlers(): void {
   for (const signal of ['SIGTERM', 'SIGINT'] as const)
     process.once(signal, () => {
-      void sdk?.shutdown();
+      void shutdownTracing();
     });
 }

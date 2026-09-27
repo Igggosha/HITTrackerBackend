@@ -6,17 +6,23 @@ import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-base';
-import { db } from '../db/db';
-import { outboxEvents } from '../db/schema';
-import { OutboxService } from '../outbox/outbox.service';
-import { calledWith, fakeOf } from '../outbox/testing/fake-database';
-import { RelayService } from '../relay/relay.service';
-import { activeTraceContext, initTracing, scrubUrl } from './tracing';
+import { db } from '../../src/db/db';
+import { outboxEvents } from '../../src/db/schema';
+import { OutboxService } from '../../src/outbox/outbox.service';
+import { calledWith, fakeOf } from '../../src/outbox/testing/fake-database';
+import { RelayService } from '../../src/relay/relay.service';
+import {
+  activeTraceContext,
+  initTracing,
+  installShutdownSignalHandlers,
+  scrubUrl,
+  shutdownTracing,
+} from './tracing';
 
-jest.mock('../db/db', () =>
+jest.mock('../../src/db/db', () =>
   jest
-    .requireActual<typeof import('../outbox/testing/fake-database')>(
-      '../outbox/testing/fake-database',
+    .requireActual<typeof import('../../src/outbox/testing/fake-database')>(
+      '../../src/outbox/testing/fake-database',
     )
     .fakeDbModule(),
 );
@@ -130,4 +136,37 @@ it('stores an active parent and continues it when publishing to Kafka', async ()
     manager.disable();
     await provider.shutdown();
   }
+});
+
+it('does not register SIGTERM/SIGINT itself; installShutdownSignalHandlers and shutdownTracing are opt-in', async () => {
+  const previous = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  const log = jest.spyOn(console, 'info').mockImplementation();
+  const beforeTerm = process.listeners('SIGTERM');
+  const beforeInt = process.listeners('SIGINT');
+
+  initTracing('hit-api');
+  expect(process.listeners('SIGTERM')).toEqual(beforeTerm);
+  expect(process.listeners('SIGINT')).toEqual(beforeInt);
+
+  installShutdownSignalHandlers();
+  const addedTerm = process
+    .listeners('SIGTERM')
+    .filter((listener) => !beforeTerm.includes(listener));
+  const addedInt = process
+    .listeners('SIGINT')
+    .filter((listener) => !beforeInt.includes(listener));
+  expect(addedTerm).toHaveLength(1);
+  expect(addedInt).toHaveLength(1);
+  addedTerm.forEach((listener) =>
+    process.removeListener('SIGTERM', listener as () => void),
+  );
+  addedInt.forEach((listener) =>
+    process.removeListener('SIGINT', listener as () => void),
+  );
+
+  await expect(shutdownTracing()).resolves.toBeUndefined();
+  log.mockRestore();
+  if (previous !== undefined)
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = previous;
 });

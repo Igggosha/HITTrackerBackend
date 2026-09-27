@@ -115,7 +115,8 @@
     "rootDir": "src",
     "roots": [
       "<rootDir>",
-      "<rootDir>/../scripts"
+      "<rootDir>/../scripts",
+      "<rootDir>/../packages/tracing"
     ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
