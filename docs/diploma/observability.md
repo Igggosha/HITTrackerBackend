@@ -167,6 +167,70 @@ Then, in Grafana (`http://localhost:3001`):
    encode Explore's pane state by hand and is fragile across Grafana
    versions.
 
+### Verifying container discovery
+
+Alloy ships only containers whose `com.docker.compose.project` label equals
+`ALLOY_COMPOSE_PROJECT` (docker-compose.yml; see the comment on the matching
+`discovery.relabel` rule in `docker/observability/alloy/config.alloy`). That
+default now tracks the pinned top-level `name: hittrackerbackend` in
+docker-compose.yml, so a plain `docker compose --profile observability up`
+matches regardless of which directory/worktree you run it from; a custom
+`-p <name>`/`COMPOSE_PROJECT_NAME` still needs to be exported so Alloy's
+default resolves the same way. If the Logs dashboard is unexpectedly empty,
+this project-name mismatch is the first thing to check.
+
+Alloy has no host port and its image has no shell, curl, or wget, so check it
+from a throwaway container attached to the `observability` network instead
+(substitute your actual network name — Compose names it
+`<project>_observability`, e.g. `hittrackerbackend_observability` by
+default; `docker network ls` also lists it):
+
+```sh
+# What project name Alloy is actually filtering on:
+docker compose --profile observability exec alloy printenv ALLOY_COMPOSE_PROJECT
+
+# Which project label values Loki has actually ingested lines for — if your
+# project isn't in this list, Alloy's filter matched zero containers:
+docker run --rm --network hittrackerbackend_observability curlimages/curl:8.11.1 \
+  -s http://loki:3100/loki/api/v1/label/project/values
+```
+
+The same check works from Grafana: open **Explore**, pick the **Loki**
+datasource, and run `label_values(project)`, or just look at the **Logs**
+dashboard's `service` variable — an empty dropdown means Alloy shipped
+nothing for this project.
+
+### Debugging Loki directly
+
+Loki has no host port at all (Grafana and Alloy reach it over the internal
+`observability` Compose network only), and its image
+(`grafana/loki:3.7.8`) ships only the `loki` binary — no shell, curl, or
+wget — so `docker compose exec loki ...` cannot run anything. Prefer Grafana:
+**Explore** with the Loki datasource, or the **Logs** dashboard, cover nearly
+every debugging need without touching the container at all.
+
+When you do need to query it from the host directly (e.g. to check
+`/ready`, `/metrics`, or hit the HTTP API with a query Explore doesn't
+expose), attach a throwaway `curlimages/curl` container to the same
+`observability` network instead of trying to exec into `loki` or `alloy`:
+
+```sh
+docker run --rm --network hittrackerbackend_observability curlimages/curl:8.11.1 \
+  -s http://loki:3100/ready
+
+docker run --rm --network hittrackerbackend_observability curlimages/curl:8.11.1 \
+  -s 'http://loki:3100/loki/api/v1/query_range?query={service=~".+"}&limit=5'
+```
+
+Replace `hittrackerbackend_observability` with `<project>_observability` if
+you started the stack under a custom `-p`/`COMPOSE_PROJECT_NAME`. Grafana
+itself reaches Loki the same way its provisioned datasource does
+(`docker/observability/grafana/provisioning/datasources/loki.yml`); its
+built-in datasource proxy API
+(`/api/datasources/proxy/uid/loki/loki/api/v1/query_range`, with Grafana
+admin credentials) is another way to query Loki from outside the Compose
+network without a throwaway container.
+
 ### Alerting
 
 `docker/observability/grafana/provisioning/alerting/rules.yml` provisions

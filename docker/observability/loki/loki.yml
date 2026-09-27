@@ -1,8 +1,8 @@
 # Single-binary Loki for local/dev observability. Auth is disabled because
 # Loki is only reachable on the internal `observability` Compose network
-# (Grafana and Alloy); it is never bound to a host port by default (see
-# LOKI_PORT in docker-compose.yml, off unless explicitly opted into for
-# debugging). Everything is stored under /loki, which is the named volume
+# (Grafana and Alloy); it has no host port at all (see "Debugging Loki
+# directly" in docs/diploma/observability.md for how to query it without
+# one). Everything is stored under /loki, which is the named volume
 # `loki_data` mounted by docker-compose.yml.
 auth_enabled: false
 

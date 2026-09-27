@@ -1,3 +1,12 @@
+# Pinned so the Compose project name never depends on the checkout directory
+# name: Alloy (docker/observability/alloy/config.alloy) filters discovered
+# containers by `com.docker.compose.project`, and that label's value is this
+# pinned name unless overridden by `-p <name>` or `COMPOSE_PROJECT_NAME` in
+# the environment/.env, both of which still take precedence over `name:`
+# here. Keep this in sync with the `ALLOY_COMPOSE_PROJECT` default on the
+# `alloy` service below.
+name: hittrackerbackend
+
 services:
   postgres:
     image: postgres:17
@@ -406,15 +415,15 @@ services:
   # Log storage. Filesystem-backed, single binary, 7-day retention (matches
   # Prometheus's --storage.tsdb.retention.time above). Reachable only from
   # Grafana and Alloy on the internal `observability` network; auth is
-  # disabled because nothing outside that network can reach it. LOKI_PORT is
-  # unset (no host port) unless you opt in for local debugging.
+  # disabled because nothing outside that network can reach it. No host port
+  # is published at all (unlike Grafana/Prometheus above) since nothing on
+  # the host needs to query Loki directly; see "Debugging Loki directly" in
+  # docs/diploma/observability.md for how to query it anyway when needed.
   loki:
     image: grafana/loki:3.7.8
     profiles: [observability]
     command: ["-config.file=/etc/loki/loki.yml"]
     mem_limit: 512m
-    ports:
-      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
     volumes:
       - ./docker/observability/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki_data:/loki
@@ -450,9 +459,13 @@ services:
     mem_limit: 256m
     environment:
       # Which Compose project's containers to collect (see config.alloy).
-      # Tracks whatever project name Compose itself resolved; when running
-      # under a custom `-p <name>`, also export COMPOSE_PROJECT_NAME=<name>
-      # (or set it in `.env`) so this matches.
+      # Tracks whatever project name Compose itself resolved: the top-level
+      # `name: hittrackerbackend` above unless overridden by a custom
+      # `-p <name>` or `COMPOSE_PROJECT_NAME` (also export/set it here so
+      # this default matches). If the Logs dashboard or
+      # `{project="..."}` queries come back empty, verify what Alloy is
+      # actually shipping with the `project` label values check described in
+      # docs/diploma/observability.md ("Verifying container discovery").
       ALLOY_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-hittrackerbackend}
     volumes:
       - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro

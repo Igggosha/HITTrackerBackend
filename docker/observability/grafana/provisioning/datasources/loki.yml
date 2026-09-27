@@ -4,8 +4,9 @@ datasources:
     uid: loki
     type: loki
     access: proxy
-    # Loki has no host port by default (see LOKI_PORT in docker-compose.yml);
-    # Grafana reaches it over the internal `observability` Compose network.
+    # Loki has no host port at all; Grafana reaches it over the internal
+    # `observability` Compose network. See "Debugging Loki directly" in
+    # docs/diploma/observability.md for how to query it from the host anyway.
     url: http://loki:3100
     isDefault: false
     editable: false

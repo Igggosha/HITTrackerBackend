@@ -25,7 +25,7 @@
         "refresh": 2,
         "multi": true,
         "includeAll": true,
-        "allValue": ".+",
+        "allValue": ".*",
         "current": { "text": "All", "value": "$__all" }
       },
       {

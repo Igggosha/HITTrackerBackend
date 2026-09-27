@@ -34,12 +34,30 @@ discovery.relabel "docker_targets" {
   // developer's own default `hittrackerbackend` project running alongside a
   // differently-named `-p` project) are dropped here and never reach Loki.
   // ALLOY_COMPOSE_PROJECT (docker-compose.yml) tracks whatever project name
-  // Compose itself resolved (directory name, `.env` COMPOSE_PROJECT_NAME, or
-  // `-p`), as long as that same value is also visible to Compose's own
-  // variable interpolation (export it, or set it in `.env`).
+  // Compose itself resolved (the top-level `name:` in docker-compose.yml,
+  // `.env`'s COMPOSE_PROJECT_NAME, or `-p`), as long as that same value is
+  // also visible to Compose's own variable interpolation (export it, or set
+  // it in `.env`).
+  //
+  // The env var is spliced into a regex, not compared literally, so it is
+  // explicitly anchored (`^...$`) rather than relying on any implicit
+  // anchoring behavior: an unanchored value would also "keep" a project
+  // whose name merely contains this one as a substring. Docker Compose
+  // itself restricts project names to `[a-z0-9][a-z0-9_-]*` (lowercase
+  // letters, digits, `_`, `-`), none of which are regex metacharacters, so
+  // no further escaping of the value is needed as long as that naming rule
+  // holds.
+  //
+  // If the Logs dashboard (or an Explore query) unexpectedly comes back
+  // empty, that almost always means this filter matched zero containers.
+  // Neither this image nor grafana/loki ships curl/wget, so check from a
+  // throwaway container on the `observability` network instead — see
+  // "Verifying container discovery" in docs/diploma/observability.md for the
+  // exact commands (Alloy's own component API, or Loki's label index, for
+  // what "project" values were actually discovered/ingested).
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
-    regex         = sys.env("ALLOY_COMPOSE_PROJECT")
+    regex         = "^" + sys.env("ALLOY_COMPOSE_PROJECT") + "$"
     action        = "keep"
   }
 
@@ -53,11 +71,12 @@ discovery.relabel "docker_targets" {
     target_label  = "project"
   }
 
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
-  }
+  // No `container` label: it would be redundant with `service` (one
+  // container per Compose service in this stack) and adds an extra stream
+  // dimension for no query benefit — see "Why labels must be low-cardinality"
+  // in docs/diploma/observability.md. The container name is still visible on
+  // each line via Docker's own `__meta_docker_container_name` discovery
+  // metadata if ever needed ad hoc; it is just not promoted to a label.
 }
 
 loki.source.docker "containers" {
@@ -95,7 +114,7 @@ loki.process "containers" {
     }
 
     // Only `level` (a handful of possible values) becomes a Loki label.
-    // `service`/`project`/`container` labels were already added above by
+    // `service`/`project` labels were already added above by
     // discovery.relabel, before loki.source.docker even ingested the line.
     stage.labels {
       values = {
