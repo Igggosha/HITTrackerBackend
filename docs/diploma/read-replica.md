@@ -54,6 +54,8 @@ including the replication password, into the replica's
    `sed` rewrite of `postgresql.auto.conf`), so streaming resumes with the new
    password without a full `pg_basebackup`. Verify with the `pg_hba_file_rules`
    query below and by checking replication resumes (see Lag queries).
+   The rewrite expects a password without spaces or quotes (libpq quotes such
+   values in `primary_conninfo`); for those, re-bootstrap the replica volume.
 
 Verify the scoped rule and the dedicated role:
 

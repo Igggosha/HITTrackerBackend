@@ -23,9 +23,12 @@ rule="host replication replicator ${subnet} scram-sha-256"
 # an older 0.0.0.0/0 rule written before subnet scoping existed, or one for a
 # stale subnet) before appending the current one, so a rerun never leaves two
 # rules for `replicator` behind.
-grep -v -E '^host replication replicator ' "$PGDATA/pg_hba.conf" > "$PGDATA/pg_hba.conf.tmp" || true
-mv "$PGDATA/pg_hba.conf.tmp" "$PGDATA/pg_hba.conf"
-printf '%s\n' "$rule" >> "$PGDATA/pg_hba.conf"
+# Rewrite in place (cat >, not mv) so the file keeps the postgres owner and
+# 0600 mode: this container runs as root and a moved file would become root's.
+grep -v -E '^host replication replicator ' "$PGDATA/pg_hba.conf" > /tmp/pg_hba.conf || true
+printf '%s\n' "$rule" >> /tmp/pg_hba.conf
+cat /tmp/pg_hba.conf > "$PGDATA/pg_hba.conf"
+rm -f /tmp/pg_hba.conf
 
 psql -v ON_ERROR_STOP=1 -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   -c 'SELECT pg_reload_conf()'
