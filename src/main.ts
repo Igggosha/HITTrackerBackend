@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { json, urlencoded } from 'express';
 import type { Express } from 'express';
 import session from 'express-session';
@@ -11,7 +12,11 @@ import { pool } from './db/db';
 import { createValidationPipe } from './users/body-metrics-validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    bufferLogs: true,
+  });
+  app.useLogger(app.get(Logger));
   // Cloudflare Tunnel is the only public hop; secure OAuth cookies need its HTTPS signal.
   configureTrustProxy(
     app.getHttpAdapter().getInstance() as Express,
@@ -52,8 +57,8 @@ async function bootstrap() {
     ) => callback(null, isCorsOriginAllowed(origin)),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, ngrok-skip-browser-warning',
-    exposeHeaders: 'Retry-After',
+      'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, X-Request-Id, ngrok-skip-browser-warning',
+    exposeHeaders: 'Retry-After, X-Request-Id',
     credentials: true,
   });
 
