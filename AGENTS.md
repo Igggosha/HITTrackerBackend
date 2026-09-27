@@ -39,6 +39,7 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 - `src/db/schema.ts` is the schema source; services use the shared Drizzle `db` and transactions.
 - For a schema change create a new migration under `drizzle/`; never rewrite an applied migration. Review SQL, constraints, defaults, foreign keys, recovery/rollback, and compatibility with existing data.
 - Follow the workflow in `README.md`: update schema and add/review a versioned migration. `sql/init.sql` is for first-time Docker-volume initialization; `seed.sql` is only for idempotent shared starter data, never user data.
+- `scripts/baseline-drizzle.ts` runs before every `db:migrate` (including against an already-migrated volume) and records specific migrations as already applied so `db:migrate` does not re-run DDL that a dump already reflects. Read "Refreshing `sql/init.sql`" in `README.md` before regenerating that dump, and add a fingerprint to `scripts/baseline-drizzle.logic.ts` (never a hardcoded migration list) for any migration whose changes the new dump already contains.
 - Never run `db:push` against shared/production data or execute a destructive migration without explicit authorization and a backup/restore plan.
 
 ## Validation

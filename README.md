@@ -75,6 +75,46 @@ After pulling the branch, each developer runs `docker compose up --build`; the
 schema only. Shared starter data belongs in the versioned seed/dump; personal
 users, workouts, and other local test data are not copied through Git.
 
+#### Refreshing `sql/init.sql`
+
+`sql/init.sql` is a `pg_dump` schema+data snapshot used only to bootstrap a
+brand-new Docker volume; `docker/init-db.sh` loads it before `migrate` runs.
+`scripts/baseline-drizzle.ts` (`npm run db:baseline`, run automatically before
+every `db:migrate`) records the two pre-Drizzle migrations
+(`20260810115352_robust_leopardon`, `20260815144508_curved_hannibal_king`) as
+already applied, because the dump always contains their table shapes.
+
+If you ever regenerate `sql/init.sql` from a database that had a migration
+applied out of sequence (directly, via `db:push`, or by dumping a database
+that skipped ahead), the fresh dump can already contain a later migration's
+columns/constraints/indexes even though earlier migrations were never run
+against it. `db:migrate` would then fail on a fresh volume with an
+"already exists" error the first time that migration's plain `ALTER`/`CREATE`
+DDL runs against a dump that already has it.
+
+Before committing a refreshed `sql/init.sql`:
+
+1. Diff the new dump's schema against `src/db/schema.ts` and against each
+   migration under `drizzle/` in order, to find exactly which migrations'
+   changes the dump already contains.
+2. For each such migration (anything beyond the two pre-Drizzle ones),
+   add an entry to `fingerprintedMigrations` in
+   `scripts/baseline-drizzle.logic.ts`: a query that checks for that
+   migration's specific columns/constraints/indexes, so `db:baseline` records
+   it as applied instead of letting `db:migrate` re-run its DDL. Prefer this
+   fingerprint approach over hardcoding a migration name, so the check keeps
+   working (or fails loudly) if the dump changes again later.
+3. Verify both paths still work: a brand-new volume (`docker compose up` on a
+   fresh `_postgres_data` volume ends with `migrate`/`seed` exiting 0 and the
+   same schema as `src/db/schema.ts`), and an existing volume that already
+   ran every migration (`db:baseline && db:migrate` again is a no-op).
+
+Prefer making an ordinary new migration idempotent with `IF NOT EXISTS`
+guards (see `drizzle/20260901013000_reconcile_docker_schema`) when the gap is
+small and self-contained; reach for a `fingerprintedMigrations` entry when the
+dump itself jumped ahead of the migration history. Either way, never edit an
+existing migration file under `drizzle/` to add such guards after the fact.
+
 ### Manual deployment migration gate / Обов'язкова міграція для ручного розгортання
 
 For a deployment outside Docker Compose, run the versioned migrations after
