@@ -2,7 +2,7 @@
 
 **What.** Domain events (`workout.finished`, `user.registered`, …) are written to
 the `outbox_events` table **inside the same database transaction** as the change
-they describe. A relay (a later task: Kafka) claims unpublished rows, publishes
+they describe. A Kafka relay claims unpublished rows, publishes
 them and marks them published.
 
 **Why.** Writing to the database and then calling a broker is a dual write: a
@@ -34,18 +34,18 @@ de-duplicate by event `id`).
 | `user.registered` | user | user id, method (`email`/`google`), `registeredAt` |
 | `user.deleted` | user | user id, deleting admin id, `deletedAt` |
 
-`aggregate_id` is the broker partition key, so the events of one workout or one
-user keep their order.
+`payload.userId` is the Kafka partition key, so a user's events share a
+partition within each topic.
 
-## Relay interface (no publisher yet)
+## Relay interface
 
 `OutboxService.claimBatch(tx, { limit, maxAttempts })` selects the oldest
 unpublished rows `FOR UPDATE SKIP LOCKED`: parallel relays get disjoint batches
 instead of blocking or double-publishing. `markPublished` / `recordFailure`
 (`attempts + 1`, truncated `last_error`) finish the job, and `processBatch(publish)`
-wraps one iteration in a transaction. It stops at the first failure so a later
-event of the same aggregate never overtakes an earlier one; after `maxAttempts`
-(default 10) an event is parked for an operator.
+wraps one iteration in a transaction. It stops at the first failure; after
+`maxAttempts` (default 10), `processDeadLetters` sends the row to the DLQ and
+marks it published only after Kafka accepts it.
 
 ## Activity log in the same transaction
 

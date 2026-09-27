@@ -209,6 +209,7 @@ services:
 
   api:
     build: .
+    image: hit-tracker-api:20260928
     depends_on:
       postgres:
         condition: service_healthy
@@ -235,6 +236,7 @@ services:
       # Inside Compose the API reaches MinIO by service name; presigned URLs
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
+      KAFKA_BROKERS: ""
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -245,6 +247,68 @@ services:
     networks:
       - private
       - edge
+
+  kafka:
+    image: apache/kafka:3.9.1
+    profiles: [events]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    networks: [private]
+    restart: unless-stopped
+
+  kafka-init:
+    image: apache/kafka:3.9.1
+    profiles: [events]
+    depends_on: [kafka]
+    entrypoint: ["/bin/bash"]
+    command:
+      - -c
+      - >-
+        until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
+        for topic in hit.workout.v1 hit.user.v1 hit.events.dlq; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1;
+        done
+    networks: [private]
+    restart: "no"
+
+  relay:
+    image: hit-tracker-api:20260928
+    build: .
+    profiles: [events]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      kafka-init: { condition: service_completed_successfully }
+    env_file: [.env]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      KAFKA_BROKERS: kafka:9092
+    command: ["node", "dist/src/relay/main.js"]
+    networks: [private]
+    restart: unless-stopped
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.3.0
+    profiles: [events]
+    depends_on: [kafka-init]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: hit-tracker
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports: ["127.0.0.1:${KAFKA_UI_PORT:-8085}:8080"]
+    networks: [private, edge]
+    restart: unless-stopped
 
   frontend:
     profiles: ["edge"]

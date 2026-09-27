@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import { outboxEvents } from '../db/schema';
 import {
@@ -15,8 +15,7 @@ export type ClaimOptions = {
   /** Maximum number of events to lock in one batch. */
   limit?: number;
   /**
-   * Events that already failed this many times are parked: they are no longer
-   * claimed and wait for an operator (their `last_error` says why).
+   * Events that already failed this many times are sent to the DLQ by the relay.
    */
   maxAttempts?: number;
 };
@@ -135,6 +134,43 @@ export class OutboxService {
         }
       }
 
+      await this.markPublished(tx, published);
+      return { claimed: events.length, published, failed };
+    });
+  }
+
+  /** Retry DLQ delivery until acknowledged; a failed DLQ send leaves the row intact. */
+  async processDeadLetters(
+    publish: (event: ClaimedOutboxEvent) => Promise<void>,
+    {
+      limit = DEFAULT_OUTBOX_BATCH_SIZE,
+      maxAttempts = DEFAULT_OUTBOX_MAX_ATTEMPTS,
+    }: ClaimOptions = {},
+  ): Promise<BatchResult> {
+    return db.transaction(async (tx) => {
+      const events = await tx
+        .select()
+        .from(outboxEvents)
+        .where(
+          and(
+            isNull(outboxEvents.publishedAt),
+            gte(outboxEvents.attempts, maxAttempts),
+          ),
+        )
+        .orderBy(asc(outboxEvents.occurredAt), asc(outboxEvents.id))
+        .limit(limit)
+        .for('update', { skipLocked: true });
+      const published: string[] = [];
+      let failed: BatchResult['failed'] = null;
+      for (const event of events) {
+        try {
+          await publish(event);
+          published.push(event.id);
+        } catch (error) {
+          failed = { id: event.id, error: describeError(error) };
+          break;
+        }
+      }
       await this.markPublished(tx, published);
       return { claimed: events.length, published, failed };
     });

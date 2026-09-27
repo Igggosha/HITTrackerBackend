@@ -170,6 +170,41 @@ describe('OutboxService', () => {
     expect(publish).not.toHaveBeenCalled();
     expect(fake.find('update')).toHaveLength(0);
   });
+
+  it('sends max-attempt rows to the DLQ and marks only acknowledged rows', async () => {
+    fake.returns('select', outboxEvents, [
+      {
+        ...event('a', '2026-09-27T10:00:00Z'),
+        attempts: 10,
+        lastError: 'broker down',
+      },
+    ]);
+    const publish = jest.fn().mockResolvedValue(undefined);
+    expect(await outbox.processDeadLetters(publish)).toEqual({
+      claimed: 1,
+      published: ['a'],
+      failed: null,
+    });
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a', lastError: 'broker down' }),
+    );
+    const where = renderSql(
+      calledWith(fake.find('select', outboxEvents)[0], 'where')[0].args[0],
+    );
+    expect(where).toContain('"attempts" >=');
+    expect(fake.committed('update', outboxEvents)).toHaveLength(1);
+  });
+
+  it('keeps a row unpublished when DLQ delivery fails', async () => {
+    fake.returns('select', outboxEvents, [
+      { ...event('a', '2026-09-27T10:00:00Z'), attempts: 10 },
+    ]);
+    const result = await outbox.processDeadLetters(() => {
+      throw new Error('dlq down');
+    });
+    expect(result.failed?.id).toBe('a');
+    expect(fake.find('update', outboxEvents)).toHaveLength(0);
+  });
 });
 
 describe('performedSetsPayload', () => {

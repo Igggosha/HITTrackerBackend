@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workout.cancelled v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "workout.cancelled"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "workoutId": {
+          "type": "integer"
+        },
+        "userId": {
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "cancelledAt": {
+          "type": "string"
+        },
+        "setCount": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "workoutId",
+        "userId",
+        "startedAt",
+        "cancelledAt",
+        "setCount"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

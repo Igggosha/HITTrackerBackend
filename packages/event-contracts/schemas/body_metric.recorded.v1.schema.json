@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "body_metric.recorded v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "body_metric.recorded"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "metricId": {
+          "type": "integer"
+        },
+        "userId": {
+          "type": "integer"
+        },
+        "weight": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "bodyFatPercentage": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "muscleMass": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "waistCircumference": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "recordedAt": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "body_metrics",
+            "profile"
+          ]
+        }
+      },
+      "required": [
+        "metricId",
+        "userId",
+        "weight",
+        "bodyFatPercentage",
+        "muscleMass",
+        "waistCircumference",
+        "recordedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

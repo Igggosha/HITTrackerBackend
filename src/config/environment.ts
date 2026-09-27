@@ -67,5 +67,15 @@ export function validateEnvironment(
   // Object storage is optional, but a partially configured one must not boot.
   validateStorageEnvironment(environment);
 
+  if (
+    environment.RELAY_POLL_INTERVAL_MS !== undefined &&
+    (!Number.isInteger(Number(environment.RELAY_POLL_INTERVAL_MS)) ||
+      Number(environment.RELAY_POLL_INTERVAL_MS) < 100)
+  ) {
+    throw new Error(
+      'RELAY_POLL_INTERVAL_MS must be an integer of at least 100.',
+    );
+  }
+
   return environment;
 }

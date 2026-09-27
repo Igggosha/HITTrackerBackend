@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "program.scheduled v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "program.scheduled"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "integer"
+        },
+        "programId": {
+          "type": "integer"
+        },
+        "scheduledFor": {
+          "type": "string"
+        },
+        "repeat": {
+          "enum": [
+            "none",
+            "weekly"
+          ]
+        },
+        "repeatUntil": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "seriesId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "scheduleIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "userId",
+        "programId",
+        "scheduledFor",
+        "repeat",
+        "repeatUntil",
+        "seriesId",
+        "scheduleIds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

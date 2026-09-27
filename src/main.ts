@@ -9,6 +9,7 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
+  app.enableShutdownHooks();
   configureApp(app);
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');

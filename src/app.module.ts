@@ -11,6 +11,7 @@ import { WorkoutsModule } from './workouts/workouts.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { UsersModule } from './users/users.module';
 import { OutboxModule } from './outbox/outbox.module';
+import { RelayModule } from './relay/relay.module';
 import { AppController } from './app.controller';
 import { validateEnvironment } from './config/environment';
 import { MetricsModule } from './metrics/metrics.module';
@@ -95,6 +96,7 @@ import { requestIds } from './common/request-id';
       }),
     }),
     OutboxModule,
+    RelayModule,
     AuthModule,
     WorkoutProgramsModule,
     WorkoutsModule,
