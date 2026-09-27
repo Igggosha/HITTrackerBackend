@@ -15,7 +15,8 @@ Scope: the NestJS/TypeScript API in this repository. For product scope read `../
 - Pass ID path params through `ParseIntPipe`. Protect authenticated routes with `JwtGuard`; role-sensitive routes also use `RolesGuard` and `@MinimumRole`.
 - Use the appropriate Nest exception (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `Gone`, or `HttpException`). Preserve machine-readable error codes when a mobile flow branches on them.
 - Auth endpoint limits and global throttling are security behavior. Do not weaken them to make a test pass.
-- There is no centralized application logger or exception filter. Prefer Nest `Logger` for new server diagnostics, and never log credentials, JWTs, reset/verification/OAuth codes, or personal payloads.
+- `nestjs-pino` provides structured request logging and the global exception filter supplies a consistent error envelope with `requestId`.
+- Prefer Nest `Logger` for server diagnostics; never log credentials, JWTs, reset/verification/OAuth codes, or personal payloads.
 
 ## Authentication and external integrations
 

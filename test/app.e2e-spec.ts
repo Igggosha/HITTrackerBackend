@@ -16,10 +16,15 @@ describe('application (e2e)', () => {
     await app.init();
   });
 
-  it('rejects unauthenticated requests to a protected endpoint', () => {
+  it('rejects unauthenticated requests with a request ID', () => {
     return request(app.getHttpServer())
       .get('/workout-programs')
-      .expect(401);
+      .set('X-Request-Id', 'integration_123')
+      .expect(401)
+      .expect('X-Request-Id', 'integration_123')
+      .expect(({ body }) => {
+        expect(body.requestId).toBe('integration_123');
+      });
   });
 
   afterEach(async () => {
