@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
 import { WorkoutProgramsService } from './workout-programs.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { UpdateExerciseDto } from '../exercises/dto/update-exercise.dto';
 
 jest.mock('../db/db', () => ({ db: { select: jest.fn(), delete: jest.fn(), insert: jest.fn() } }));
@@ -13,7 +14,7 @@ function query(rows: unknown[]) {
 }
 
 describe('Library access and program cards', () => {
-  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any);
+  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any, new OutboxService());
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());
 

@@ -1,0 +1,277 @@
+// Turns load-tests/results/*.json (k6 --summary-export) and *.meta.json
+// (run.sh) into load-tests/results/summary.md. Plain Node, no dependencies:
+//
+//   node load-tests/summarize.mjs
+//
+// Runs are grouped by label without the trailing "-<n>" (a-replica-1..3 ->
+// a-replica). For every group the MEDIAN run (by throughput for A/B, by
+// visibility-lag p50 for C) is reported, plus the spread of all runs.
+// It also strips `setup_data` (access tokens, fixture ids) from the k6 JSON,
+// so the committed result files contain no credentials.
+import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const dir = join(dirname(fileURLToPath(import.meta.url)), 'results');
+const files = readdirSync(dir).filter((f) => f.endsWith('.meta.json'));
+
+const seconds = (d) => Number(String(d).replace(/s$/, ''));
+const fmt = (v, digits = 1) => (v === undefined || v === null || Number.isNaN(v) ? '-' : Number(v).toFixed(digits));
+const pct = (v) => `${fmt(v * 100, 2)} %`;
+const kb = (bytes) => `${fmt(bytes / 1024, 1)} KiB`;
+const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor((s.length - 1) / 2)]; };
+const quantile = (xs, q) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.ceil(q * s.length) - 1)] : NaN; };
+
+const runs = files.map((f) => {
+  const meta = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+  const summaryPath = join(dir, `${meta.label}.json`);
+  let k6 = null;
+  if (existsSync(summaryPath)) {
+    k6 = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    if (k6.setup_data) {
+      delete k6.setup_data;
+      writeFileSync(summaryPath, `${JSON.stringify(k6, null, 2)}\n`);
+    }
+  }
+  const delta = (side) => {
+    const out = {};
+    for (const key of ['xact_commit', 'tup_returned', 'tup_fetched', 'blks_hit']) {
+      out[key] = meta[side].after[key] - meta[side].before[key];
+    }
+    out.seconds = (Date.parse(meta[side].after.at) - Date.parse(meta[side].before.at)) / 1000;
+    return out;
+  };
+  return {
+    meta,
+    k6,
+    group: meta.label.replace(/-\d+$/, ''),
+    primary: delta('primary'),
+    replica: delta('replica'),
+    m: (name) => k6?.metrics?.[name],
+  };
+});
+
+const groups = {};
+for (const run of runs) (groups[run.group] ||= []).push(run);
+for (const list of Object.values(groups)) list.sort((a, b) => a.meta.label.localeCompare(b.meta.label));
+
+const endpointsOf = (run) => Object.keys(run.k6.metrics)
+  .filter((k) => k.startsWith('lat_') && k !== 'lat_all')
+  .map((k) => k.slice(4));
+const rps = (run, name) => (run.m(`reqs_${name}`)?.count ?? 0) / seconds(run.meta.duration);
+const totalRps = (run, names) => names.reduce((sum, n) => sum + rps(run, n), 0);
+
+function pickMedian(list, score) {
+  const target = median(list.map(score));
+  return list.find((r) => score(r) === target);
+}
+
+// `docker stats --no-stream` taken 30 s into the measured run by run.sh.
+const STAT_CONTAINERS = ['api', 'postgres', 'postgres-replica', 'analytics', 'relay', 'kafka'];
+function dockerStats(run) {
+  const path = join(dir, `${run.meta.label}.docker-stats.txt`);
+  if (!existsSync(path)) return null;
+  const byName = {};
+  for (const row of readFileSync(path, 'utf8').trim().split(/\r?\n/)) {
+    const [name, mem, , , cpu] = row.split(' ');
+    const service = name.replace(/^loadtest-/, '').replace(/-1$/, '');
+    if (name.startsWith('loadtest-')) byName[service] = { mem, cpu };
+  }
+  return byName;
+}
+function statsTable(list) {
+  line();
+  line('CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):');
+  line();
+  line(`| run | ${STAT_CONTAINERS.join(' | ')} |`);
+  line(`| --- |${STAT_CONTAINERS.map(() => ' ---: |').join('')}`);
+  for (const run of list) {
+    const s = dockerStats(run);
+    if (!s) continue;
+    line(`| ${run.meta.label} | ${STAT_CONTAINERS.map((c) => (s[c] ? `${s[c].cpu} / ${s[c].mem}` : '-')).join(' | ')} |`);
+  }
+}
+
+function lagFromDb(run) {
+  const path = join(dir, `${run.meta.label}.lag.csv`);
+  if (!existsSync(path)) return null;
+  const outbox = new Map();
+  const processed = new Map();
+  for (const line of readFileSync(path, 'utf8').trim().split(/\r?\n/).slice(1)) {
+    const [source, id, , occurred, published, processedAt] = line.split(',');
+    if (source === 'outbox') outbox.set(id, { occurred: Date.parse(occurred), published: Date.parse(published) });
+    if (source === 'analytics') processed.set(id, Date.parse(processedAt));
+  }
+  const relay = [];
+  const consume = [];
+  const total = [];
+  for (const [id, o] of outbox) {
+    const p = processed.get(id);
+    if (p === undefined || Number.isNaN(o.published)) continue;
+    relay.push(o.published - o.occurred);
+    consume.push(p - o.published);
+    total.push(p - o.occurred);
+  }
+  return { n: total.length, of: outbox.size, relay, consume, total };
+}
+
+const out = [];
+const line = (s = '') => out.push(s);
+line('# Load-test results (generated by load-tests/summarize.mjs)');
+line();
+line('Median run of three per configuration; latencies in ms, measured by k6 inside the Compose network.');
+line('Throughput = recorded requests / measured duration (setup logins and warm-up excluded).');
+
+const flagged = runs.filter((r) => r.meta.otherProjectsDuringRun && r.meta.otherProjectsDuringRun.trim());
+if (flagged.length) {
+  line();
+  line(`**Runs with containers of other Compose projects running:** ${flagged.map((r) => `${r.meta.label} (${r.meta.otherProjectsDuringRun.trim()})`).join('; ')}`);
+}
+
+// ---- idle baseline -------------------------------------------------------
+if (groups.idle) {
+  const r = groups.idle[0];
+  line();
+  line('## Idle baseline (no load)');
+  line();
+  line('| server | transactions/s | rows returned/s |');
+  line('| --- | ---: | ---: |');
+  for (const side of ['primary', 'replica']) {
+    line(`| ${side} | ${fmt(r[side].xact_commit / r[side].seconds)} | ${fmt(r[side].tup_returned / r[side].seconds, 0)} |`);
+  }
+}
+
+// ---- A -------------------------------------------------------------------
+const aNames = ['history_list', 'history_dates', 'history_details'];
+function aTable(label, list) {
+  const best = pickMedian(list, (r) => totalRps(r, aNames));
+  line();
+  line(`### ${label}: median run \`${best.meta.label}\` (${best.meta.vus} VUs, ${best.meta.duration})`);
+  line();
+  line('| endpoint | req/s | p50 | p95 | p99 | errors |');
+  line('| --- | ---: | ---: | ---: | ---: | ---: |');
+  for (const name of aNames) {
+    const lat = best.m(`lat_${name}`);
+    line(`| ${name} | ${fmt(rps(best, name))} | ${fmt(lat.med)} | ${fmt(lat['p(95)'])} | ${fmt(lat['p(99)'])} | ${pct(best.m(`err_${name}`).value)} |`);
+  }
+  const all = best.m('lat_all');
+  line(`| **all** | **${fmt(totalRps(best, aNames))}** | **${fmt(all.med)}** | **${fmt(all['p(95)'])}** | **${fmt(all['p(99)'])}** | **${pct(best.m('err_all').value)}** |`);
+  line();
+  line(`All runs, total req/s: ${list.map((r) => `${r.meta.label} ${fmt(totalRps(r, aNames))}`).join(', ')}; p95: ${list.map((r) => fmt(r.m('lat_all')['p(95)'])).join(' / ')} ms.`);
+  return best;
+}
+function aSection(prefix, title) {
+  if (!groups[`${prefix}a-replica`] && !groups[`${prefix}a-single`]) return;
+  line();
+  line(title);
+  const withReplica = groups[`${prefix}a-replica`] && aTable('With replica (DATABASE_REPLICA_URL set)', groups[`${prefix}a-replica`]);
+  const single = groups[`${prefix}a-single`] && aTable('Single node (DATABASE_REPLICA_URL empty)', groups[`${prefix}a-single`]);
+  line();
+  line('### Database work per server during the median runs');
+  line();
+  line('`pg_stat_database` deltas of database `nestdb` (includes k6 setup: 20 logins and ~80 fixture reads, and background relay/exporter activity).');
+  line();
+  line('| arm | server | transactions | tx/s | rows returned (scanned) | rows fetched | share of transactions | share of rows scanned |');
+  line('| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |');
+  for (const [armName, r] of [['replica', withReplica], ['single', single]]) {
+    if (!r) continue;
+    const tx = r.primary.xact_commit + r.replica.xact_commit;
+    const rows = r.primary.tup_returned + r.replica.tup_returned;
+    for (const side of ['primary', 'replica']) {
+      line(`| ${armName} | ${side} | ${r[side].xact_commit} | ${fmt(r[side].xact_commit / r[side].seconds)} | ${r[side].tup_returned.toLocaleString('en-US')} | ${r[side].tup_fetched.toLocaleString('en-US')} | ${pct(r[side].xact_commit / tx)} | ${pct(r[side].tup_returned / rows)} |`);
+    }
+  }
+  if (withReplica && single) {
+    line();
+    const share = withReplica.replica.xact_commit / (withReplica.primary.xact_commit + withReplica.replica.xact_commit);
+    const change = (totalRps(withReplica, aNames) / totalRps(single, aNames) - 1) * 100;
+    line(`**Headline A:** with the replica, the standby served ${pct(share)} of the read transactions of the history workload; throughput ${fmt(totalRps(withReplica, aNames))} vs ${fmt(totalRps(single, aNames))} req/s (${change >= 0 ? '+' : ''}${fmt(change)} %), p95 ${fmt(withReplica.m('lat_all')['p(95)'])} vs ${fmt(single.m('lat_all')['p(95)'])} ms.`);
+  }
+  statsTable([withReplica, single].filter(Boolean));
+}
+aSection('', '## A. Read replica: workout history browsing');
+
+// Unplanned 30 s re-runs of A after the series (not part of the medians).
+const diag = runs.filter((r) => r.group.startsWith('diag-a-')).sort((a, b) => a.meta.dbStartedAt.localeCompare(b.meta.dbStartedAt));
+if (diag.length) {
+  line();
+  line('### Supplementary A re-runs (30 s each, after the series; not in the medians)');
+  line();
+  line('| run | arm | req/s | p50 | p95 | p99 | primary tx/s | replica tx/s |');
+  line('| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |');
+  for (const r of diag) {
+    const all = r.m('lat_all');
+    line(`| ${r.meta.label} | ${r.meta.arm} | ${fmt(totalRps(r, aNames))} | ${fmt(all.med)} | ${fmt(all['p(95)'])} | ${fmt(all['p(99)'])} | ${fmt(r.primary.xact_commit / r.primary.seconds)} | ${fmt(r.replica.xact_commit / r.replica.seconds)} |`);
+  }
+}
+
+// ---- B -------------------------------------------------------------------
+function bSection(prefix, title) {
+  const list = groups[`${prefix}b-cqrs`];
+  if (!list) return;
+  const names = ['old_exercise_sets', 'new_exercise_progress', 'old_body_metrics', 'new_body_metrics', 'new_summary', 'new_weekly_volume', 'old_weekly_volume_composite'];
+  const best = pickMedian(list, (r) => totalRps(r, names.slice(0, 6)));
+  line();
+  line(title);
+  if (!prefix) line('The original weekly composite used a rolling 84-day window; its weekly comparison is superseded by the corrected after-index B runs below.');
+  line();
+  line(`Median run \`${best.meta.label}\` (${best.meta.vus} VUs, ${best.meta.duration}); every endpoint got the same share of the mix iterations.`);
+  line();
+  line('| endpoint | req/s | p50 | p95 | p99 | avg payload | errors |');
+  line('| --- | ---: | ---: | ---: | ---: | ---: | ---: |');
+  for (const name of names) {
+    const lat = best.m(`lat_${name}`);
+    if (!lat) continue;
+    const sub = best.m(`subreqs_${name}`);
+    const extra = sub ? ` (${fmt(sub.count / best.m(`reqs_${name}`).count, 1)} HTTP requests each)` : '';
+    line(`| ${name}${extra} | ${fmt(rps(best, name))} | ${fmt(lat.med)} | ${fmt(lat['p(95)'])} | ${fmt(lat['p(99)'])} | ${kb(best.m(`size_${name}`).avg)} | ${pct(best.m(`err_${name}`).value)} |`);
+  }
+  line();
+  line(`p95 of every run (ms): ${names.filter((n) => best.m(`lat_${n}`)).map((n) => `${n} ${list.map((r) => fmt(r.m(`lat_${n}`)['p(95)'])).join('/')}`).join('; ')}.`);
+  statsTable([best]);
+}
+bSection('', '## B. CQRS: computed on request vs read models');
+
+// ---- C -------------------------------------------------------------------
+function cSection(title, list) {
+  const best = pickMedian(list, (r) => r.m('visibility_lag_ms').med);
+  const lag = best.m('visibility_lag_ms');
+  line();
+  line(`### ${title}: median run \`${best.meta.label}\``);
+  line();
+  line(`${best.meta.vus} background VUs (B read mix) + writer at a steady rate.`);
+  line();
+  line('| measure | n | p50 | p95 | p99 | max |');
+  line('| --- | ---: | ---: | ---: | ---: | ---: |');
+  line(`| finish response -> visible in /analytics/me/summary (k6) | ${lag.count} | ${fmt(lag.med)} | ${fmt(lag['p(95)'])} | ${fmt(lag['p(99)'])} | ${fmt(lag.max)} |`);
+  const db = lagFromDb(best);
+  if (db) {
+    for (const [label, xs] of [['outbox occurred_at -> relay published_at', db.relay], ['published_at -> consumer processed_at', db.consume], ['occurred_at -> processed_at (DB total)', db.total]]) {
+      line(`| ${label} | ${xs.length} | ${fmt(quantile(xs, 0.5))} | ${fmt(quantile(xs, 0.95))} | ${fmt(quantile(xs, 0.99))} | ${fmt(Math.max(...xs))} |`);
+    }
+  }
+  const timeouts = best.m('visibility_timeout');
+  line();
+  line(`Workouts finished: ${best.m('workouts_finished')?.count}; not visible within 30 s: ${timeouts?.passes ?? 0}; polls: ${best.m('visibility_polls')?.count}. All runs p50/p95/max: ${list.map((r) => { const l = r.m('visibility_lag_ms'); return `${fmt(l.med, 0)}/${fmt(l['p(95)'], 0)}/${fmt(l.max, 0)}`; }).join(', ')} ms.`);
+  statsTable([best]);
+  line();
+  line('| background endpoint during C | req/s | p50 | p95 | errors |');
+  line('| --- | ---: | ---: | ---: | ---: |');
+  for (const name of endpointsOf(best)) {
+    const lat = best.m(`lat_${name}`);
+    line(`| ${name} | ${fmt(rps(best, name))} | ${fmt(lat.med)} | ${fmt(lat['p(95)'])} | ${pct(best.m(`err_${name}`).value)} |`);
+  }
+  return best;
+}
+if (groups['c-lag'] || groups['c-notify']) {
+  line();
+  line('## C. Eventual-consistency lag under load');
+  if (groups['c-lag']) cSection('Before LISTEN/NOTIFY (RELAY_POLL_INTERVAL_MS timer only)', groups['c-lag']);
+  if (groups['c-notify']) cSection('After LISTEN/NOTIFY', groups['c-notify']);
+}
+
+aSection('after-', '## After indexes: A. Read replica');
+bSection('after-', '## After indexes: B. CQRS');
+
+writeFileSync(join(dir, 'summary.md'), `${out.join('\n')}\n`);
+console.log(out.join('\n'));

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workout.finished v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "workout.finished"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "workoutId": {
+          "type": "integer"
+        },
+        "userId": {
+          "type": "integer"
+        },
+        "programId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "scheduleId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "finishedAt": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "type": "number"
+        },
+        "pausedSeconds": {
+          "type": "number"
+        },
+        "setCount": {
+          "type": "integer"
+        },
+        "exerciseIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "totalVolume": {
+          "type": "number"
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "setId": {
+                "type": "integer"
+              },
+              "exerciseId": {
+                "type": "integer"
+              },
+              "weight": {
+                "type": "number"
+              },
+              "reps": {
+                "type": "number"
+              },
+              "rpe": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "isFailure": {
+                "type": "boolean"
+              },
+              "isDropSet": {
+                "type": "boolean"
+              },
+              "volume": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "setId",
+              "exerciseId",
+              "weight",
+              "reps",
+              "rpe",
+              "isFailure",
+              "isDropSet",
+              "volume"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "workoutId",
+        "userId",
+        "programId",
+        "scheduleId",
+        "startedAt",
+        "finishedAt",
+        "durationSeconds",
+        "pausedSeconds",
+        "setCount",
+        "exerciseIds",
+        "totalVolume",
+        "sets"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

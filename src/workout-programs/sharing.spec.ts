@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { db } from '../db/db';
 import { WorkoutProgramsService } from './workout-programs.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { hasSameExerciseMultiset } from './sharing.utils';
 
 jest.mock('../db/db', () => ({
@@ -28,7 +29,7 @@ function query(rows: unknown[]) {
 }
 
 describe('Shared workout programs', () => {
-  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any);
+  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any, new OutboxService());
 
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());

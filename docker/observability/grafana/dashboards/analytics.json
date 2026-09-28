@@ -1,0 +1,18 @@
+{
+  "title": "Analytics (CQRS read side)",
+  "uid": "analytics",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "Consumer lag (messages)", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "sum by (topic) (analytics_consumer_lag{job=\"analytics\"})", "legendFormat": "{{topic}}"}]},
+    {"id": 2, "title": "Events handled per second by result", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "sum by (result) (rate(analytics_events_processed_total{job=\"analytics\"}[5m]))", "legendFormat": "{{result}}"}]},
+    {"id": 3, "title": "Throughput by event type (applied)", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "sum by (type) (rate(analytics_events_processed_total{job=\"analytics\",result=\"applied\"}[5m]))", "legendFormat": "{{type}}"}]},
+    {"id": 4, "title": "Processing latency p50 / p95", "type": "timeseries", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}, "targets": [{"expr": "histogram_quantile(0.5, sum by (le) (rate(analytics_event_processing_seconds_bucket{job=\"analytics\"}[5m])))", "legendFormat": "p50"}, {"expr": "histogram_quantile(0.95, sum by (le) (rate(analytics_event_processing_seconds_bucket{job=\"analytics\"}[5m])))", "legendFormat": "p95"}]},
+    {"id": 5, "title": "Errors: retries and dead letters (per 5m)", "type": "timeseries", "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}, "targets": [{"expr": "sum(increase(analytics_events_processed_total{job=\"analytics\",result=\"retry\"}[5m]))", "legendFormat": "retries"}, {"expr": "sum by (reason) (increase(analytics_dlq_messages_total{job=\"analytics\"}[5m]))", "legendFormat": "DLQ {{reason}}"}]},
+    {"id": 6, "title": "Read API requests per second", "type": "timeseries", "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8}, "targets": [{"expr": "sum by (route, status) (rate(analytics_http_requests_total{job=\"analytics\"}[5m]))", "legendFormat": "{{status}} {{route}}"}]},
+    {"id": 7, "title": "Analytics target up", "type": "stat", "gridPos": {"x": 0, "y": 24, "w": 6, "h": 4}, "targets": [{"expr": "up{job=\"analytics\"}", "legendFormat": "up"}]},
+    {"id": 8, "title": "Total lag", "type": "stat", "gridPos": {"x": 6, "y": 24, "w": 6, "h": 4}, "targets": [{"expr": "sum(analytics_consumer_lag{job=\"analytics\"})", "legendFormat": "lag"}]}
+  ]
+}

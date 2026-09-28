@@ -225,6 +225,8 @@ export class ExercisesService {
       throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
     }
 
+    // The pre-check gives a friendly error; the unique index on name is what
+    // actually decides a race between two identical creates.
     return db.transaction(async (tx: any) => {
       const [newExercise] = await tx
         .insert(exercises)
@@ -249,7 +251,15 @@ export class ExercisesService {
         ...newExercise,
         muscleIds: data.muscleIds || [],
       };
-    }).then((created) => this.withImageUrl(created));
+    }).then(
+      (created) => this.withImageUrl(created),
+      (error: any) => {
+        if (error?.code === '23505') {
+          throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
+        }
+        throw error;
+      },
+    );
   }
 
   async updateExercise(id: number, data: UpdateExerciseDto) {

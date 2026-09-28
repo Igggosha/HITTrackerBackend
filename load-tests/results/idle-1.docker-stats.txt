@@ -1,0 +1,17 @@
+loadtest-api-1 124.7MiB / 15.46GiB 0.39%
+loadtest-relay-1 88.72MiB / 15.46GiB 3.43%
+loadtest-analytics-1 106.1MiB / 15.46GiB 3.23%
+loadtest-postgres-replica-1 93.2MiB / 15.46GiB 0.00%
+loadtest-postgres-exporter-1 9.402MiB / 15.46GiB 0.00%
+loadtest-kafka-ui-1 407.3MiB / 15.46GiB 0.17%
+loadtest-grafana-1 97.52MiB / 15.46GiB 0.40%
+loadtest-alloy-1 79.63MiB / 256MiB 0.34%
+loadtest-prometheus-1 27.83MiB / 15.46GiB 0.00%
+loadtest-loki-1 109.8MiB / 512MiB 0.81%
+loadtest-jaeger-1 8.648MiB / 512MiB 0.02%
+loadtest-minio-1 150.2MiB / 15.46GiB 0.08%
+loadtest-postgres-1 146.8MiB / 15.46GiB 0.17%
+loadtest-kafka-1 665.4MiB / 15.46GiB 1.11%
+hittrackerbackend-api-1 137.6MiB / 15.46GiB 0.00%
+hittrackerbackend-postgres-1 49.65MiB / 15.46GiB 0.00%
+hittrackerbackend-minio-1 145.8MiB / 15.46GiB 2.14%

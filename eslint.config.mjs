@@ -32,4 +32,18 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // scripts/ is not part of tsconfig.json's `include` (src/**/*.ts only),
+    // so the shared projectService above never finds these files. Point
+    // them at their own tsconfig instead of widening tsconfig.json/the
+    // projectService for src.
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['./tsconfig.scripts.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
 );

@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import type { StorageService, StoredImage } from '../storage/storage.service';
 import { UsersService } from './users.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 // Storage is switched off in these tests, so every avatar URL resolves to null.
 // The doubles are standalone consts so assertions never reference an unbound
@@ -24,34 +25,49 @@ const mockReservationUpsert = jest.fn();
 const mockDbSet = jest.fn();
 const mockDbReturning = jest.fn();
 const mockDbDeleteReturning = jest.fn();
+const mockTxLockRows = jest.fn();
+const mockTxDeleteReturning = jest.fn();
+const mockTxSet = jest.fn(() => ({
+  where: () => ({ returning: mockTxReturning }),
+}));
 
 const tx = {
   execute: jest.fn(),
+  rollback: jest.fn(),
   select: jest.fn(() => ({
     from: () => ({
       where: () => ({
         limit: mockTxLimit,
         for: () => ({ limit: mockTxLimit }),
+        orderBy: () => ({ for: mockTxLockRows, limit: mockTxLimit }),
       }),
     }),
   })),
   insert: jest.fn(() => ({ values: mockReservationValues })),
-  delete: jest.fn(() => ({ where: jest.fn() })),
-  update: jest.fn(() => ({
-    set: () => ({
-      where: () => ({ returning: mockTxReturning }),
-    }),
+  delete: jest.fn(() => ({
+    where: jest.fn(() => ({ returning: mockTxDeleteReturning })),
   })),
+  update: jest.fn(() => ({ set: mockTxSet })),
 };
 
-jest.mock('../db/db', () => ({
-  db: {
+jest.mock('../db/db', () => {
+  // `db` and `primaryDb` are deliberately distinct mocks (mirrors
+  // auth.service.spec.ts): db.select throws so a read that is supposed to go
+  // through primaryDb (auth/authorization checks, profile reads, username
+  // availability) but was accidentally changed to use the replica fails the
+  // test instead of silently passing against the same double.
+  const db = {
     transaction: jest.fn((callback) => callback(tx)),
     update: jest.fn(() => ({ set: mockDbSet })),
     delete: jest.fn(() => ({
       where: () => ({ returning: mockDbDeleteReturning }),
     })),
     insert: jest.fn(() => ({ values: jest.fn() })),
+    select: jest.fn(() => {
+      throw new Error('Read used the replica instead of primaryDb');
+    }),
+  };
+  const primaryDb = {
     select: jest.fn(() => ({
       from: () => ({
         where: () => ({
@@ -60,11 +76,16 @@ jest.mock('../db/db', () => ({
         }),
       }),
     })),
-  },
-}));
+  };
+  return { db, primaryDb };
+});
 
 describe('UsersService profile identity', () => {
-  const service = new UsersService({ get: jest.fn(() => 25) } as any, storage);
+  const service = new UsersService(
+    { get: jest.fn(() => 25) } as any,
+    storage,
+    new OutboxService(),
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -78,6 +99,8 @@ describe('UsersService profile identity', () => {
     mockDbSet.mockReset();
     mockDbReturning.mockReset();
     mockDbDeleteReturning.mockReset();
+    mockTxLockRows.mockReset();
+    mockTxDeleteReturning.mockReset();
     mockDbSet.mockReturnValue({
       where: () => ({ returning: mockDbReturning }),
     });
@@ -102,10 +125,11 @@ describe('UsersService profile identity', () => {
   });
 
   it('removes a deleted user avatar without exposing its object key', async () => {
-    mockDbLimit
-      .mockResolvedValueOnce([{ role: 'super_admin' }])
-      .mockResolvedValueOnce([{ id: 2, role: 'user' }]);
-    mockDbDeleteReturning.mockResolvedValueOnce([
+    mockTxLockRows.mockResolvedValueOnce([
+      { id: 1, role: 'super_admin' },
+      { id: 2, role: 'user' },
+    ]);
+    mockTxDeleteReturning.mockResolvedValueOnce([
       {
         id: 2,
         email: 'deleted@example.com',
@@ -208,9 +232,7 @@ describe('UsersService profile identity', () => {
     jest.useFakeTimers().setSystemTime(now);
     mockTxLimit
       .mockResolvedValueOnce([{ username: 'current_name' }])
-      .mockResolvedValueOnce([]);
-    mockTxReturning.mockResolvedValue([{ id: 1 }]);
-    mockDbLimit
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -221,6 +243,7 @@ describe('UsersService profile identity', () => {
         },
       ])
       .mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
 
     await service.updateUsername(1, 'New_Name');
 
@@ -235,9 +258,7 @@ describe('UsersService profile identity', () => {
   it('PROFILE-USERNAME-009 lets the owner reclaim a reserved username', async () => {
     mockTxLimit
       .mockResolvedValueOnce([{ username: 'new_name' }])
-      .mockResolvedValueOnce([{ userId: 1 }]);
-    mockTxReturning.mockResolvedValue([{ id: 1 }]);
-    mockDbLimit
+      .mockResolvedValueOnce([{ userId: 1 }])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -248,6 +269,7 @@ describe('UsersService profile identity', () => {
         },
       ])
       .mockResolvedValueOnce([]);
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
 
     await expect(service.updateUsername(1, 'old_name')).resolves.toMatchObject({
       username: 'old_name',
@@ -256,8 +278,8 @@ describe('UsersService profile identity', () => {
   });
 
   it('PROFILE-USERNAME-012 preserves the legacy profile-name contract', async () => {
-    mockDbReturning.mockResolvedValue([{ id: 1 }]);
-    mockDbLimit
+    mockTxReturning.mockResolvedValue([{ id: 1 }]);
+    mockTxLimit
       .mockResolvedValueOnce([
         {
           email: 'user@example.com',
@@ -281,8 +303,9 @@ describe('UsersService profile identity', () => {
 
     const result = await service.updateProfile(1, { username: ' John Doe ' });
 
-    expect(mockDbSet).toHaveBeenCalledWith({ displayName: 'John Doe' });
-    expect(db.transaction).not.toHaveBeenCalled();
+    expect(mockTxSet).toHaveBeenCalledWith({ displayName: 'John Doe' });
+    // The legacy field edits the display name only: no username lock/change.
+    expect(tx.execute).not.toHaveBeenCalled();
     expect(result.username).toBe('John Doe');
   });
 
@@ -320,10 +343,8 @@ describe('UsersService profile identity', () => {
       width: 512,
       height: 512,
     });
-    mockTxLimit.mockResolvedValueOnce([
-      { avatarKey: 'uploads/avatars/1/old.webp' },
-    ]);
-    mockDbLimit
+    mockTxLimit
+      .mockResolvedValueOnce([{ avatarKey: 'uploads/avatars/1/old.webp' }])
       .mockResolvedValueOnce([
         {
           id: 1,
@@ -364,10 +385,8 @@ describe('UsersService profile identity', () => {
   });
 
   it('AVATAR-003 clears the key and deletes the object on removal', async () => {
-    mockTxLimit.mockResolvedValueOnce([
-      { avatarKey: 'uploads/avatars/1/old.webp' },
-    ]);
-    mockDbLimit
+    mockTxLimit
+      .mockResolvedValueOnce([{ avatarKey: 'uploads/avatars/1/old.webp' }])
       .mockResolvedValueOnce([
         {
           id: 1,

@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { eq } from 'drizzle-orm';
-import { db } from '../db/db';
+import { primaryDb } from '../db/db';
 import { users } from '../db/schema';
 import { MINIMUM_ROLE_KEY } from './minimum-role.decorator';
 import { hasMinimumRole } from './roles';
@@ -28,7 +28,7 @@ export class RolesGuard implements CanActivate {
     const userId = request.user?.id;
     if (!userId) throw new UnauthorizedException();
 
-    const [user] = await db
+    const [user] = await primaryDb
       .select({ role: users.role })
       .from(users)
       .where(eq(users.id, userId))

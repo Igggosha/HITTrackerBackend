@@ -1,3 +1,12 @@
+# Pinned so the Compose project name never depends on the checkout directory
+# name: Alloy (docker/observability/alloy/config.alloy) filters discovered
+# containers by `com.docker.compose.project`, and that label's value is this
+# pinned name unless overridden by `-p <name>` or `COMPOSE_PROJECT_NAME` in
+# the environment/.env, both of which still take precedence over `name:`
+# here. Keep this in sync with the `ALLOY_COMPOSE_PROJECT` default on the
+# `alloy` service below.
+name: hittrackerbackend
+
 services:
   postgres:
     image: postgres:17
@@ -16,6 +25,57 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks:
+      - private
+
+  replication-init:
+    image: postgres:17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      PGDATA: /var/lib/postgresql/data
+      # Dedicated replication credential; never the superuser password. Rotate
+      # it here and in `postgres-replica` together.
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-change_me}
+      # Must match the `private` network's `ipam.config.subnet` below; changing
+      # either requires `docker compose down` (recreates the network, keeps volumes).
+      PRIVATE_NETWORK_SUBNET: ${PRIVATE_NETWORK_SUBNET:-172.28.40.0/24}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/enable-replication.sh:/enable-replication.sh:ro
+    command: ["sh", "/enable-replication.sh"]
+    restart: "no"
+    networks:
+      - private
+
+  postgres-replica:
+    image: postgres:17
+    restart: unless-stopped
+    depends_on:
+      replication-init:
+        condition: service_completed_successfully
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      # The replicator role's own password, never the superuser password.
+      # pg_basebackup authenticates with it, and start-replica.sh also uses it
+      # to refresh an already-stored primary_conninfo after a rotation.
+      PGPASSWORD: ${REPLICATION_PASSWORD:-change_me}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-change_me}
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./docker/start-replica.sh:/start-replica.sh:ro
+    entrypoint: ["sh", "/start-replica.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} && test \"$(psql -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -tAc 'SELECT pg_is_in_recovery()')\" = t"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       - private
 
@@ -77,7 +137,7 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:9000/minio/health/live"]
       interval: 5s
@@ -105,6 +165,12 @@ services:
       S3_UPLOAD_PREFIX: ${S3_UPLOAD_PREFIX:-uploads}
       S3_TEMP_PREFIX: ${S3_TEMP_PREFIX:-tmp}
       S3_TEMP_EXPIRY_DAYS: ${S3_TEMP_EXPIRY_DAYS:-1}
+      # Least-privilege accounts for the backup profile. Both are optional:
+      # left unset, minio-init just skips provisioning them (see docker/minio-init.sh).
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      RESTORE_S3_ACCESS_KEY_ID: ${RESTORE_S3_ACCESS_KEY_ID:-}
+      RESTORE_S3_SECRET_ACCESS_KEY: ${RESTORE_S3_SECRET_ACCESS_KEY:-}
     entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/minio-init.sh"]
     volumes:
       - ./docker/minio-init.sh:/docker-entrypoint-init.d/minio-init.sh:ro
@@ -112,10 +178,51 @@ services:
     networks:
       - private
 
-  api:
-    build: .
+  # Opt-in daily PostgreSQL + bucket backups. Run immediately with
+  # `docker compose --profile backup run --rm backup run-now`.
+  backup:
+    profiles: ["backup"]
+    build:
+      context: ./docker/backup
+      args:
+        MC_IMAGE: quay.io/minio/mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
     depends_on:
       postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      PGDATABASE: ${DB_NAME:-nestdb}
+      MINIO_ENDPOINT: http://minio:9000
+      # Read-only, bucket-scoped account provisioned by docker/minio-init.sh.
+      # Never the MinIO root user: this service runs unattended and
+      # continuously, so its credentials must not be able to write or admin.
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-hit-tracker}
+      BACKUP_TIME: ${BACKUP_TIME:-03:00}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-12}
+    volumes:
+      - ${BACKUP_HOST_PATH:-backups_data}:/backups
+      - ./docker/backup:/scripts:ro
+    restart: unless-stopped
+    networks:
+      # minio is reachable on `private`; this service never needs storage-edge.
+      - private
+
+  api:
+    build: .
+    image: hit-tracker-api:20260928
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
@@ -134,9 +241,18 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_REPLICA_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres-replica:5432/${DB_NAME:-nestdb}
       # Inside Compose the API reaches MinIO by service name; presigned URLs
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
+      KAFKA_BROKERS: ""
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
+      # Thin proxy for GET /analytics/* (src/analytics-proxy). Without the
+      # `events` profile the name does not resolve and those routes answer
+      # 503 ANALYTICS_UNAVAILABLE; nothing else changes.
+      ANALYTICS_URL: ${ANALYTICS_URL:-http://analytics:3000}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -147,6 +263,169 @@ services:
     networks:
       - private
       - edge
+
+  kafka:
+    image: apache/kafka:3.9.1
+    profiles: [events]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    networks: [private]
+    restart: unless-stopped
+
+  kafka-init:
+    image: apache/kafka:3.9.1
+    profiles: [events]
+    depends_on: [kafka]
+    entrypoint: ["/bin/bash"]
+    # Domain topics keep every event (retention.ms=-1): they are the log the
+    # analytics read models are rebuilt from (docs/diploma/analytics-cqrs.md).
+    # The DLQ keeps 30 days for inspection/replay. `kafka-configs --alter`
+    # re-applies retention on every start, so a topic created before this
+    # setting (existing volume) is fixed up too; both commands are idempotent.
+    environment:
+      DOMAIN_TOPIC_RETENTION_MS: ${DOMAIN_TOPIC_RETENTION_MS:--1}
+      DLQ_RETENTION_MS: ${DLQ_RETENTION_MS:-2592000000}
+    command:
+      - -c
+      - >-
+        set -e;
+        until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
+        for topic in hit.workout.v1 hit.user.v1 hit.events.dlq; do
+          if [ "$$topic" = hit.events.dlq ]; then retention="$$DLQ_RETENTION_MS"; else retention="$$DOMAIN_TOPIC_RETENTION_MS"; fi;
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1 --config retention.ms=$$retention;
+          /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter --entity-type topics --entity-name $$topic --add-config retention.ms=$$retention;
+        done
+    networks: [private]
+    restart: "no"
+
+  relay:
+    image: hit-tracker-api:20260928
+    build: .
+    profiles: [events]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      kafka-init: { condition: service_completed_successfully }
+    # No `env_file: .env` here: the relay only ever touches PostgreSQL and
+    # Kafka, never SMTP/OAuth/S3/JWT secrets, so it gets an explicit, minimal
+    # environment instead of every app secret the API needs.
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      KAFKA_BROKERS: kafka:9092
+      OTEL_SERVICE_NAME: hit-relay
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
+      RELAY_FALLBACK_POLL_INTERVAL_MS: ${RELAY_FALLBACK_POLL_INTERVAL_MS:-${RELAY_POLL_INTERVAL_MS:-5000}}
+      RELAY_PUBLISH_TIMEOUT_MS: ${RELAY_PUBLISH_TIMEOUT_MS:-5000}
+      RELAY_CONNECTION_TIMEOUT_MS: ${RELAY_CONNECTION_TIMEOUT_MS:-5000}
+      RELAY_DB_TX_TIMEOUT_MS: ${RELAY_DB_TX_TIMEOUT_MS:-10000}
+      # `/metrics` in this process only, on the private network (see
+      # src/relay/main.ts); no host port is published for it.
+      RELAY_METRICS_PORT: ${RELAY_METRICS_PORT:-9464}
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+    command: ["node", "dist/src/relay/main.js"]
+    networks: [private]
+    restart: unless-stopped
+
+  # ---- Analytics read side (CQRS), profile `events` ------------------------
+  # Database-per-service on the existing PostgreSQL server: a separate
+  # `analytics` database and `analytics_app` role (a second PostgreSQL
+  # container would cost more RAM; see docs/diploma/analytics-cqrs.md).
+  analytics-db-init:
+    image: postgres:17
+    profiles: [events]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      ANALYTICS_DB_PASSWORD: ${ANALYTICS_DB_PASSWORD:-change_me}
+    volumes:
+      - ./docker/analytics-db-init.sh:/docker-entrypoint-init.d/analytics-db-init.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/analytics-db-init.sh"]
+    restart: "no"
+    networks: [private]
+
+  analytics-migrate:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+      target: migration
+    profiles: [events]
+    depends_on:
+      analytics-db-init:
+        condition: service_completed_successfully
+    environment:
+      ANALYTICS_DATABASE_URL: postgresql://analytics_app:${ANALYTICS_DB_PASSWORD:-change_me}@postgres:5432/analytics
+    restart: "no"
+    networks: [private]
+
+  analytics:
+    image: hit-tracker-analytics:20260928
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+      target: production
+    profiles: [events]
+    depends_on:
+      analytics-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    # Explicit, minimal environment (no `env_file: .env`): only the shared
+    # JWT secret it verifies tokens with, its own database and Kafka.
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ANALYTICS_DATABASE_URL: postgresql://analytics_app:${ANALYTICS_DB_PASSWORD:-change_me}@postgres:5432/analytics
+      KAFKA_BROKERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+      ANALYTICS_MAX_ATTEMPTS: ${ANALYTICS_MAX_ATTEMPTS:-5}
+      LOG_LEVEL: ${ANALYTICS_LOG_LEVEL:-info}
+      OTEL_SERVICE_NAME: hit-analytics
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
+    # No host port: the mobile app reaches it only through the main API
+    # (GET /analytics/*); Prometheus scrapes it on the private network.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks: [private]
+    restart: unless-stopped
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.3.0
+    profiles: [events]
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_CLUSTERS_0_NAME: hit-tracker
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports: ["127.0.0.1:${KAFKA_UI_PORT:-8085}:8080"]
+    networks: [private, edge]
+    restart: unless-stopped
 
   frontend:
     profiles: ["edge"]
@@ -208,17 +487,206 @@ services:
     networks:
       - private
 
+  metrics-token:
+    image: alpine:3.22.1
+    profiles: [observability]
+    environment:
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+    command: ["sh", "-c", "umask 077; printf '%s' \"$$METRICS_TOKEN\" > /token/metrics-token; chmod 0444 /token/metrics-token"]
+    volumes:
+      - metrics_token:/token
+    restart: "no"
+    # Only writes to the `metrics_token` volume; it never talks to another
+    # container or the network.
+    network_mode: none
+
+  # Idempotently creates/updates a least-privilege `metrics_reader` role for
+  # postgres-exporter, instead of handing the exporter the superuser
+  # credentials the API itself uses. Runs every startup of the
+  # `observability` profile (not gated behind docker-entrypoint-initdb.d, so
+  # it also fixes up a volume that already existed before this role did) and
+  # keeps the role's password synced with METRICS_DB_PASSWORD.
+  metrics-role-init:
+    image: postgres:17
+    profiles: [observability]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:-change_me}
+    volumes:
+      - ./docker/observability/metrics-role-init.sh:/docker-entrypoint-init.d/metrics-role-init.sh:ro
+    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/metrics-role-init.sh"]
+    restart: "no"
+    networks:
+      - private
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [observability]
+    depends_on:
+      metrics-token:
+        condition: service_completed_successfully
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - metrics_token:/run/metrics:ro
+      - prometheus_data:/prometheus
+    networks:
+      - private
+      - observability
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    profiles: [observability]
+    environment:
+      # metrics_reader only holds pg_monitor (read-only), never the
+      # application superuser credentials postgres/DB_PASSWORD.
+      DATA_SOURCE_NAME: postgresql://metrics_reader:${METRICS_DB_PASSWORD:-change_me}@postgres:5432/${DB_NAME:-nestdb}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      metrics-role-init:
+        condition: service_completed_successfully
+    networks:
+      - private
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    profiles: [observability]
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - observability
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    profiles: [observability]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      MEMORY_MAX_TRACES: "10000"
+    ports:
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+    mem_limit: 512m
+    networks: [private, observability]
+    restart: unless-stopped
+
+  # Log storage. Filesystem-backed, single binary, 7-day retention (matches
+  # Prometheus's --storage.tsdb.retention.time above). Reachable only from
+  # Grafana and Alloy on the internal `observability` network; auth is
+  # disabled because nothing outside that network can reach it. No host port
+  # is published at all (unlike Grafana/Prometheus above) since nothing on
+  # the host needs to query Loki directly; see "Debugging Loki directly" in
+  # docs/diploma/observability.md for how to query it anyway when needed.
+  loki:
+    image: grafana/loki:3.7.8
+    profiles: [observability]
+    command: ["-config.file=/etc/loki/loki.yml"]
+    mem_limit: 512m
+    volumes:
+      - ./docker/observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    # The grafana/loki image ships only the `loki` binary (no shell, no
+    # wget/curl), so there is no CMD/CMD-SHELL healthcheck to run inside it;
+    # `alloy`'s `loki.write` component retries pushes with backoff until Loki
+    # is actually accepting writes, so no health-gated dependency is needed.
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # Log collector (Alloy is Grafana's supported successor to Promtail).
+  # Reads container logs through the Docker socket and ships only THIS
+  # Compose project's containers to Loki. Needs no network but
+  # `observability` (to reach loki:3100); it talks to Docker over the
+  # bind-mounted socket, not over a Compose network.
+  #
+  # SECURITY: the read-only Docker socket mount below is still effectively
+  # root-on-the-host access (list/inspect every container, read their logs).
+  # Runs as root so it can read the socket; see the comment in
+  # docker/observability/alloy/config.alloy for the full rationale.
+  alloy:
+    image: grafana/alloy:v1.20.0
+    profiles: [observability]
+    user: "0:0"
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "--storage.path=/var/lib/alloy/data",
+        "/etc/alloy/config.alloy",
+      ]
+    mem_limit: 256m
+    environment:
+      # Which Compose project's containers to collect (see config.alloy).
+      # Tracks whatever project name Compose itself resolved: the top-level
+      # `name: hittrackerbackend` above unless overridden by a custom
+      # `-p <name>` or `COMPOSE_PROJECT_NAME` (also export/set it here so
+      # this default matches). If the Logs dashboard or
+      # `{project="..."}` queries come back empty, verify what Alloy is
+      # actually shipping with the `project` label values check described in
+      # docs/diploma/observability.md ("Verifying container discovery").
+      ALLOY_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-hittrackerbackend}
+    volumes:
+      - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      - observability
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  postgres_replica_data:
   minio_data:
+  backups_data:
+  prometheus_data:
+  grafana_data:
+  metrics_token:
+  loki_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.
+  # The subnet is pinned (rather than Docker-assigned) so the replication pg_hba
+  # rule can scope to it instead of 0.0.0.0/0. Override with PRIVATE_NETWORK_SUBNET;
+  # a change requires `docker compose down` to recreate the network (volumes are kept).
   private:
     internal: true
+    ipam:
+      config:
+        - subnet: ${PRIVATE_NETWORK_SUBNET:-172.28.40.0/24}
   # Reserved for the API and a future HTTPS tunnel/reverse proxy.
   edge:
     driver: bridge
   # Dedicated path from cloudflared to MinIO; PostgreSQL is not on this network.
   storage-edge:
+    driver: bridge
+  # Local-only observability UI/API; not shared with the tunnel network.
+  observability:
     driver: bridge

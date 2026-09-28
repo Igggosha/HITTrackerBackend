@@ -13,6 +13,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -289,6 +290,7 @@ export const workoutPrograms = pgTable(
         uniqueIndex("workout_programs_owner_source_unique")
             .on(table.createdById, table.sourceProgramId)
             .where(sql`${table.sourceProgramId} is not null`),
+        index("workout_programs_personal_owner_idx").on(table.isPersonal, table.createdById),
     ],
 );
 
@@ -297,7 +299,10 @@ export const workoutPrograms = pgTable(
 export const programLikes = pgTable('program_likes', {
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     programId: integer('program_id').notNull().references(() => workoutPrograms.id, { onDelete: 'cascade' }),
-}, (table) => ({ pk: primaryKey({ columns: [table.userId, table.programId] }) }));
+}, (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.programId] }),
+    programIdx: index('program_likes_program_id_idx').on(table.programId),
+}));
 
 export const exerciseBookmarks = pgTable('exercise_bookmarks', {
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -317,7 +322,8 @@ export const programContent = pgTable(
             .references(() => workoutPrograms.id, {
                 onDelete: "cascade",
             }),
-    }
+    },
+    (table) => [index('program_content_program_week_idx').on(table.programId, table.week)],
 );
 
 
@@ -356,7 +362,8 @@ export const exerciseInPrograms = pgTable(
         // 0 = Monday, 6 = Sunday
         weekDay: integer("week_day")
             .notNull(),
-    }
+    },
+    (table) => [index('exercises_in_programs_content_id_idx').on(table.programContentId)],
 );
 
 
@@ -398,6 +405,7 @@ export const userProgramScheduleSeries = pgTable(
         endsOn: date("ends_on"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
+    (table) => [index('user_program_schedule_series_user_starts_idx').on(table.userId, table.startsOn)],
 );
 
 // A personal calendar assignment. One user can plan multiple programs per date.
@@ -417,6 +425,7 @@ export const userProgramSchedule = pgTable(
         status: text("status").notNull().default("planned"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
+    (table) => [uniqueIndex('user_program_schedule_unique_assignment_idx').on(table.userId, table.scheduledFor, table.programId)],
 );
 
 
@@ -481,7 +490,11 @@ export const workouts = pgTable(
         createdAt: timestamp("created_at")
             .defaultNow()
             .notNull(),
-    }
+    },
+    (table) => [
+        index('workouts_user_finished_id_idx').on(table.userId, table.finishedAt.desc(), table.id.desc()),
+        index('workouts_schedule_id_idx').on(table.scheduleId),
+    ],
 );
 
 
@@ -525,5 +538,49 @@ export const sets = pgTable(
 
 
         rpe: integer("rpe"),
-    }
+    },
+    (table) => [
+        index('sets_workout_id_idx').on(table.workoutId),
+        index('sets_exercise_workout_idx').on(table.exerciseId, table.workoutId),
+    ],
+);
+
+
+// ================= TRANSACTIONAL OUTBOX =================
+
+// Domain events written in the same transaction as the change they describe.
+// A relay later claims unpublished rows and forwards them to the broker, so an
+// event exists if and only if its business change committed. There are no
+// foreign keys on purpose: events must outlive the rows they describe (for
+// example `user.deleted`), and the table is meant to be range-partitioned by
+// `occurred_at` later.
+export const outboxEvents = pgTable(
+    "outbox_events",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        aggregateType: text("aggregate_type").notNull(),
+        aggregateId: text("aggregate_id").notNull(),
+        eventType: text("event_type").notNull(),
+        eventVersion: integer("event_version").notNull(),
+        payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+        traceContext: jsonb("trace_context").$type<{ traceparent: string; tracestate?: string }>(),
+        occurredAt: timestamp("occurred_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+        publishedAt: timestamp("published_at", { withTimezone: true }),
+        attempts: integer("attempts").notNull().default(0),
+        lastError: text("last_error"),
+    },
+    (table) => [
+        check("outbox_events_event_version_positive", sql`${table.eventVersion} > 0`),
+        check("outbox_events_attempts_non_negative", sql`${table.attempts} >= 0`),
+        index("outbox_events_unpublished_idx")
+            .on(table.occurredAt)
+            .where(sql`${table.publishedAt} is null`),
+        index("outbox_events_aggregate_idx").on(
+            table.aggregateType,
+            table.aggregateId,
+            table.occurredAt,
+        ),
+    ],
 );

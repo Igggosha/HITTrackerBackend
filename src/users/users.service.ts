@@ -15,12 +15,13 @@ import {
   gt,
   gte,
   ilike,
+  inArray,
   isNotNull,
   lte,
   or,
   sql,
 } from 'drizzle-orm';
-import { db } from '../db/db';
+import { db, primaryDb } from '../db/db';
 import {
   sets,
   userActivityEvents,
@@ -55,12 +56,26 @@ import {
   recordUserActivity,
   type AdminUserActivityItem,
 } from './user-activity';
+import { OutboxService } from '../outbox/outbox.service';
+import type { DbTransaction } from '../outbox/transaction';
+
+type AvatarProfile = Awaited<ReturnType<UsersService['getProfile']>>;
+
+const bodyMetricFields = {
+  id: userBodyMetrics.id,
+  weight: userBodyMetrics.weight,
+  bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
+  muscleMass: userBodyMetrics.muscleMass,
+  waistCircumference: userBodyMetrics.waistCircumference,
+  recordedAt: userBodyMetrics.recordedAt,
+};
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly configService: ConfigService,
     private readonly storageService: StorageService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async listUsers({ search, page, limit, online }: ListUsersDto) {
@@ -101,12 +116,12 @@ export class UsersService {
 
   private async getInspectableUser(actorUserId: number, targetUserId: number) {
     const [[actor], [target]] = await Promise.all([
-      db
+      primaryDb
         .select({ role: users.role })
         .from(users)
         .where(eq(users.id, actorUserId))
         .limit(1),
-      db.select().from(users).where(eq(users.id, targetUserId)).limit(1),
+      primaryDb.select().from(users).where(eq(users.id, targetUserId)).limit(1),
     ]);
     if (!actor || !hasMinimumRole(actor.role, 'admin')) {
       throw new ForbiddenException('Insufficient permissions');
@@ -369,116 +384,157 @@ export class UsersService {
       .where(eq(users.id, userId));
   }
 
+  /**
+   * Locks the acting and the target account until the transaction ends, in id
+   * order so two admins acting on each other cannot deadlock. Authorization is
+   * decided on these locked rows, so a role granted or revoked concurrently
+   * cannot slip between the permission check and the write.
+   */
+  private async lockActorAndTarget(
+    tx: DbTransaction,
+    actorUserId: number,
+    targetUserId: number,
+  ) {
+    const rows = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(inArray(users.id, [actorUserId, targetUserId]))
+      .orderBy(asc(users.id))
+      .for('update');
+    return {
+      actor: rows.find((row) => row.id === actorUserId),
+      target: rows.find((row) => row.id === targetUserId),
+    };
+  }
+
   async updateUserRole(
     actorUserId: number,
     targetUserId: number,
     role: UserRole,
   ) {
-    const [[actor], [target]] = await Promise.all([
-      db
-        .select({ role: users.role })
-        .from(users)
-        .where(eq(users.id, actorUserId))
-        .limit(1),
-      db
-        .select({ id: users.id, role: users.role })
-        .from(users)
-        .where(eq(users.id, targetUserId))
-        .limit(1),
-    ]);
-
-    if (!actor)
-      throw new ForbiddenException('Your account no longer has access');
-    if (!target) throw new NotFoundException('User not found');
-    if (actorUserId === targetUserId) {
-      throw new ForbiddenException('You cannot change your own role');
-    }
-
-    const isSuperAdmin = actor.role === 'super_admin';
-    if (
-      !isSuperAdmin &&
-      (target.role === 'super_admin' || role === 'super_admin')
-    ) {
-      throw new ForbiddenException(
-        'Only a super admin can manage super admins',
-      );
-    }
-    if (!hasMinimumRole(actor.role, 'admin')) {
-      throw new ForbiddenException('Insufficient permissions');
-    }
-
-    const [updated] = await db
-      .update(users)
-      .set({ role })
-      .where(eq(users.id, targetUserId))
-      .returning({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        displayName: users.displayName,
-        role: users.role,
-      });
-
-    if (target.role !== role) {
-      await recordUserActivity({
-        userId: targetUserId,
+    return db.transaction(async (tx) => {
+      const { actor, target } = await this.lockActorAndTarget(
+        tx,
         actorUserId,
-        type: 'role.changed',
-        metadata: { from: target.role, to: role },
-      });
-    }
+        targetUserId,
+      );
 
-    return { user: updated };
+      if (!actor)
+        throw new ForbiddenException('Your account no longer has access');
+      if (!target) throw new NotFoundException('User not found');
+      if (actorUserId === targetUserId) {
+        throw new ForbiddenException('You cannot change your own role');
+      }
+
+      const isSuperAdmin = actor.role === 'super_admin';
+      if (
+        !isSuperAdmin &&
+        (target.role === 'super_admin' || role === 'super_admin')
+      ) {
+        throw new ForbiddenException(
+          'Only a super admin can manage super admins',
+        );
+      }
+      if (!hasMinimumRole(actor.role, 'admin')) {
+        throw new ForbiddenException('Insufficient permissions');
+      }
+
+      const [updated] = await tx
+        .update(users)
+        .set({ role })
+        .where(eq(users.id, targetUserId))
+        .returning({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          role: users.role,
+        });
+
+      if (target.role !== role) {
+        await recordUserActivity(
+          {
+            userId: targetUserId,
+            actorUserId,
+            type: 'role.changed',
+            metadata: { from: target.role, to: role },
+          },
+          tx,
+        );
+      }
+
+      return { user: updated };
+    });
   }
 
   async deleteUser(actorUserId: number, targetUserId: number) {
-    const [[actor], [target]] = await Promise.all([
-      db
-        .select({ role: users.role })
-        .from(users)
-        .where(eq(users.id, actorUserId))
-        .limit(1),
-      db
-        .select({ id: users.id, role: users.role })
-        .from(users)
-        .where(eq(users.id, targetUserId))
-        .limit(1),
-    ]);
-
-    if (!actor)
-      throw new ForbiddenException('Your account no longer has access');
-    if (!target) throw new NotFoundException('User not found');
-    if (actorUserId === targetUserId)
-      throw new ForbiddenException('You cannot delete your own account');
-    if (!hasMinimumRole(actor.role, 'admin'))
-      throw new ForbiddenException('Insufficient permissions');
-    if (actor.role !== 'super_admin' && target.role === 'super_admin') {
-      throw new ForbiddenException(
-        'Only a super admin can manage super admins',
+    const deleted = await db.transaction(async (tx) => {
+      const { actor, target } = await this.lockActorAndTarget(
+        tx,
+        actorUserId,
+        targetUserId,
       );
-    }
 
-    const [deleted] = await db
-      .delete(users)
-      .where(eq(users.id, targetUserId))
-      .returning({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        displayName: users.displayName,
-        role: users.role,
-        avatarKey: users.avatarKey,
+      if (!actor)
+        throw new ForbiddenException('Your account no longer has access');
+      if (!target) throw new NotFoundException('User not found');
+      if (actorUserId === targetUserId)
+        throw new ForbiddenException('You cannot delete your own account');
+      if (!hasMinimumRole(actor.role, 'admin'))
+        throw new ForbiddenException('Insufficient permissions');
+      if (actor.role !== 'super_admin' && target.role === 'super_admin') {
+        throw new ForbiddenException(
+          'Only a super admin can manage super admins',
+        );
+      }
+
+      const [row] = await tx
+        .delete(users)
+        .where(eq(users.id, targetUserId))
+        .returning({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          role: users.role,
+          avatarKey: users.avatarKey,
+        });
+      if (!row) throw new NotFoundException('User not found');
+
+      // The outbox row has no foreign key, so it survives the cascade above.
+      await this.outbox.enqueue(tx, {
+        type: 'user.deleted',
+        aggregateId: targetUserId,
+        payload: {
+          userId: targetUserId,
+          deletedByUserId: actorUserId,
+          deletedAt: new Date().toISOString(),
+        },
       });
-    if (!deleted) throw new NotFoundException('User not found');
+      return row;
+    });
 
+    // Object storage cannot join the transaction, so the object is removed
+    // only after the row that referenced it is gone.
     const { avatarKey, ...deletedUser } = deleted;
     await this.storageService.remove(avatarKey);
 
     return { user: deletedUser };
   }
 
-  async getProfile(userId: number, useIdentityContractV2 = false) {
-    const [user] = await db
+  /**
+   * Reads the profile. Pass the transaction a preceding write just committed
+   * to, so this reaches the primary in the same request instead of a plain
+   * `db.select` that could hit a lagging replica and miss that write.
+   * Without an executor it defaults to `primaryDb`: profile reads never go
+   * to the replica.
+   */
+  async getProfile(
+    userId: number,
+    useIdentityContractV2 = false,
+    executor: DbTransaction | typeof db = primaryDb,
+  ) {
+    const [user] = await executor
       .select({
         id: users.id,
         email: users.email,
@@ -497,7 +553,7 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    const [latestMetric] = await db
+    const [latestMetric] = await executor
       .select({ weight: userBodyMetrics.weight })
       .from(userBodyMetrics)
       .where(
@@ -541,49 +597,42 @@ export class UsersService {
       square: true,
     });
 
-    let replacedKey: string | null;
+    let result: { replacedKey: string | null; profile: AvatarProfile };
     try {
-      replacedKey = await this.setAvatarKey(userId, stored.key);
+      result = await this.setAvatarKey(
+        userId,
+        stored.key,
+        useIdentityContractV2,
+      );
     } catch (error) {
       // The row was not updated, so nothing points at the new object.
       await this.storageService.remove(stored.key);
       throw error;
     }
 
-    await this.storageService.remove(replacedKey);
+    await this.storageService.remove(result.replacedKey);
 
-    await recordUserActivity({
-      userId,
-      actorUserId: userId,
-      type: 'avatar.updated',
-    });
-
-    return this.getProfile(userId, useIdentityContractV2);
+    return result.profile;
   }
 
   async removeAvatar(userId: number, useIdentityContractV2 = false) {
-    const replacedKey = await this.setAvatarKey(userId, null);
-    await this.storageService.remove(replacedKey);
+    const result = await this.setAvatarKey(userId, null, useIdentityContractV2);
+    await this.storageService.remove(result.replacedKey);
 
-    if (replacedKey) {
-      await recordUserActivity({
-        userId,
-        actorUserId: userId,
-        type: 'avatar.removed',
-      });
-    }
-
-    return this.getProfile(userId, useIdentityContractV2);
+    return result.profile;
   }
 
   /**
-   * Swaps the stored avatar key and returns the one that was replaced, so the
-   * caller can clean up an object that nothing references any more.
+   * Swaps the stored avatar key and returns the one that was replaced (so the
+   * caller can clean up an object that nothing references any more) together
+   * with the fresh profile, read on the primary inside the same transaction
+   * as the swap.
    */
   private async setAvatarKey(
     userId: number,
     avatarKey: string | null,
-  ): Promise<string | null> {
+    useIdentityContractV2 = false,
+  ): Promise<{ replacedKey: string | null; profile: AvatarProfile }> {
     return db.transaction(async (tx) => {
       const [current] = await tx
         .select({ avatarKey: users.avatarKey })
@@ -595,18 +644,33 @@ export class UsersService {
 
       await tx.update(users).set({ avatarKey }).where(eq(users.id, userId));
 
-      return current.avatarKey === avatarKey ? null : current.avatarKey;
+      if (avatarKey || current.avatarKey) {
+        await recordUserActivity(
+          {
+            userId,
+            actorUserId: userId,
+            type: avatarKey ? 'avatar.updated' : 'avatar.removed',
+          },
+          tx,
+        );
+      }
+
+      const profile = await this.getProfile(userId, useIdentityContractV2, tx);
+      return {
+        replacedKey: current.avatarKey === avatarKey ? null : current.avatarKey,
+        profile,
+      };
     });
   }
   async getUsernameAvailability(userId: number, value: unknown) {
     const username = this.validateUsername(value);
     const [[owner], [reservation]] = await Promise.all([
-      db
+      primaryDb
         .select({ id: users.id })
         .from(users)
         .where(sql`lower(${users.username}) = ${username}`)
         .limit(1),
-      db
+      primaryDb
         .select({ userId: usernameReservations.userId })
         .from(usernameReservations)
         .where(
@@ -653,18 +717,43 @@ export class UsersService {
       throw new BadRequestException({ code: 'BODY_METRIC_FUTURE_DATE' });
     }
 
-    const [created] = await db
-      .insert(userBodyMetrics)
-      .values({ userId, ...values, recordedAt })
-      .returning({
-        id: userBodyMetrics.id,
-        weight: userBodyMetrics.weight,
-        bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
-        muscleMass: userBodyMetrics.muscleMass,
-        waistCircumference: userBodyMetrics.waistCircumference,
-        recordedAt: userBodyMetrics.recordedAt,
-      });
-    return created;
+    return db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(userBodyMetrics)
+        .values({ userId, ...values, recordedAt })
+        .returning(bodyMetricFields);
+      await this.enqueueBodyMetricRecorded(tx, userId, created, 'body_metrics');
+      return created;
+    });
+  }
+
+  private async enqueueBodyMetricRecorded(
+    tx: DbTransaction,
+    userId: number,
+    metric: {
+      id: number;
+      weight: number | null;
+      bodyFatPercentage: number | null;
+      muscleMass: number | null;
+      waistCircumference: number | null;
+      recordedAt: Date;
+    },
+    source: 'body_metrics' | 'profile',
+  ) {
+    await this.outbox.enqueue(tx, {
+      type: 'body_metric.recorded',
+      aggregateId: userId,
+      payload: {
+        metricId: metric.id,
+        userId,
+        weight: metric.weight,
+        bodyFatPercentage: metric.bodyFatPercentage,
+        muscleMass: metric.muscleMass,
+        waistCircumference: metric.waistCircumference,
+        recordedAt: metric.recordedAt.toISOString(),
+        source,
+      },
+    });
   }
 
   async getBodyMetrics(userId: number, dto: ListBodyMetricsDto) {
@@ -729,30 +818,72 @@ export class UsersService {
       ...(profile.email ? { email: profile.email.trim().toLowerCase() } : {}),
       ...(normalizedDisplayName ? { displayName: normalizedDisplayName } : {}),
     };
-    const [previous] = Object.keys(changes).length
-      ? await db
-          .select({
-            email: users.email,
-            displayName: users.displayName,
-            age: users.age,
-            gender: users.gender,
-            height: users.height,
-            goal: users.goal,
-          })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1)
-      : [];
-
+    const hasChanges = Object.keys(changes).length > 0;
     try {
-      if (Object.keys(changes).length) {
-        const updated = await db
-          .update(users)
-          .set(changes)
-          .where(eq(users.id, userId))
-          .returning({ id: users.id });
-        if (!updated.length) throw new NotFoundException('User not found');
-      }
+      // Profile fields, the optional weight entry, its outbox event and the
+      // activity row commit together. The row lock keeps the "from" values in
+      // the activity entry exact when two edits race. The response is read
+      // back in the same transaction, on the primary.
+      return await db.transaction(async (tx) => {
+        const [previous] = hasChanges
+          ? await tx
+              .select({
+                email: users.email,
+                displayName: users.displayName,
+                age: users.age,
+                gender: users.gender,
+                height: users.height,
+                goal: users.goal,
+              })
+              .from(users)
+              .where(eq(users.id, userId))
+              .for('update')
+              .limit(1)
+          : [];
+
+        if (hasChanges) {
+          const updated = await tx
+            .update(users)
+            .set(changes)
+            .where(eq(users.id, userId))
+            .returning({ id: users.id });
+          if (!updated.length) throw new NotFoundException('User not found');
+        }
+
+        if (weight !== undefined) {
+          const [metric] = await tx
+            .insert(userBodyMetrics)
+            .values({ userId, weight })
+            .returning(bodyMetricFields);
+          await this.enqueueBodyMetricRecorded(tx, userId, metric, 'profile');
+        }
+
+        if (previous && hasChanges) {
+          const changedFields = Object.entries(changes)
+            .filter(
+              ([field, value]) =>
+                previous[field as keyof typeof previous] !== value,
+            )
+            .map(([field, value]) => ({
+              field,
+              from: previous[field as keyof typeof previous] ?? null,
+              to: value ?? null,
+            }));
+          if (changedFields.length) {
+            await recordUserActivity(
+              {
+                userId,
+                actorUserId: userId,
+                type: 'profile.updated',
+                metadata: { changes: changedFields },
+              },
+              tx,
+            );
+          }
+        }
+
+        return this.getProfile(userId, useIdentityContractV2, tx);
+      });
     } catch (error: unknown) {
       const databaseError = error as { code?: string };
       if (databaseError.code === '23505') {
@@ -763,40 +894,13 @@ export class UsersService {
       }
       throw error;
     }
-
-    if (weight !== undefined) {
-      await db.insert(userBodyMetrics).values({ userId, weight });
-    }
-
-    if (previous && Object.keys(changes).length) {
-      const changedFields = Object.entries(changes)
-        .filter(
-          ([field, value]) =>
-            previous[field as keyof typeof previous] !== value,
-        )
-        .map(([field, value]) => ({
-          field,
-          from: previous[field as keyof typeof previous] ?? null,
-          to: value ?? null,
-        }));
-      if (changedFields.length) {
-        await recordUserActivity({
-          userId,
-          actorUserId: userId,
-          type: 'profile.updated',
-          metadata: { changes: changedFields },
-        });
-      }
-    }
-
-    return this.getProfile(userId, useIdentityContractV2);
   }
 
   async updateUsername(userId: number, value: unknown) {
     const normalizedUsername = this.validateUsername(value);
-    let previousUsername: string | null = null;
     try {
-      await db.transaction(async (tx) => {
+      // The response is read back in the same transaction, on the primary.
+      return await db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(42719, ${userId})`);
 
         const [currentUser] = await tx
@@ -809,7 +913,6 @@ export class UsersService {
         const currentUsername = currentUser.username
           ? normalizeUsername(currentUser.username)
           : null;
-        previousUsername = currentUsername;
         if (normalizedUsername !== currentUsername) {
           const usernamesToLock = [currentUsername, normalizedUsername]
             .filter((value): value is string => Boolean(value))
@@ -872,6 +975,20 @@ export class UsersService {
           .where(eq(users.id, userId))
           .returning({ id: users.id });
         if (!updated.length) throw new NotFoundException('User not found');
+
+        if (currentUsername !== normalizedUsername) {
+          await recordUserActivity(
+            {
+              userId,
+              actorUserId: userId,
+              type: 'username.changed',
+              metadata: { from: currentUsername, to: normalizedUsername },
+            },
+            tx,
+          );
+        }
+
+        return this.getProfile(userId, true, tx);
       });
     } catch (error: unknown) {
       const databaseError = error as { code?: string };
@@ -883,17 +1000,6 @@ export class UsersService {
       }
       throw error;
     }
-
-    if (previousUsername !== normalizedUsername) {
-      await recordUserActivity({
-        userId,
-        actorUserId: userId,
-        type: 'username.changed',
-        metadata: { from: previousUsername, to: normalizedUsername },
-      });
-    }
-
-    return this.getProfile(userId, true);
   }
 
   private validateUsername(value: unknown): string {

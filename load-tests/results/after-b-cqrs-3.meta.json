@@ -1,0 +1,13 @@
+{
+  "label": "after-b-cqrs-3",
+  "scenario": "b",
+  "arm": "replica",
+  "vus": 20,
+  "duration": "60s",
+  "warmup": "15s",
+  "dbStartedAt": "2026-09-28 01:37:06.102827+00",
+  "otherRunningContainers": "hittrackerbackend-api-1 hittrackerbackend-postgres-1 hittrackerbackend-minio-1 ",
+  "otherProjectsDuringRun": "",
+  "primary": { "before": {"xact_commit" : 446118, "xact_rollback" : 1, "tup_returned" : 52329416, "tup_fetched" : 38244444, "blks_hit" : 4748977, "blks_read" : 602, "at" : "2026-09-28T01:37:08.878576+00:00"}, "after": {"xact_commit" : 446625, "xact_rollback" : 1, "tup_returned" : 52383702, "tup_fetched" : 38256379, "blks_hit" : 4769437, "blks_read" : 602, "at" : "2026-09-28T01:38:17.413891+00:00"} },
+  "replica": { "before": {"xact_commit" : 550956, "xact_rollback" : 0, "tup_returned" : 97289017, "tup_fetched" : 94511988, "blks_hit" : 12378172, "blks_read" : 156, "at" : "2026-09-28T01:37:11.397206+00:00"}, "after": {"xact_commit" : 584487, "xact_rollback" : 0, "tup_returned" : 111510017, "tup_fetched" : 108556430, "blks_hit" : 14937794, "blks_read" : 156, "at" : "2026-09-28T01:38:20.130057+00:00"} }
+}
