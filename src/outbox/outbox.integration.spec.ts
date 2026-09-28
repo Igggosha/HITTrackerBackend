@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
-import { Pool } from 'pg';
+import { Client, Pool } from 'pg';
 import { outboxEvents } from '../db/schema';
 import { OutboxService } from './outbox.service';
 import type { DbTransaction } from './transaction';
@@ -41,15 +41,17 @@ describeWithDatabase('outbox against PostgreSQL', () => {
       options: `-c search_path=${schema}`,
     });
     database = drizzle({ client: pool });
-    const migration = readFileSync(
-      join(
-        __dirname,
-        '../../drizzle/20260928090000_add_outbox_events/migration.sql',
-      ),
-      'utf8',
-    );
-    for (const statement of migration.split('--> statement-breakpoint')) {
-      await pool.query(statement);
+    // `trace_context` was added by a later migration; both must run for the
+    // `traceContext` column `OutboxService.enqueue` writes to exist.
+    const migrations = [
+      '../../drizzle/20260928090000_add_outbox_events/migration.sql',
+      '../../drizzle/20260928110000_add_outbox_trace_context/migration.sql',
+    ];
+    for (const path of migrations) {
+      const migration = readFileSync(join(__dirname, path), 'utf8');
+      for (const statement of migration.split('--> statement-breakpoint')) {
+        await pool.query(statement);
+      }
     }
   });
 
@@ -78,6 +80,33 @@ describeWithDatabase('outbox against PostgreSQL', () => {
       attempts: 0,
       publishedAt: null,
     });
+  });
+
+  it('notifies only after commit and never after rollback', async () => {
+    const listener = new Client({ connectionString: url });
+    await listener.connect();
+    const notifications: string[] = [];
+    listener.on('notification', (message) =>
+      notifications.push(message.payload ?? ''),
+    );
+    try {
+      await listener.query('LISTEN outbox_events');
+      await expect(
+        transaction(async (tx) => {
+          await outbox.enqueue(tx, event(1));
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          expect(notifications).toEqual([]);
+          throw new Error('rollback');
+        }),
+      ).rejects.toThrow('rollback');
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(notifications).toEqual([]);
+      await transaction((tx) => outbox.enqueue(tx, event(2)));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(notifications).toEqual(['']);
+    } finally {
+      await listener.end();
+    }
   });
 
   it('gives concurrent relays disjoint batches with SKIP LOCKED', async () => {

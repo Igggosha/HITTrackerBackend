@@ -136,6 +136,7 @@ function assertOptionalIntInRange(
  */
 export function validateRelayEnvironment(environment: NodeJS.ProcessEnv): void {
   assertOptionalIntInRange(environment, 'RELAY_POLL_INTERVAL_MS', 100);
+  assertOptionalIntInRange(environment, 'RELAY_FALLBACK_POLL_INTERVAL_MS', 100);
   assertOptionalIntInRange(environment, 'RELAY_PUBLISH_TIMEOUT_MS', 100);
   assertOptionalIntInRange(environment, 'RELAY_CONNECTION_TIMEOUT_MS', 100);
   assertOptionalIntInRange(environment, 'RELAY_DB_TX_TIMEOUT_MS', 1000);

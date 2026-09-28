@@ -13,6 +13,7 @@
     {"id": 6, "title": "Event loop lag", "type": "timeseries", "gridPos": {"x": 0, "y": 25, "w": 12, "h": 8}, "targets": [{"expr": "nodejs_eventloop_lag_seconds{job=\"api\"}", "legendFormat": "lag"}]},
     {"id": 7, "title": "Active workouts", "type": "stat", "gridPos": {"x": 12, "y": 25, "w": 12, "h": 8}, "targets": [{"expr": "active_workouts{job=\"api\"}", "legendFormat": "active"}]},
     {"id": 8, "title": "Outbox relay publish rate", "type": "timeseries", "gridPos": {"x": 0, "y": 33, "w": 12, "h": 8}, "targets": [{"expr": "rate(outbox_published_total{job=\"relay\"}[5m])", "legendFormat": "published/s"}]},
-    {"id": 9, "title": "Outbox relay publish failure rate", "type": "timeseries", "gridPos": {"x": 12, "y": 33, "w": 12, "h": 8}, "targets": [{"expr": "rate(outbox_publish_failures_total{job=\"relay\"}[5m])", "legendFormat": "failures/s"}]}
+    {"id": 9, "title": "Outbox relay publish failure rate", "type": "timeseries", "gridPos": {"x": 12, "y": 33, "w": 12, "h": 8}, "targets": [{"expr": "rate(outbox_publish_failures_total{job=\"relay\"}[5m])", "legendFormat": "failures/s"}]},
+    {"id": 10, "title": "Outbox listener and wakeups", "type": "timeseries", "gridPos": {"x": 0, "y": 41, "w": 24, "h": 6}, "targets": [{"expr": "outbox_listener_connected{job=\"relay\"}", "legendFormat": "listener connected"}, {"expr": "rate(outbox_relay_wakeups_total{job=\"relay\"}[5m])", "legendFormat": "{{reason}} wakeups/s"}]}
   ]
 }

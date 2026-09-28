@@ -45,6 +45,17 @@ export class MetricsService {
     help: 'Outbox or DLQ publish failures.',
     registers: [this.registry],
   });
+  readonly outboxListenerConnected = new Gauge({
+    name: 'outbox_listener_connected',
+    help: 'Whether the relay is listening for committed outbox events.',
+    registers: [this.registry],
+  });
+  readonly outboxRelayWakeups = new Counter({
+    name: 'outbox_relay_wakeups_total',
+    help: 'Relay wakeups by source.',
+    labelNames: ['reason'] as const,
+    registers: [this.registry],
+  });
 
   private activeWorkoutsGauge: Gauge<string>;
   private activeWorkouts = 0;

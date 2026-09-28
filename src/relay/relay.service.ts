@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { Kafka, type Producer } from 'kafkajs';
+import { Client } from 'pg';
 import {
   envelopeFrom,
   eventKey,
@@ -39,7 +40,11 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
     process.env.KAFKA_BROKERS?.split(',')
       .map((s) => s.trim())
       .filter(Boolean) ?? [];
-  private readonly interval = Number(process.env.RELAY_POLL_INTERVAL_MS ?? 500);
+  private readonly interval = Number(
+    process.env.RELAY_FALLBACK_POLL_INTERVAL_MS ??
+      process.env.RELAY_POLL_INTERVAL_MS ??
+      5_000,
+  );
   private readonly connectionTimeoutMs = Number(
     process.env.RELAY_CONNECTION_TIMEOUT_MS ?? DEFAULT_CONNECTION_TIMEOUT_MS,
   );
@@ -49,6 +54,10 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
   private producer?: Producer;
   private running = false;
   private loop?: Promise<void>;
+  private listenerLoop?: Promise<void>;
+  private listener?: Client;
+  private stopListening?: () => void;
+  private pending = false;
   private wake?: () => void;
 
   constructor(
@@ -75,7 +84,67 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
       },
     }).producer({ idempotent: true, maxInFlightRequests: 5 });
     this.running = true;
+    this.metrics.outboxListenerConnected.set(0);
+    this.listenerLoop = this.listen();
     this.loop = this.run();
+  }
+
+  private notify() {
+    if (!this.running || this.pending) return;
+    this.pending = true;
+    this.metrics.outboxRelayWakeups.inc({ reason: 'notify' });
+    this.wake?.();
+  }
+
+  private async listen() {
+    let backoff = 250;
+    while (this.running) {
+      const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        connectionTimeoutMillis: 5_000,
+      });
+      this.listener = client;
+      try {
+        const lost = new Promise<void>((resolve) => {
+          client.on('error', () => resolve());
+          client.once('end', resolve);
+          this.stopListening = resolve;
+        });
+        await client.connect();
+        if (!this.running) break;
+        client.on('notification', (message) => {
+          if (message.channel === 'outbox_events') this.notify();
+        });
+        await client.query('LISTEN outbox_events');
+        if (!this.running) break;
+        this.metrics.outboxListenerConnected.set(1);
+        await lost;
+      } catch (error) {
+        if (this.running)
+          this.logger.warn(
+            `outbox listener error: ${error instanceof Error ? error.name : 'unknown'}`,
+          );
+      } finally {
+        this.metrics.outboxListenerConnected.set(0);
+        this.stopListening = undefined;
+        this.listener = undefined;
+        await client.end().catch(() => undefined);
+        client.removeAllListeners();
+      }
+      if (!this.running) break;
+      this.logger.warn(
+        `outbox listener disconnected; retrying in ${backoff}ms`,
+      );
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, backoff);
+        this.stopListening = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
+      this.stopListening = undefined;
+      backoff = Math.min(backoff * 2, 5_000);
+    }
   }
 
   private async run() {
@@ -132,14 +201,24 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
           /* retry next poll */
         }
       }
-      if (this.running)
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, this.interval);
-          this.wake = () => {
-            clearTimeout(timer);
-            resolve();
-          };
-        });
+      if (!this.running) break;
+      if (this.pending) {
+        this.pending = false;
+        continue;
+      }
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          this.metrics.outboxRelayWakeups.inc({ reason: 'timer' });
+          this.wake = undefined;
+          resolve();
+        }, this.interval);
+        this.wake = () => {
+          clearTimeout(timer);
+          this.wake = undefined;
+          resolve();
+        };
+      });
+      this.pending = false;
     }
   }
 
@@ -208,7 +287,10 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     this.running = false;
+    this.stopListening?.();
+    await this.listener?.end().catch(() => undefined);
     this.wake?.();
+    await this.listenerLoop;
     await this.loop;
     await this.producer?.disconnect();
   }
