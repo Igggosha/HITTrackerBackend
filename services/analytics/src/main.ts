@@ -1,3 +1,6 @@
+// Must be the very first import: see services/analytics/src/tracing/register.ts.
+import './tracing/register';
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import httpMetrics from './common/http-metrics';
