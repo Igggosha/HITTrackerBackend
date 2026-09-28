@@ -98,10 +98,10 @@ nestjs-pino (api container)
 
 Every container in the stack (`postgres`, `minio`, `grafana`, `prometheus`,
 `loki`, `alloy` itself, ...) is discovered and shipped the same way; only the
-`api` container's lines are additionally JSON-parsed, since it is the only
-one that currently logs structured JSON (see the `stage.match` selector in
-`docker/observability/alloy/config.alloy` — extend it when another Node
-service is added).
+`api`, `relay` and `analytics` containers' lines are additionally
+JSON-parsed, since those are the only ones that currently log structured
+JSON (see the `stage.match` selector in `docker/observability/alloy/
+config.alloy` — extend it when another Node service is added).
 
 ### Why labels must be low-cardinality
 
@@ -284,6 +284,9 @@ the observable outcome for this dev/diploma stack, not a page to anyone.
   line actually containing `"requestId":"..."` in the raw text (it does,
   via nestjs-pino's `mixin`); a future change to the log serializer that
   drops that field would silently break both without failing any test.
-- Only the api's lines get `level`/`requestId`/etc.; postgres/minio/etc.
-  logs are collected (visible on the Logs dashboard, filterable by
-  `service`) but not structured beyond that.
+- Only the api's, relay's and analytics' lines get `level`/etc. structured
+  out (`requestId`/`traceId` on api/analytics, `eventId`/`eventType` on
+  analytics' consumer lines only, none of that on relay - see the
+  `stage.match` selector's comment); postgres/minio/etc. logs are collected
+  (visible on the Logs dashboard, filterable by `service`) but not
+  structured beyond that.

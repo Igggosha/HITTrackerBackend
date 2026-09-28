@@ -4,6 +4,7 @@ import {
   SpanKind,
   trace,
   type Context,
+  type Span,
 } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -64,6 +65,35 @@ export function producerSpan<T>(
     );
 }
 
+type KafkaHeaderValue = Buffer | string | (Buffer | string)[] | undefined;
+
+function kafkaHeader(
+  headers: Record<string, KafkaHeaderValue> | undefined,
+  name: string,
+): string | undefined {
+  const raw = headers?.[name];
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  return first === undefined ? undefined : first.toString();
+}
+
+/**
+ * `@opentelemetry/instrumentation-kafkajs` already wraps `consumer.run`'s
+ * `eachMessage` in a CONSUMER span parented from the extracted `traceparent`
+ * header (see docs/diploma/tracing.md), with messaging.system/destination/
+ * partition/offset attributes and the message key. It does not know about
+ * this app's own envelope, so this hook adds `event.id`/`event.type` from
+ * the relay's `event-id`/`event-type` headers - never the message payload.
+ */
+export function kafkaConsumerHook(
+  span: Span,
+  info: { message: { headers?: Record<string, KafkaHeaderValue> } },
+): void {
+  const eventId = kafkaHeader(info.message.headers, 'event-id');
+  const eventType = kafkaHeader(info.message.headers, 'event-type');
+  if (eventId) span.setAttribute('event.id', eventId);
+  if (eventType) span.setAttribute('event.type', eventType);
+}
+
 export function initTracing(serviceName: string): void {
   const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) {
@@ -98,7 +128,7 @@ export function initTracing(serviceName: string): void {
       new ExpressInstrumentation(),
       new NestInstrumentation(),
       new PgInstrumentation({ enhancedDatabaseReporting: false }),
-      new KafkaJsInstrumentation(),
+      new KafkaJsInstrumentation({ consumerHook: kafkaConsumerHook }),
     ],
   });
   sdk.start();

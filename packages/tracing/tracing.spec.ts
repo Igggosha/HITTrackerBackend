@@ -11,10 +11,12 @@ import { outboxEvents } from '../../src/db/schema';
 import { OutboxService } from '../../src/outbox/outbox.service';
 import { calledWith, fakeOf } from '../../src/outbox/testing/fake-database';
 import { RelayService } from '../../src/relay/relay.service';
+import type { Span } from '@opentelemetry/api';
 import {
   activeTraceContext,
   initTracing,
   installShutdownSignalHandlers,
+  kafkaConsumerHook,
   scrubUrl,
   shutdownTracing,
 } from './tracing';
@@ -169,4 +171,32 @@ it('does not register SIGTERM/SIGINT itself; installShutdownSignalHandlers and s
   log.mockRestore();
   if (previous !== undefined)
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = previous;
+});
+
+it('kafkaConsumerHook tags the CONSUMER span with event id/type, never the payload', () => {
+  const span = { setAttribute: jest.fn() } as unknown as Span;
+  kafkaConsumerHook(span, {
+    message: {
+      value: Buffer.from('{"secret":"do not log"}'),
+      headers: {
+        'event-id': Buffer.from('00000000-0000-4000-8000-000000000001'),
+        'event-type': 'workout.finished',
+      },
+    },
+  });
+  expect(span.setAttribute).toHaveBeenCalledWith(
+    'event.id',
+    '00000000-0000-4000-8000-000000000001',
+  );
+  expect(span.setAttribute).toHaveBeenCalledWith(
+    'event.type',
+    'workout.finished',
+  );
+  expect(span.setAttribute).toHaveBeenCalledTimes(2);
+});
+
+it('kafkaConsumerHook is a no-op when headers are missing', () => {
+  const span = { setAttribute: jest.fn() } as unknown as Span;
+  kafkaConsumerHook(span, { message: { value: null } });
+  expect(span.setAttribute).not.toHaveBeenCalled();
 });
