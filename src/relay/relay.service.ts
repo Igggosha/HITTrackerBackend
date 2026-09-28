@@ -101,7 +101,7 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
     while (this.running) {
       const client = new Client({
         connectionString: process.env.DATABASE_URL,
-        connectionTimeoutMillis: 5_000,
+        connectionTimeoutMillis: this.connectionTimeoutMs,
       });
       this.listener = client;
       try {
@@ -118,6 +118,8 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
         await client.query('LISTEN outbox_events');
         if (!this.running) break;
         this.metrics.outboxListenerConnected.set(1);
+        // A healthy connection restarts the reconnect schedule from the minimum.
+        backoff = 250;
         await lost;
       } catch (error) {
         if (this.running)
