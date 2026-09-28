@@ -89,17 +89,23 @@ loki.source.docker "containers" {
 loki.process "containers" {
   forward_to = [loki.write.default.receiver]
 
-  // Only the api (and, as more Node services are added, list their compose
-  // service names here too) writes pino JSON lines; postgres/minio/grafana/
-  // prometheus/etc. log plain text and must not go through stage.json.
+  // api and analytics write pino JSON (level/requestId/traceId/spanId, plus
+  // eventId/eventType on analytics' consumer lines); relay writes Nest's own
+  // ConsoleLogger JSON (a string `level`, no requestId/traceId - it has no
+  // per-request context to attach). All three are still JSON, so stage.json
+  // below parses all of them the same way; postgres/minio/grafana/
+  // prometheus/etc. log plain text and must not go through it. Extend this
+  // list when another Node service is added.
   stage.match {
-    selector = "{service=~\"^(api)$\"}"
+    selector = "{service=~\"^(api|relay|analytics)$\"}"
 
     stage.json {
       expressions = {
         level      = "level",
         requestId  = "requestId",
         traceId    = "traceId",
+        eventId    = "eventId",
+        eventType  = "eventType",
         req_method = "req.method",
         req_url    = "req.url",
         res_status = "res.statusCode",
@@ -123,19 +129,25 @@ loki.process "containers" {
       }
     }
 
-    // requestId/traceId are unique per request/trace (unbounded cardinality)
-    // and req.method/req.url/res.statusCode are per-request too, so all five
-    // go into structured metadata: queryable with `| requestId="..."` or
-    // `| traceId="..."` etc. without ever becoming index labels. traceId is
-    // `null` (extracted as empty) on lines logged while tracing is disabled
-    // (no OTEL_EXPORTER_OTLP_ENDPOINT) or outside any span; that is
-    // harmless here precisely because it is metadata, not a label — an
-    // empty label value would instead fragment the `level` label's stream.
-    // See docs/diploma/observability.md and docs/diploma/tracing.md.
+    // requestId/traceId/eventId/eventType are unique per request/trace/event
+    // (unbounded cardinality) and req.method/req.url/res.statusCode are
+    // per-request too, so all seven go into structured metadata: queryable
+    // with `| requestId="..."`, `| traceId="..."` or `| eventId="..."` etc.
+    // without ever becoming index labels. traceId is `null` (extracted as
+    // empty) on lines logged while tracing is disabled (no
+    // OTEL_EXPORTER_OTLP_ENDPOINT) or outside any span; eventId/eventType are
+    // absent on HTTP lines (only analytics' Kafka consumer lines set them,
+    // via eventContext - see services/analytics/src/common/log-context.ts).
+    // That is harmless here precisely because it is metadata, not a label —
+    // an empty/missing label value would instead fragment the `level`
+    // label's stream. See docs/diploma/observability.md and
+    // docs/diploma/tracing.md.
     stage.structured_metadata {
       values = {
         requestId  = "",
         traceId    = "",
+        eventId    = "",
+        eventType  = "",
         method     = "req_method",
         path       = "req_url",
         statusCode = "res_status",

@@ -399,6 +399,10 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
       ANALYTICS_MAX_ATTEMPTS: ${ANALYTICS_MAX_ATTEMPTS:-5}
       LOG_LEVEL: ${ANALYTICS_LOG_LEVEL:-info}
+      OTEL_SERVICE_NAME: hit-analytics
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
     # No host port: the mobile app reaches it only through the main API
     # (GET /analytics/*); Prometheus scrapes it on the private network.
     healthcheck:

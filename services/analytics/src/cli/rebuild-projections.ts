@@ -15,6 +15,15 @@
  * Both steps are idempotent, and either order of a partial failure is safe
  * to re-run: offsets reset but tables not truncated -> replay is deduplicated
  * by processed_events; the command is simply run again to finish.
+ *
+ * No `tracing/register` import here, deliberately: this is a one-shot admin
+ * command (reset offsets, truncate tables, exit), not a Nest application and
+ * not a message consumer - there is no request/consumer span for it to join,
+ * and every replayed message gets its own fresh CONSUMER span from the
+ * running `analytics` service once it is restarted afterwards. Adding
+ * `initTracing`/`shutdownTracing` here would only add SDK startup/flush
+ * latency to a command whose own run is never itself part of a trace. See
+ * docs/diploma/tracing.md.
  */
 import { sql } from 'drizzle-orm';
 import { loadConfig } from '../config/environment';

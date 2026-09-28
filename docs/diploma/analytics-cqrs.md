@@ -86,9 +86,14 @@ run inserts 0. Run it with the migration image:
 Prometheus job `analytics`, the alert `AnalyticsConsumerLagging` and the
 Grafana dashboard "Analytics (CQRS read side)". Logs are pino JSON:
 `requestId` on HTTP lines, `eventId`/`eventType` on every consumer line
-(never payloads). Tracing hook: `MessageHandler.handle` gets the whole Kafka
-header map. Extracting `traceparent` and opening a CONSUMER span around it is
-a local change there.
+(never payloads), plus `traceId`/`spanId` on every line when tracing is
+enabled. Tracing: `@opentelemetry/instrumentation-kafkajs` already wraps
+`consumer.run`'s `eachMessage`, extracts `traceparent` from the message
+headers and opens a CONSUMER span around the whole callback (so
+`MessageHandler.handle` and its `pg` writes run, and nest, inside it with no
+code change here); `packages/tracing/tracing.ts`'s `consumerHook` tags that
+span with `event.id`/`event.type`. See docs/diploma/tracing.md ("The
+analytics consumer").
 
 **Demo** (`--profile events --profile observability`): log in, start/finish a
 workout with sets -> `GET /analytics/me/summary` shows it within ~1 s. Stop

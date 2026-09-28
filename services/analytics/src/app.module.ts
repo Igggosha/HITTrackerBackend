@@ -30,12 +30,14 @@ import { MetricsService } from './metrics/metrics.service';
 import { PgReadModelStore } from './projections/pg-read-model-store';
 import { Projector } from './projections/projector';
 import { READ_MODEL_STORE } from './projections/read-model-store';
+import { TracingShutdownModule } from './tracing/tracing-shutdown.module';
 
 export const CONFIG = Symbol('CONFIG');
 
 @Module({
   imports: [
     DatabaseModule,
+    TracingShutdownModule,
     JwtModule.registerAsync({
       useFactory: () => ({ secret: process.env.JWT_SECRET }),
     }),
