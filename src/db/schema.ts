@@ -290,6 +290,7 @@ export const workoutPrograms = pgTable(
         uniqueIndex("workout_programs_owner_source_unique")
             .on(table.createdById, table.sourceProgramId)
             .where(sql`${table.sourceProgramId} is not null`),
+        index("workout_programs_personal_owner_idx").on(table.isPersonal, table.createdById),
     ],
 );
 
@@ -298,7 +299,10 @@ export const workoutPrograms = pgTable(
 export const programLikes = pgTable('program_likes', {
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     programId: integer('program_id').notNull().references(() => workoutPrograms.id, { onDelete: 'cascade' }),
-}, (table) => ({ pk: primaryKey({ columns: [table.userId, table.programId] }) }));
+}, (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.programId] }),
+    programIdx: index('program_likes_program_id_idx').on(table.programId),
+}));
 
 export const exerciseBookmarks = pgTable('exercise_bookmarks', {
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -318,7 +322,8 @@ export const programContent = pgTable(
             .references(() => workoutPrograms.id, {
                 onDelete: "cascade",
             }),
-    }
+    },
+    (table) => [index('program_content_program_week_idx').on(table.programId, table.week)],
 );
 
 
@@ -357,7 +362,8 @@ export const exerciseInPrograms = pgTable(
         // 0 = Monday, 6 = Sunday
         weekDay: integer("week_day")
             .notNull(),
-    }
+    },
+    (table) => [index('exercises_in_programs_content_id_idx').on(table.programContentId)],
 );
 
 
@@ -399,6 +405,7 @@ export const userProgramScheduleSeries = pgTable(
         endsOn: date("ends_on"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
+    (table) => [index('user_program_schedule_series_user_starts_idx').on(table.userId, table.startsOn)],
 );
 
 // A personal calendar assignment. One user can plan multiple programs per date.
@@ -418,6 +425,7 @@ export const userProgramSchedule = pgTable(
         status: text("status").notNull().default("planned"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
+    (table) => [uniqueIndex('user_program_schedule_unique_assignment_idx').on(table.userId, table.scheduledFor, table.programId)],
 );
 
 
@@ -482,7 +490,11 @@ export const workouts = pgTable(
         createdAt: timestamp("created_at")
             .defaultNow()
             .notNull(),
-    }
+    },
+    (table) => [
+        index('workouts_user_finished_id_idx').on(table.userId, table.finishedAt.desc(), table.id.desc()),
+        index('workouts_schedule_id_idx').on(table.scheduleId),
+    ],
 );
 
 
@@ -526,7 +538,11 @@ export const sets = pgTable(
 
 
         rpe: integer("rpe"),
-    }
+    },
+    (table) => [
+        index('sets_workout_id_idx').on(table.workoutId),
+        index('sets_exercise_workout_idx').on(table.exerciseId, table.workoutId),
+    ],
 );
 
 

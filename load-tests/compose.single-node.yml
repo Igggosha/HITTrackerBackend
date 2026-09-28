@@ -1,0 +1,8 @@
+# Adds on top of compose.loadtest.yml for the "single node" arm of
+# measurement A: the API gets no DATABASE_REPLICA_URL, so src/db/db.ts routes
+# every query to the primary. The replica container keeps running (streaming
+# WAL, serving nothing) so both arms have the same set of containers.
+services:
+  api:
+    environment:
+      DATABASE_REPLICA_URL: ""
