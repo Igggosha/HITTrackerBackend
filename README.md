@@ -27,6 +27,8 @@
 
 ## Run the backend and PostgreSQL with Docker
 
+For a clean setup, manual checks, and a 10-minute thesis demo, follow the [Ukrainian demo runbook](docs/diploma/demo-runbook.md).
+
 Docker Compose starts the API, PostgreSQL primary, and a streaming replica. The containers use the
 internal `hit-tracker-network`; the API connects to PostgreSQL through the
 service name `postgres`, not through a host port. Only the API is published to
