@@ -30,9 +30,9 @@ export function historyMix(reader) {
 }
 
 // ---- B: analytics, computed on request vs read models ---------------------
-// Pairs answer the same chart question:
-//   exercise progress: old = raw sets of one exercise (client aggregates)
-//                      new = per-day top set / e1RM / volume read model
+// Exercise endpoints supply different chart products: old = raw weight/reps
+// sets, new = per-day top set / e1RM / volume read model.
+// Other pairs:
 //   body metrics:      old = main API aggregates the rows on every request
 //                      new = precomputed timeline
 //   summary / weekly volume: read models only (the old way is the
@@ -84,7 +84,9 @@ export function cqrsMix(reader, iteration) {
 export const COMPOSITE = 'old_weekly_volume_composite';
 export function weeklyVolumeComposite(reader, compositeMetrics) {
   const started = Date.now();
-  const from = isoDaysAgo(12 * 7);
+  const now = new Date();
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    - (((now.getUTCDay() + 6) % 7) + 11 * 7) * 86400000).toISOString();
   const list = getJson(`/workouts/history?limit=50&from=${from}`, reader.token);
   let ok = list.status === 200;
   let bytes = list.body ? list.body.length : 0;

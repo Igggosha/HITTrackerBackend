@@ -107,7 +107,7 @@ k6 exports `load-tests/results/<run>.json`, database counters
 | | number | context |
 | --- | --- | --- |
 | **A** | **the replica served 99 % of the read queries** (98.98 % of `nestdb` transactions, ~100 % of scanned rows) | primary drops from ~1,030 tx/s and ~3.2 cores to ~7 tx/s (idle is 6.5) and <1 % CPU; end-to-end throughput does **not** rise (median 458 vs 626 req/s, within run-to-run noise) because one Node.js API process at 100 % of a core is the bottleneck |
-| **B** | **12-week volume chart: 1 request, p50 39 ms / p95 73 ms, 1.2 KiB with the read model vs 23 requests, p50 226 ms / p95 554 ms, 68 KiB without** | the single-request pairs are equally fast at this data size (p50/p95 within ~10 ms); the read models win on request count, payload (1.8-5.7x smaller) and no full-table scans |
+| **B** | **12-week volume chart: 1 request, p50 37 ms / p95 58 ms, 1.2 KiB with the read model vs 21 requests, p50 187 ms / p95 390 ms, 62 KiB without** | corrected, matching 12 ISO-week window on both sides; the API process still dominates single-request latency; exercise sets and daily progress are different chart products |
 | **C** | **a finished workout is visible in the analytics summary after p50 326 ms, p95 531 ms, max 545 ms** (median run, 31 workouts, 0 timeouts; worst of all runs 604 ms) | under 15 VUs of read load; almost all of it is the relay's 500 ms outbox poll interval, Kafka + consumer take p50 5 ms / p95 12 ms |
 
 ### A. Read replica: workout history browsing (20 VUs, 60 s)
@@ -159,15 +159,18 @@ was left out of this study.
 
 ### B. CQRS: computed on request vs read models (18 + 2 VUs, 60 s, replica arm)
 
+The original B weekly-composite numbers used a rolling 84-day window that included a 13th partial ISO week. They are superseded by the three corrected, indexed runs below; both paths now use the same 12 ISO weeks, beginning on the Monday 11 weeks before the current week (UTC).
+
 What each endpoint computes, for a user with 150 workouts / ~2,600 sets over
 18 months:
 
 - `old_exercise_sets` - `GET /workouts/exercise/:id/sets`: every raw set of
-  one exercise (~330 rows, joined with workouts, ordered). The client has to
-  aggregate them into a progress chart itself.
+  one exercise (~330 rows, joined with workouts, ordered). The old mobile
+  chart plots weight against reps.
 - `new_exercise_progress` - `GET /analytics/me/exercises/:id/progress`: one
   precomputed row per training day (top set, e1RM, volume), a primary-key
-  range read.
+  range read. This is a different chart product; latency and payload compare
+  what the exercise screen downloads, not equivalent plotted data.
 - `old_body_metrics` - `GET /users/me/body-metrics?from&to` (365 days): the
   main API reads all rows up to `to` and computes first/current/latest/change
   per metric on every request.
@@ -176,44 +179,41 @@ What each endpoint computes, for a user with 150 workouts / ~2,600 sets over
 - `new_summary` - `GET /analytics/me/summary`: this/last week, streak, PR
   count, last workout; four small indexed reads.
 - `new_weekly_volume` - `GET /analytics/me/weekly-volume?weeks=12`.
-- `old_weekly_volume_composite` - the same 12-week chart without a read
-  model. The write API has no aggregate endpoint, so the client lists the
-  last 12 weeks (`GET /workouts/history?from=...&limit=50`) and fetches every
-  workout's details (22 in parallel with k6 `http.batch`, 6 per host) to sum
+- `old_weekly_volume_composite` - the same 12 ISO weeks without a read
+  model. The write API has no aggregate endpoint, so the client lists from
+  the oldest included Monday (`GET /workouts/history?from=...&limit=50`) and
+  fetches each workout's details (20 in parallel with k6 `http.batch`, 6 per host) to sum
   the volume. Latency = list + slowest detail.
 
 All `new_*` calls go through the main API proxy (`/analytics/*` -> analytics
 service), i.e. one extra HTTP hop; the `old_*` calls read the replica.
 
-Median run `b-cqrs-3`:
+Median corrected run `after-b-cqrs-3`:
 
 | endpoint | req/s | p50 | p95 | p99 | avg payload | errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| old_exercise_sets | 68.8 | 45.4 | 87.6 | 120.9 | 46.5 KiB | 0 % |
-| new_exercise_progress | 68.8 | 48.3 | 82.7 | 102.9 | 8.2 KiB | 0 % |
-| old_body_metrics | 68.7 | 28.7 | 77.1 | 106.5 | 11.6 KiB | 0 % |
-| new_body_metrics | 68.7 | 38.3 | 79.0 | 99.3 | 6.5 KiB | 0 % |
-| new_summary | 68.7 | 35.2 | 69.9 | 88.6 | 0.5 KiB | 0 % |
-| new_weekly_volume | 68.7 | 38.6 | 72.9 | 98.1 | 1.2 KiB | 0 % |
-| old_weekly_volume_composite (23 requests) | 7.6 | 226.0 | 553.8 | 619.9 | 68.4 KiB | 0 % |
+| old_exercise_sets | 78.5 | 30.4 | 66.3 | 100.2 | 46.8 KiB | 0 % |
+| new_exercise_progress | 78.5 | 41.0 | 66.4 | 85.6 | 8.2 KiB | 0 % |
+| old_body_metrics | 78.5 | 25.2 | 61.1 | 93.4 | 11.6 KiB | 0 % |
+| new_body_metrics | 78.5 | 40.8 | 65.4 | 88.3 | 6.5 KiB | 0 % |
+| new_summary | 78.5 | 37.6 | 58.3 | 81.8 | 0.5 KiB | 0 % |
+| new_weekly_volume | 78.5 | 36.6 | 58.2 | 81.6 | 1.2 KiB | 0 % |
+| old_weekly_volume_composite (21 requests) | 9.4 | 187.0 | 389.8 | 499.4 | 62.1 KiB | 0 % |
 
-p95 of the three runs (ms): exercise sets 113/76/88 vs progress 107/74/83;
-body metrics 96/64/77 vs 98/70/79; summary 91/63/70; weekly volume 97/64/73 vs
-composite 763/456/554. CPU 30 s in: API 103 %, replica 178 %, analytics 34 %,
-primary 20 %.
+p95 of the corrected runs (ms): exercise sets 76/93/66 vs progress 74/84/66;
+body metrics 68/83/61 vs 72/82/65; summary 65/75/58; weekly volume 68/76/58 vs
+composite 362/559/390. CPU 30 s into the median run: API 103 %, replica 27 %, analytics 30 %,
+primary 14 %.
 
-**Interpretation.** Per single request the read models are **not faster**
-here. At 150 workouts per user every query is a few milliseconds of database
-work, the saturated API process dominates the latency, and the proxy hop
-costs the API extra CPU (`new_body_metrics` is ~10 ms slower at p50 than the
-on-request aggregation). The read models win where the question needs
-aggregation over history. The 12-week volume chart is **one request instead
-of 23, 5.9x faster at p50 (7.6x at p95), with 57x less data**. Exercise
-progress arrives pre-aggregated in 5.7x fewer bytes instead of as ~330 raw
-sets. On the database side, the old exercise query scans the whole `sets`
-table (see the finding in A) while the read models are primary-key lookups.
-That difference grows with data volume; at this data size the per-request
-latency does not show it yet. The price of the read models is C.
+**Interpretation.** Per single request the read models are not consistently
+faster here. At 150 workouts per user, the saturated API process dominates
+latency and the analytics proxy adds a hop. For the same 12 ISO-week volume
+chart, the read model uses **one request instead of 21, 5.1x lower p50
+(6.7x lower p95), and about 52x less data**. The new exercise endpoint
+downloads 8.2 KiB of daily aggregates rather than 46.8 KiB of raw sets,
+but those endpoints serve different charts. The new indexes remove the old
+exercise query's full-table scan (see [indexes.md](indexes.md)); the price of
+the read models' asynchronous updates is measured in C.
 
 ### C. Eventual-consistency lag under load (15 background VUs + writer)
 
@@ -247,6 +247,17 @@ publish + projection. A shorter poll interval (or LISTEN/NOTIFY instead of
 polling) would cut it, at the price of more idle queries on the primary. The
 k6 figure has a resolution of the 50 ms poll interval plus one poll round
 trip.
+
+## After indexes
+
+`20260928120000_add_query_indexes` adds the history and program-browsing indexes audited in [indexes.md](indexes.md). The same seeded `loadtest` stack, 20 VUs, 15 s warm-up and 60 s measurement was used for A: three runs per arm, interleaved, median by throughput. The first pair was repeated after local verification commands overlapped it; the table uses the clean reruns. Scenario C was not repeated.
+
+| A arm (median run) | req/s before → after | p50 ms before → after | p95 ms before → after | PostgreSQL CPU before → after | scanned rows/s before → after | replica share of transactions before → after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Replica (`after-a-replica-3`) | 457.5 → 723.5 | 38.9 → 20.4 | 80.2 → 31.9 | replica 310% → 40% | 43.0m → 0.113m | 99.0% → 99.4% |
+| Single node (`after-a-single-1`) | 625.9 → 726.6 | 27.0 → 22.1 | 68.3 → 74.2 | primary 336% → 40% | 62.2m → 0.111m | ~0% → ~0% |
+
+Throughput and p95 vary substantially across short runs; the API still sits at about one full core in both arms, so the changed throughput is not a reliable measure of index benefit. The database result is consistent with the query plans: the history detail lookup now reads about 17 indexed sets rather than scanning 131k, and database CPU falls to about 0.4 core while scanned rows/s falls by hundreds of times. The replica still receives almost all read transactions when configured. Full per-endpoint results and run spread are in `load-tests/results/summary.md`; before/after `EXPLAIN (ANALYZE, BUFFERS)` plans are in [indexes.md](indexes.md).
 
 ## Threats to validity
 

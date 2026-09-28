@@ -63,6 +63,7 @@ CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
 | diag-a-replica-2 | replica | 801.3 | 25.5 | 34.5 | 41.8 | 7.6 | 1174.7 |
 
 ## B. CQRS: computed on request vs read models
+The original weekly composite used a rolling 84-day window; its weekly comparison is superseded by the corrected after-index B runs below.
 
 Median run `b-cqrs-3` (20 VUs, 60s); every endpoint got the same share of the mix iterations.
 
@@ -115,3 +116,69 @@ CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
 | new_weekly_volume | 103.4 | 19.0 | 41.2 | 0.00 % |
 | new_exercise_progress | 103.4 | 27.2 | 50.4 | 0.00 % |
 | write_set | 2.6 | 51.5 | 120.1 | 0.00 % |
+
+## After indexes: A. Read replica
+
+### With replica (DATABASE_REPLICA_URL set): median run `after-a-replica-3` (20 VUs, 60s)
+
+| endpoint | req/s | p50 | p95 | p99 | errors |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| history_list | 287.7 | 21.6 | 33.0 | 115.9 | 0.00 % |
+| history_dates | 147.5 | 14.5 | 23.1 | 97.7 | 0.00 % |
+| history_details | 288.4 | 21.2 | 33.0 | 157.3 | 0.00 % |
+| **all** | **723.5** | **20.4** | **31.9** | **125.3** | **0.00 %** |
+
+All runs, total req/s: after-a-replica-1 684.4, after-a-replica-2 790.2, after-a-replica-3 723.5; p95: 36.1 / 62.2 / 31.9 ms.
+
+### Single node (DATABASE_REPLICA_URL empty): median run `after-a-single-1` (20 VUs, 60s)
+
+| endpoint | req/s | p50 | p95 | p99 | errors |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| history_list | 292.4 | 23.2 | 80.7 | 144.7 | 0.00 % |
+| history_dates | 143.3 | 15.7 | 58.4 | 99.4 | 0.00 % |
+| history_details | 290.9 | 22.9 | 80.2 | 144.9 | 0.00 % |
+| **all** | **726.6** | **22.1** | **74.2** | **139.0** | **0.00 %** |
+
+All runs, total req/s: after-a-single-1 726.6, after-a-single-2 803.5, after-a-single-3 703.0; p95: 74.2 / 27.0 / 39.7 ms.
+
+### Database work per server during the median runs
+
+`pg_stat_database` deltas of database `nestdb` (includes k6 setup: 20 logins and ~80 fixture reads, and background relay/exporter activity).
+
+| arm | server | transactions | tx/s | rows returned (scanned) | rows fetched | share of transactions | share of rows scanned |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| replica | primary | 464 | 7.0 | 49,231 | 9,849 | 0.58 % | 0.66 % |
+| replica | replica | 79521 | 1179.0 | 7,442,404 | 7,050,986 | 99.42 % | 99.34 % |
+| single | primary | 79676 | 1172.2 | 7,528,035 | 7,080,314 | 99.95 % | 99.99 % |
+| single | replica | 41 | 0.6 | 573 | 546 | 0.05 % | 0.01 % |
+
+**Headline A:** with the replica, the standby served 99.42 % of the read transactions of the history workload; throughput 723.5 vs 726.6 req/s (-0.4 %), p95 31.9 vs 74.2 ms.
+
+CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
+
+| run | api | postgres | postgres-replica | analytics | relay | kafka |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| after-a-replica-3 | 104.94% / 383MiB | 0.18% / 136.2MiB | 40.29% / 117.4MiB | 3.43% / 79.11MiB | 0.76% / 90.24MiB | 1.12% / 652.9MiB |
+| after-a-single-1 | 100.68% / 422MiB | 40.32% / 155.1MiB | 0.00% / 96.07MiB | 2.92% / 134.7MiB | 0.63% / 89.56MiB | 0.64% / 655.9MiB |
+
+## After indexes: B. CQRS
+
+Median run `after-b-cqrs-3` (20 VUs, 60s); every endpoint got the same share of the mix iterations.
+
+| endpoint | req/s | p50 | p95 | p99 | avg payload | errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| old_exercise_sets | 78.5 | 30.4 | 66.3 | 100.2 | 46.8 KiB | 0.00 % |
+| new_exercise_progress | 78.5 | 41.0 | 66.4 | 85.6 | 8.2 KiB | 0.00 % |
+| old_body_metrics | 78.5 | 25.2 | 61.1 | 93.4 | 11.6 KiB | 0.00 % |
+| new_body_metrics | 78.5 | 40.8 | 65.4 | 88.3 | 6.5 KiB | 0.00 % |
+| new_summary | 78.5 | 37.6 | 58.3 | 81.8 | 0.5 KiB | 0.00 % |
+| new_weekly_volume | 78.5 | 36.6 | 58.2 | 81.6 | 1.2 KiB | 0.00 % |
+| old_weekly_volume_composite (21.0 HTTP requests each) | 9.4 | 187.0 | 389.8 | 499.4 | 62.1 KiB | 0.00 % |
+
+p95 of every run (ms): old_exercise_sets 75.9/93.2/66.3; new_exercise_progress 74.4/84.0/66.4; old_body_metrics 68.1/83.3/61.1; new_body_metrics 71.7/82.2/65.4; new_summary 65.3/75.3/58.3; new_weekly_volume 67.6/75.6/58.2; old_weekly_volume_composite 362.1/559.0/389.8.
+
+CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
+
+| run | api | postgres | postgres-replica | analytics | relay | kafka |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| after-b-cqrs-3 | 103.16% / 517MiB | 14.36% / 155.6MiB | 27.38% / 118.9MiB | 29.88% / 194MiB | 0.83% / 89.07MiB | 0.75% / 656.3MiB |

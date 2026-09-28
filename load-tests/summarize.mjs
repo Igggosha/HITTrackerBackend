@@ -160,11 +160,12 @@ function aTable(label, list) {
   line(`All runs, total req/s: ${list.map((r) => `${r.meta.label} ${fmt(totalRps(r, aNames))}`).join(', ')}; p95: ${list.map((r) => fmt(r.m('lat_all')['p(95)'])).join(' / ')} ms.`);
   return best;
 }
-if (groups['a-replica'] || groups['a-single']) {
+function aSection(prefix, title) {
+  if (!groups[`${prefix}a-replica`] && !groups[`${prefix}a-single`]) return;
   line();
-  line('## A. Read replica: workout history browsing');
-  const withReplica = groups['a-replica'] && aTable('With replica (DATABASE_REPLICA_URL set)', groups['a-replica']);
-  const single = groups['a-single'] && aTable('Single node (DATABASE_REPLICA_URL empty)', groups['a-single']);
+  line(title);
+  const withReplica = groups[`${prefix}a-replica`] && aTable('With replica (DATABASE_REPLICA_URL set)', groups[`${prefix}a-replica`]);
+  const single = groups[`${prefix}a-single`] && aTable('Single node (DATABASE_REPLICA_URL empty)', groups[`${prefix}a-single`]);
   line();
   line('### Database work per server during the median runs');
   line();
@@ -188,6 +189,7 @@ if (groups['a-replica'] || groups['a-single']) {
   }
   statsTable([withReplica, single].filter(Boolean));
 }
+aSection('', '## A. Read replica: workout history browsing');
 
 // Unplanned 30 s re-runs of A after the series (not part of the medians).
 const diag = runs.filter((r) => r.group.startsWith('diag-a-')).sort((a, b) => a.meta.dbStartedAt.localeCompare(b.meta.dbStartedAt));
@@ -204,12 +206,14 @@ if (diag.length) {
 }
 
 // ---- B -------------------------------------------------------------------
-if (groups['b-cqrs']) {
-  const list = groups['b-cqrs'];
+function bSection(prefix, title) {
+  const list = groups[`${prefix}b-cqrs`];
+  if (!list) return;
   const names = ['old_exercise_sets', 'new_exercise_progress', 'old_body_metrics', 'new_body_metrics', 'new_summary', 'new_weekly_volume', 'old_weekly_volume_composite'];
   const best = pickMedian(list, (r) => totalRps(r, names.slice(0, 6)));
   line();
-  line('## B. CQRS: computed on request vs read models');
+  line(title);
+  if (!prefix) line('The original weekly composite used a rolling 84-day window; its weekly comparison is superseded by the corrected after-index B runs below.');
   line();
   line(`Median run \`${best.meta.label}\` (${best.meta.vus} VUs, ${best.meta.duration}); every endpoint got the same share of the mix iterations.`);
   line();
@@ -226,6 +230,7 @@ if (groups['b-cqrs']) {
   line(`p95 of every run (ms): ${names.filter((n) => best.m(`lat_${n}`)).map((n) => `${n} ${list.map((r) => fmt(r.m(`lat_${n}`)['p(95)'])).join('/')}`).join('; ')}.`);
   statsTable([best]);
 }
+bSection('', '## B. CQRS: computed on request vs read models');
 
 // ---- C -------------------------------------------------------------------
 if (groups['c-lag']) {
@@ -258,6 +263,9 @@ if (groups['c-lag']) {
     line(`| ${name} | ${fmt(rps(best, name))} | ${fmt(lat.med)} | ${fmt(lat['p(95)'])} | ${pct(best.m(`err_${name}`).value)} |`);
   }
 }
+
+aSection('after-', '## After indexes: A. Read replica');
+bSection('after-', '## After indexes: B. CQRS');
 
 writeFileSync(join(dir, 'summary.md'), `${out.join('\n')}\n`);
 console.log(out.join('\n'));
