@@ -29,6 +29,20 @@ docker compose logs analytics-migrate
 
 У `ps` API і analytics мають бути `healthy`, PostgreSQL/репліка/MinIO/Kafka — запущені, одноразові init/migrate/seed — `Exited (0)`. Для backup: `docker compose --profile backup up -d backup`. При зупинці використовуйте `docker compose --profile events --profile observability --profile backup down` (іменовані томи зберігаються).
 
+**Другий, ізольований стек поруч із робочим.** Щоб не зачепити робочий `hittrackerbackend`, запускайте тестовий стек з власною назвою проєкту `-p <назва>`, окремим `--env-file <файл>` і вільними `PORT`/`*_PORT`/`PRIVATE_NETWORK_SUBNET`. Сервіс `api` читає секрети з жорстко заданого `env_file: .env` у `docker-compose.yml`, тому `--env-file` на його секрети **не впливає**. Щоб API теж узяв тестовий файл, додайте невеликий override-файл і передайте його другим `-f`:
+
+```yaml
+# docker-compose.test-override.yml
+services:
+  api:
+    env_file: !override [.env.test]
+```
+
+```text
+docker compose -p demotest --env-file .env.test -f docker-compose.yml -f docker-compose.test-override.yml --profile events --profile observability up -d --build
+docker compose -p demotest --profile events --profile observability down -v
+```
+
 | Сервіс | Адреса за замовчуванням | Compose-змінна |
 | --- | --- | --- |
 | API | http://127.0.0.1:3000 | `PORT` |
@@ -259,6 +273,7 @@ docker compose exec -T postgres dropdb -U postgres --maintenance-db=postgres run
 | --- | --- |
 | API crash-loop при першому запуску | Замініть placeholder `S3_SECRET_ACCESS_KEY` при непорожньому `S3_BUCKET`; також перевірте 24+ символи `JWT_SECRET`/`OAUTH_SESSION_SECRET`. `docker compose logs api`. |
 | Свіжий том не має таблиць | Перевірте `bootstrap`, `migrate`, `seed` через `docker compose logs`; `sql/init.sql` завантажується тільки при ініціалізації тому, а Drizzle baseline/migrations виконуються далі. Не використовуйте `db:push` для робочих даних. |
+| Перший `up --build -d` на свіжому томі завершується помилкою `postgres-replica is unhealthy` | Репліка ще виконує `pg_basebackup`, а Compose передчасно вважає залежність невдалою. Через кілька секунд вона вже `healthy`: просто повторіть `docker compose ... up -d` без `--build`. |
 | `Pool overlaps with other one on this address space` | Встановіть вільний `PRIVATE_NETWORK_SUBNET`, виконайте `docker compose down`, потім `up`; `down` без `-v` зберігає томи. |
 | Антивірус Check Point/DLP повідомляє про `package-lock.json` | Порівняйте файл з Git та повторіть встановлення в чистому checkout; це відомий false positive, не видаляйте lockfile й не обходьте корпоративні правила. |
 | Logs порожні | Alloy фільтрує **точну** назву Compose-проєкту; для `-p`/`COMPOSE_PROJECT_NAME` передайте таке саме значення в env для `ALLOY_COMPOSE_PROJECT`. Типово це `hittrackerbackend`. |
