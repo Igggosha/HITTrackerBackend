@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-import { SharedWorkoutProgramsController, WorkoutProgramsController } from './workout-programs.controller';
+import {
+  SharedWorkoutProgramsController,
+  WorkoutProgramsController,
+} from './workout-programs.controller';
 import { WorkoutProgramsService } from './workout-programs.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { StorageModule } from '../storage/storage.module';

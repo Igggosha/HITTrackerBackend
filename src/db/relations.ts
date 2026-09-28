@@ -2,54 +2,54 @@ import { defineRelations } from 'drizzle-orm';
 import * as schema from './schema';
 
 export const relations = defineRelations(schema, (r) => ({
-    users: {
-        // Programs created by this user
-        createdWorkoutPrograms: r.many.workoutPrograms(),
+  users: {
+    // Programs created by this user
+    createdWorkoutPrograms: r.many.workoutPrograms(),
 
-        // Programs this user is using
-        usersWorkoutPrograms: r.many.usersWorkoutPrograms(),
-    },
+    // Programs this user is using
+    usersWorkoutPrograms: r.many.usersWorkoutPrograms(),
+  },
 
-    muscles: {
-        exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
-    },
+  muscles: {
+    exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
+  },
 
-    exercises: {
-        exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
-    },
+  exercises: {
+    exercisesTrainMuscles: r.many.exercisesTrainMuscles(),
+  },
 
-    exercisesTrainMuscles: {
-        muscle: r.one.muscles({
-            from: r.exercisesTrainMuscles.muscleId,
-            to: r.muscles.id,
-        }),
+  exercisesTrainMuscles: {
+    muscle: r.one.muscles({
+      from: r.exercisesTrainMuscles.muscleId,
+      to: r.muscles.id,
+    }),
 
-        exercise: r.one.exercises({
-            from: r.exercisesTrainMuscles.exerciseId,
-            to: r.exercises.id,
-        }),
-    },
+    exercise: r.one.exercises({
+      from: r.exercisesTrainMuscles.exerciseId,
+      to: r.exercises.id,
+    }),
+  },
 
-    workoutPrograms: {
-        // Creator of the program
-        createdBy: r.one.users({
-            from: r.workoutPrograms.createdById,
-            to: r.users.id,
-        }),
+  workoutPrograms: {
+    // Creator of the program
+    createdBy: r.one.users({
+      from: r.workoutPrograms.createdById,
+      to: r.users.id,
+    }),
 
-        // Users currently using this program
-        usersWorkoutPrograms: r.many.usersWorkoutPrograms(),
-    },
+    // Users currently using this program
+    usersWorkoutPrograms: r.many.usersWorkoutPrograms(),
+  },
 
-    usersWorkoutPrograms: {
-        user: r.one.users({
-            from: r.usersWorkoutPrograms.userId,
-            to: r.users.id,
-        }),
+  usersWorkoutPrograms: {
+    user: r.one.users({
+      from: r.usersWorkoutPrograms.userId,
+      to: r.users.id,
+    }),
 
-        workoutProgram: r.one.workoutPrograms({
-            from: r.usersWorkoutPrograms.programId,
-            to: r.workoutPrograms.id,
-        }),
-    },
+    workoutProgram: r.one.workoutPrograms({
+      from: r.usersWorkoutPrograms.programId,
+      to: r.workoutPrograms.id,
+    }),
+  },
 }));

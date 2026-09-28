@@ -1,4 +1,7 @@
-import { paginateUserActivity, type AdminUserActivityItem } from './user-activity';
+import {
+  paginateUserActivity,
+  type AdminUserActivityItem,
+} from './user-activity';
 
 const item = (id: string, occurredAt: string): AdminUserActivityItem => ({
   id,

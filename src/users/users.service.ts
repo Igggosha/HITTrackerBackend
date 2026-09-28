@@ -132,67 +132,72 @@ export class UsersService {
 
   async getAdminUserDetails(actorUserId: number, targetUserId: number) {
     const target = await this.getInspectableUser(actorUserId, targetUserId);
-    const [latestMetric, [workoutStats], [programStats], [scheduleStats], [lastWorkout]] =
-      await Promise.all([
-        db
-          .select({
-            weight: userBodyMetrics.weight,
-            bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
-            muscleMass: userBodyMetrics.muscleMass,
-            recordedAt: userBodyMetrics.recordedAt,
-          })
-          .from(userBodyMetrics)
-          .where(
-            and(
-              eq(userBodyMetrics.userId, targetUserId),
-              isNotNull(userBodyMetrics.weight),
-            ),
-          )
-          .orderBy(desc(userBodyMetrics.recordedAt))
-          .limit(1),
-        db
-          .select({
-            completedCount: count(),
-            totalDurationSeconds: sql<number>`coalesce(sum(${workouts.durationSeconds}), 0)::int`,
-          })
-          .from(workouts)
-          .where(
-            and(
-              eq(workouts.userId, targetUserId),
-              eq(workouts.status, 'completed'),
-              isNotNull(workouts.finishedAt),
-            ),
+    const [
+      latestMetric,
+      [workoutStats],
+      [programStats],
+      [scheduleStats],
+      [lastWorkout],
+    ] = await Promise.all([
+      db
+        .select({
+          weight: userBodyMetrics.weight,
+          bodyFatPercentage: userBodyMetrics.bodyFatPercentage,
+          muscleMass: userBodyMetrics.muscleMass,
+          recordedAt: userBodyMetrics.recordedAt,
+        })
+        .from(userBodyMetrics)
+        .where(
+          and(
+            eq(userBodyMetrics.userId, targetUserId),
+            isNotNull(userBodyMetrics.weight),
           ),
-        db
-          .select({ count: count() })
-          .from(workoutPrograms)
-          .where(
-            and(
-              eq(workoutPrograms.createdById, targetUserId),
-              eq(workoutPrograms.isPersonal, true),
-            ),
+        )
+        .orderBy(desc(userBodyMetrics.recordedAt))
+        .limit(1),
+      db
+        .select({
+          completedCount: count(),
+          totalDurationSeconds: sql<number>`coalesce(sum(${workouts.durationSeconds}), 0)::int`,
+        })
+        .from(workouts)
+        .where(
+          and(
+            eq(workouts.userId, targetUserId),
+            eq(workouts.status, 'completed'),
+            isNotNull(workouts.finishedAt),
           ),
-        db
-          .select({ count: count() })
-          .from(userProgramSchedule)
-          .where(eq(userProgramSchedule.userId, targetUserId)),
-        db
-          .select({
-            id: workouts.id,
-            title: workouts.type,
-            finishedAt: workouts.finishedAt,
-          })
-          .from(workouts)
-          .where(
-            and(
-              eq(workouts.userId, targetUserId),
-              eq(workouts.status, 'completed'),
-              isNotNull(workouts.finishedAt),
-            ),
-          )
-          .orderBy(desc(workouts.finishedAt))
-          .limit(1),
-      ]);
+        ),
+      db
+        .select({ count: count() })
+        .from(workoutPrograms)
+        .where(
+          and(
+            eq(workoutPrograms.createdById, targetUserId),
+            eq(workoutPrograms.isPersonal, true),
+          ),
+        ),
+      db
+        .select({ count: count() })
+        .from(userProgramSchedule)
+        .where(eq(userProgramSchedule.userId, targetUserId)),
+      db
+        .select({
+          id: workouts.id,
+          title: workouts.type,
+          finishedAt: workouts.finishedAt,
+        })
+        .from(workouts)
+        .where(
+          and(
+            eq(workouts.userId, targetUserId),
+            eq(workouts.status, 'completed'),
+            isNotNull(workouts.finishedAt),
+          ),
+        )
+        .orderBy(desc(workouts.finishedAt))
+        .limit(1),
+    ]);
 
     return {
       user: {
@@ -300,9 +305,7 @@ export class UsersService {
           .limit(take),
       ]);
 
-    const categoryFor = (
-      type: string,
-    ): AdminUserActivityItem['category'] => {
+    const categoryFor = (type: string): AdminUserActivityItem['category'] => {
       if (type.startsWith('role.')) return 'access';
       if (
         type.startsWith('profile.') ||
@@ -336,9 +339,7 @@ export class UsersService {
       })),
       personalPrograms.map((program) => ({
         id: `program-${program.id}`,
-        type: program.sourceProgramId
-          ? 'program.imported'
-          : 'program.created',
+        type: program.sourceProgramId ? 'program.imported' : 'program.created',
         category: 'programs' as const,
         occurredAt: program.createdAt,
         metadata: { name: program.name },

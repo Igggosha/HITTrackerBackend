@@ -20,6 +20,7 @@ import { AnalyticsProxyModule } from './analytics-proxy/analytics-proxy.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
 import { context, trace } from '@opentelemetry/api';
+import { AdminObservabilityModule } from './admin-observability/admin-observability.module';
 
 @Module({
   controllers: [AppController],
@@ -115,6 +116,7 @@ import { context, trace } from '@opentelemetry/api';
     MetricsModule,
     TracingShutdownModule,
     AnalyticsProxyModule,
+    AdminObservabilityModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

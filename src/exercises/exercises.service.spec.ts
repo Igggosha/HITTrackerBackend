@@ -41,11 +41,9 @@ describe('ExercisesService likes', () => {
       .mocked(db.delete)
       .mockReturnValue({ where: jest.fn(() => ({ returning })) } as any);
     const onConflictDoNothing = jest.fn().mockResolvedValue(undefined);
-    jest
-      .mocked(db.insert)
-      .mockReturnValue({
-        values: jest.fn(() => ({ onConflictDoNothing })),
-      } as any);
+    jest.mocked(db.insert).mockReturnValue({
+      values: jest.fn(() => ({ onConflictDoNothing })),
+    } as any);
 
     await expect(service.toggleLike(7, 2)).resolves.toEqual({ isLiked: true });
     expect(onConflictDoNothing).toHaveBeenCalledTimes(1);
@@ -95,9 +93,10 @@ describe('ExercisesService concurrent creation', () => {
     jest.mocked(db.select).mockReturnValue({
       from: () => ({ where: () => ({ limit }) }),
     } as any);
-    jest
-      .mocked(db.transaction)
-      .mockRejectedValue({ code: '23505', constraint: 'exercises_name_unique' });
+    jest.mocked(db.transaction).mockRejectedValue({
+      code: '23505',
+      constraint: 'exercises_name_unique',
+    });
 
     await expect(
       service.createExercise({ name: 'Squat' } as any),

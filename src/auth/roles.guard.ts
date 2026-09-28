@@ -10,6 +10,7 @@ import type { Request } from 'express';
 import { eq } from 'drizzle-orm';
 import { primaryDb } from '../db/db';
 import { users } from '../db/schema';
+import type { UserRole } from '../db/schema';
 import { MINIMUM_ROLE_KEY } from './minimum-role.decorator';
 import { hasMinimumRole } from './roles';
 
@@ -18,10 +19,10 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const minimumRole = this.reflector.getAllAndOverride(MINIMUM_ROLE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const minimumRole = this.reflector.getAllAndOverride<UserRole>(
+      MINIMUM_ROLE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!minimumRole) return true;
 
     const request = context.switchToHttp().getRequest<Request>();

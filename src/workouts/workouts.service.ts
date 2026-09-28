@@ -1,5 +1,22 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '../db/db';
 import { readerFor, recordWrite } from '../db/read-consistency';
 import {
@@ -60,7 +77,11 @@ export class WorkoutsService {
    * longer be written into a workout that is being finished, and two finishes
    * cannot both see it as open.
    */
-  private async lockOpenWorkout(tx: DbTransaction, workoutId: number, userId: number) {
+  private async lockOpenWorkout(
+    tx: DbTransaction,
+    workoutId: number,
+    userId: number,
+  ) {
     const [workout] = await tx
       .select()
       .from(workouts)
@@ -75,7 +96,10 @@ export class WorkoutsService {
     now: Date,
     tx: DbTransaction,
   ) {
-    if (workout.status !== 'active' || !isWorkoutInactive(workout.lastActivityAt, now)) {
+    if (
+      workout.status !== 'active' ||
+      !isWorkoutInactive(workout.lastActivityAt, now)
+    ) {
       return { workout, autoPaused: false };
     }
 
@@ -87,11 +111,13 @@ export class WorkoutsService {
         status: 'paused',
         pausedAt: workoutAutoPauseAt(workout.lastActivityAt),
       })
-      .where(and(
-        eq(workouts.id, workout.id),
-        eq(workouts.status, 'active'),
-        lte(workouts.lastActivityAt, staleBefore),
-      ))
+      .where(
+        and(
+          eq(workouts.id, workout.id),
+          eq(workouts.status, 'active'),
+          lte(workouts.lastActivityAt, staleBefore),
+        ),
+      )
       .returning();
 
     if (pausedWorkout) {
@@ -106,16 +132,22 @@ export class WorkoutsService {
     return { workout: currentWorkout ?? workout, autoPaused: false };
   }
 
-  private async touchActiveWorkout(tx: DbTransaction, workoutId: number, userId: number) {
+  private async touchActiveWorkout(
+    tx: DbTransaction,
+    workoutId: number,
+    userId: number,
+  ) {
     const [updatedWorkout] = await tx
       .update(workouts)
       .set({ lastActivityAt: new Date() })
-      .where(and(
-        eq(workouts.id, workoutId),
-        eq(workouts.userId, userId),
-        eq(workouts.status, 'active'),
-        isNull(workouts.finishedAt),
-      ))
+      .where(
+        and(
+          eq(workouts.id, workoutId),
+          eq(workouts.userId, userId),
+          eq(workouts.status, 'active'),
+          isNull(workouts.finishedAt),
+        ),
+      )
       .returning();
     return updatedWorkout;
   }
@@ -126,7 +158,11 @@ export class WorkoutsService {
    * Safe to retry: starts of one user are serialized by an advisory lock, and
    * a start that finds an open workout returns it instead of creating another.
    */
-  async startWorkout(userId: number, userRole: UserRole, body: StartWorkoutDto) {
+  async startWorkout(
+    userId: number,
+    userRole: UserRole,
+    body: StartWorkoutDto,
+  ) {
     const result = await db.transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(${WORKOUT_START_LOCK_NAMESPACE}, ${userId})`,
@@ -135,11 +171,21 @@ export class WorkoutsService {
       const [existingWorkout] = await tx
         .select()
         .from(workouts)
-        .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt), inArray(workouts.status, [...openWorkoutStatuses])))
+        .where(
+          and(
+            eq(workouts.userId, userId),
+            isNull(workouts.finishedAt),
+            inArray(workouts.status, [...openWorkoutStatuses]),
+          ),
+        )
         .limit(1);
 
       if (existingWorkout) {
-        const { workout } = await this.autoPauseIfInactive(existingWorkout, new Date(), tx);
+        const { workout } = await this.autoPauseIfInactive(
+          existingWorkout,
+          new Date(),
+          tx,
+        );
         return {
           message: 'Active workout already in progress',
           workout: {
@@ -152,7 +198,11 @@ export class WorkoutsService {
 
       const now = new Date();
 
-      let source: { programId: number; programName: string; scheduledFor: string | null } | null = null;
+      let source: {
+        programId: number;
+        programName: string;
+        scheduledFor: string | null;
+      } | null = null;
 
       if (body?.scheduleId) {
         const [assignment] = await tx
@@ -163,10 +213,19 @@ export class WorkoutsService {
             programName: workoutPrograms.name,
           })
           .from(userProgramSchedule)
-          .innerJoin(workoutPrograms, eq(userProgramSchedule.programId, workoutPrograms.id))
-          .where(and(eq(userProgramSchedule.id, body.scheduleId), eq(userProgramSchedule.userId, userId)))
+          .innerJoin(
+            workoutPrograms,
+            eq(userProgramSchedule.programId, workoutPrograms.id),
+          )
+          .where(
+            and(
+              eq(userProgramSchedule.id, body.scheduleId),
+              eq(userProgramSchedule.userId, userId),
+            ),
+          )
           .limit(1);
-        if (!assignment) throw new NotFoundException('Scheduled workout not found');
+        if (!assignment)
+          throw new NotFoundException('Scheduled workout not found');
         source = assignment;
       } else if (body?.programId) {
         const [program] = await tx
@@ -180,21 +239,35 @@ export class WorkoutsService {
           .from(workoutPrograms)
           .where(eq(workoutPrograms.id, body.programId))
           .limit(1);
-        const canUse = program && (
-          hasMinimumRole(userRole, 'moderator')
-          || (program.isPersonal ? program.createdById === userId : program.isActive)
-        );
+        const canUse =
+          program &&
+          (hasMinimumRole(userRole, 'moderator') ||
+            (program.isPersonal
+              ? program.createdById === userId
+              : program.isActive));
         if (!canUse) throw new NotFoundException('Workout program not found');
-        source = { programId: program.id, programName: program.name, scheduledFor: null };
+        source = {
+          programId: program.id,
+          programName: program.name,
+          scheduledFor: null,
+        };
       }
 
       const planInput = body?.plan || [];
-      const exerciseIds = [...new Set(planInput.map((item) => item.exerciseId))];
+      const exerciseIds = [
+        ...new Set(planInput.map((item) => item.exerciseId)),
+      ];
       const exerciseRows = exerciseIds.length
-        ? await tx.select({ id: exercises.id, name: exercises.name }).from(exercises).where(inArray(exercises.id, exerciseIds))
+        ? await tx
+            .select({ id: exercises.id, name: exercises.name })
+            .from(exercises)
+            .where(inArray(exercises.id, exerciseIds))
         : [];
-      const exerciseNames = new Map(exerciseRows.map((exercise) => [exercise.id, exercise.name]));
-      if (exerciseNames.size !== exerciseIds.length) throw new NotFoundException('Planned exercise not found');
+      const exerciseNames = new Map(
+        exerciseRows.map((exercise) => [exercise.id, exercise.name]),
+      );
+      if (exerciseNames.size !== exerciseIds.length)
+        throw new NotFoundException('Planned exercise not found');
 
       const historySnapshot: WorkoutHistorySnapshot = {
         programId: source?.programId ?? null,
@@ -259,16 +332,22 @@ export class WorkoutsService {
       const [openWorkout] = await tx
         .select()
         .from(workouts)
-        .where(and(
-          eq(workouts.userId, userId),
-          isNull(workouts.finishedAt),
-          inArray(workouts.status, [...openWorkoutStatuses]),
-        ))
+        .where(
+          and(
+            eq(workouts.userId, userId),
+            isNull(workouts.finishedAt),
+            inArray(workouts.status, [...openWorkoutStatuses]),
+          ),
+        )
         .limit(1);
 
       if (!openWorkout) return { workout: null, sets: [] };
 
-      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const { workout, autoPaused } = await this.autoPauseIfInactive(
+        openWorkout,
+        new Date(),
+        tx,
+      );
       const rows = await tx
         .select({
           workout: workouts,
@@ -279,7 +358,10 @@ export class WorkoutsService {
         .from(workouts)
         .leftJoin(sets, eq(workouts.id, sets.workoutId))
         .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
-        .leftJoin(userProgramSchedule, eq(workouts.scheduleId, userProgramSchedule.id))
+        .leftJoin(
+          userProgramSchedule,
+          eq(workouts.scheduleId, userProgramSchedule.id),
+        )
         .where(eq(workouts.id, workout.id));
 
       if (rows.length === 0) {
@@ -288,7 +370,10 @@ export class WorkoutsService {
 
       const activeWorkout = {
         ...rows[0].workout,
-        programId: rows[0].programId ?? rows[0].workout.historySnapshot?.programId ?? null,
+        programId:
+          rows[0].programId ??
+          rows[0].workout.historySnapshot?.programId ??
+          null,
         // Форматуємо createdAt для запобігання помилкам часу
         createdAt: new Date(rows[0].workout.createdAt).toISOString(),
       };
@@ -318,10 +403,16 @@ export class WorkoutsService {
     const result = await db.transaction(async (tx) => {
       const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
       if (!openWorkout) {
-        throw new NotFoundException('Active workout not found or already finished');
+        throw new NotFoundException(
+          'Active workout not found or already finished',
+        );
       }
 
-      const { workout } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const { workout } = await this.autoPauseIfInactive(
+        openWorkout,
+        new Date(),
+        tx,
+      );
 
       const [recordedSet] = await tx
         .insert(sets)
@@ -336,7 +427,11 @@ export class WorkoutsService {
         })
         .returning();
 
-      const touchedWorkout = await this.touchActiveWorkout(tx, workout.id, userId);
+      const touchedWorkout = await this.touchActiveWorkout(
+        tx,
+        workout.id,
+        userId,
+      );
 
       return {
         message: 'Set recorded successfully',
@@ -359,17 +454,21 @@ export class WorkoutsService {
       const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
       const [ownedSet] = openWorkout
         ? await tx
-          .select({ id: sets.id })
-          .from(sets)
-          .where(and(eq(sets.id, setId), eq(sets.workoutId, workoutId)))
-          .limit(1)
+            .select({ id: sets.id })
+            .from(sets)
+            .where(and(eq(sets.id, setId), eq(sets.workoutId, workoutId)))
+            .limit(1)
         : [];
 
       if (!openWorkout || !ownedSet) {
         throw new NotFoundException('Active workout set not found');
       }
 
-      const { workout } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const { workout } = await this.autoPauseIfInactive(
+        openWorkout,
+        new Date(),
+        tx,
+      );
 
       const [updatedSet] = await tx
         .update(sets)
@@ -382,9 +481,17 @@ export class WorkoutsService {
         .where(eq(sets.id, setId))
         .returning();
 
-      const touchedWorkout = await this.touchActiveWorkout(tx, workout.id, userId);
+      const touchedWorkout = await this.touchActiveWorkout(
+        tx,
+        workout.id,
+        userId,
+      );
 
-      return { message: 'Set updated successfully', set: updatedSet, workout: touchedWorkout ?? workout };
+      return {
+        message: 'Set updated successfully',
+        set: updatedSet,
+        workout: touchedWorkout ?? workout,
+      };
     });
     // Marked after commit, never inside the tx: a rollback must not count as a write.
     recordWrite(userId);
@@ -398,7 +505,11 @@ export class WorkoutsService {
    * other, and every finish after the first returns the stored result without
    * rewriting it or emitting a second `workout.finished` event.
    */
-  async finishWorkout(workoutId: number, userId: number, body: FinishWorkoutDto) {
+  async finishWorkout(
+    workoutId: number,
+    userId: number,
+    body: FinishWorkoutDto,
+  ) {
     const result = await db.transaction(async (tx) => {
       const [current] = await tx
         .select()
@@ -423,7 +534,11 @@ export class WorkoutsService {
         throw new NotFoundException('Open workout not found');
       }
 
-      const { workout } = await this.autoPauseIfInactive(current, new Date(), tx);
+      const { workout } = await this.autoPauseIfInactive(
+        current,
+        new Date(),
+        tx,
+      );
       const finishedAt = new Date();
       const durationSeconds = activeDurationSeconds(workout, finishedAt);
 
@@ -443,7 +558,12 @@ export class WorkoutsService {
         await tx
           .update(userProgramSchedule)
           .set({ status: 'completed' })
-          .where(and(eq(userProgramSchedule.id, workout.scheduleId), eq(userProgramSchedule.userId, userId)));
+          .where(
+            and(
+              eq(userProgramSchedule.id, workout.scheduleId),
+              eq(userProgramSchedule.userId, userId),
+            ),
+          );
       }
 
       // recordSet/updateSet hold the same row lock, so this is the final set list.
@@ -487,9 +607,11 @@ export class WorkoutsService {
    * 5. Cursor-paginated completed workout history.
    */
   async getUserHistory(userId: number, dto: ListWorkoutHistoryDto) {
-    if (dto.cursor && !dto.limit) throw new BadRequestException('A history cursor requires a limit');
+    if (dto.cursor && !dto.limit)
+      throw new BadRequestException('A history cursor requires a limit');
     const cursor = decodeHistoryCursor(dto.cursor);
-    if (dto.cursor && !cursor) throw new BadRequestException('Invalid history cursor');
+    if (dto.cursor && !cursor)
+      throw new BadRequestException('Invalid history cursor');
 
     const conditions = [
       eq(workouts.userId, userId),
@@ -499,10 +621,15 @@ export class WorkoutsService {
     if (dto.from) conditions.push(gte(workouts.finishedAt, new Date(dto.from)));
     if (dto.to) conditions.push(lt(workouts.finishedAt, new Date(dto.to)));
     if (cursor) {
-      conditions.push(or(
-        lt(workouts.finishedAt, cursor.finishedAt),
-        and(eq(workouts.finishedAt, cursor.finishedAt), lt(workouts.id, cursor.id)),
-      )!);
+      conditions.push(
+        or(
+          lt(workouts.finishedAt, cursor.finishedAt),
+          and(
+            eq(workouts.finishedAt, cursor.finishedAt),
+            lt(workouts.id, cursor.id),
+          ),
+        )!,
+      );
     }
 
     for (const keyword of historyKeywords(dto.q)) {
@@ -543,22 +670,31 @@ export class WorkoutsService {
       .where(inArray(sets.workoutId, selectedIds));
     const actualByWorkout = new Map<number, typeof actualRows>();
     for (const row of actualRows) {
-      if (!actualByWorkout.has(row.workoutId)) actualByWorkout.set(row.workoutId, []);
+      if (!actualByWorkout.has(row.workoutId))
+        actualByWorkout.set(row.workoutId, []);
       actualByWorkout.get(row.workoutId)!.push(row);
     }
 
     const items = selected.map(({ workout }) => {
       const actual = actualByWorkout.get(workout.id) || [];
-      const names = [...new Map(actual.map((row) => [row.exerciseId, row.exerciseName])).values()];
+      const names = [
+        ...new Map(
+          actual.map((row) => [row.exerciseId, row.exerciseName]),
+        ).values(),
+      ];
       return {
         id: workout.id,
         title: workout.type,
         createdAt: workout.createdAt,
         finishedAt: workout.finishedAt,
         activeDurationSeconds: workout.durationSeconds || 0,
-        totalDurationSeconds: Math.max(0, Math.floor(
-          (workout.finishedAt!.getTime() - workout.createdAt.getTime()) / 1000,
-        )),
+        totalDurationSeconds: Math.max(
+          0,
+          Math.floor(
+            (workout.finishedAt!.getTime() - workout.createdAt.getTime()) /
+              1000,
+          ),
+        ),
         exerciseCount: names.length,
         setCount: actual.length,
         exercisePreview: names.slice(0, 3),
@@ -569,7 +705,9 @@ export class WorkoutsService {
     const last = selected.at(-1)!.workout;
     return {
       items,
-      nextCursor: hasMore ? encodeHistoryCursor(last.finishedAt!, last.id) : null,
+      nextCursor: hasMore
+        ? encodeHistoryCursor(last.finishedAt!, last.id)
+        : null,
     };
   }
 
@@ -578,28 +716,36 @@ export class WorkoutsService {
     const rows = await readerFor(userId)
       .select({ finishedAt: workouts.finishedAt })
       .from(workouts)
-      .where(and(
-        eq(workouts.userId, userId),
-        isNotNull(workouts.finishedAt),
-        eq(workouts.status, 'completed'),
-        gte(workouts.finishedAt, new Date(dto.from)),
-        lt(workouts.finishedAt, new Date(dto.to)),
-      ));
+      .where(
+        and(
+          eq(workouts.userId, userId),
+          isNotNull(workouts.finishedAt),
+          eq(workouts.status, 'completed'),
+          gte(workouts.finishedAt, new Date(dto.from)),
+          lt(workouts.finishedAt, new Date(dto.to)),
+        ),
+      );
     return rows.map(({ finishedAt }) => finishedAt!.toISOString());
   }
 
-  async getHistoryDetails(userId: number, userRole: UserRole, workoutId: number) {
+  async getHistoryDetails(
+    userId: number,
+    userRole: UserRole,
+    workoutId: number,
+  ) {
     // Pure browsing read: session consistency (readerFor), not always-primary.
     const reader = readerFor(userId);
     const [workout] = await reader
       .select()
       .from(workouts)
-      .where(and(
-        eq(workouts.id, workoutId),
-        eq(workouts.userId, userId),
-        isNotNull(workouts.finishedAt),
-        eq(workouts.status, 'completed'),
-      ))
+      .where(
+        and(
+          eq(workouts.id, workoutId),
+          eq(workouts.userId, userId),
+          isNotNull(workouts.finishedAt),
+          eq(workouts.status, 'completed'),
+        ),
+      )
       .limit(1);
     if (!workout) throw new NotFoundException('Completed workout not found');
 
@@ -610,13 +756,16 @@ export class WorkoutsService {
       .where(eq(sets.workoutId, workoutId))
       .orderBy(sets.id);
     const plan = workout.historySnapshot?.plan || [];
-    const exerciseMap = new Map<number, {
-      exerciseId: number;
-      name: string;
-      planned: (typeof plan)[number] | null;
-      actualSets: (typeof actualRows)[number]['set'][];
-      addedDuringWorkout: boolean;
-    }>();
+    const exerciseMap = new Map<
+      number,
+      {
+        exerciseId: number;
+        name: string;
+        planned: (typeof plan)[number] | null;
+        actualSets: (typeof actualRows)[number]['set'][];
+        addedDuringWorkout: boolean;
+      }
+    >();
     for (const item of plan) {
       exerciseMap.set(item.exerciseId, {
         exerciseId: item.exerciseId,
@@ -641,7 +790,10 @@ export class WorkoutsService {
 
     const actualSetCounts = new Map<number, number>();
     for (const row of actualRows) {
-      actualSetCounts.set(row.set.exerciseId, (actualSetCounts.get(row.set.exerciseId) || 0) + 1);
+      actualSetCounts.set(
+        row.set.exerciseId,
+        (actualSetCounts.get(row.set.exerciseId) || 0) + 1,
+      );
     }
     const rpeSets = actualRows.filter(({ set }) => set.rpe !== null);
     const snapshot = workout.historySnapshot;
@@ -649,20 +801,32 @@ export class WorkoutsService {
       ? { id: snapshot.programId, name: snapshot.programName, available: false }
       : null;
     if (programSource?.id) {
-      const [program] = await reader.select({
-        id: workoutPrograms.id,
-        isActive: workoutPrograms.isActive,
-        isPersonal: workoutPrograms.isPersonal,
-        createdById: workoutPrograms.createdById,
-      }).from(workoutPrograms).where(eq(workoutPrograms.id, programSource.id)).limit(1);
-      let available = !!program && (
-        hasMinimumRole(userRole, 'moderator')
-        || (program.isPersonal ? program.createdById === userId : program.isActive)
-      );
+      const [program] = await reader
+        .select({
+          id: workoutPrograms.id,
+          isActive: workoutPrograms.isActive,
+          isPersonal: workoutPrograms.isPersonal,
+          createdById: workoutPrograms.createdById,
+        })
+        .from(workoutPrograms)
+        .where(eq(workoutPrograms.id, programSource.id))
+        .limit(1);
+      let available =
+        !!program &&
+        (hasMinimumRole(userRole, 'moderator') ||
+          (program.isPersonal
+            ? program.createdById === userId
+            : program.isActive));
       if (program && !program.isPersonal && !program.isActive && !available) {
-        const [assignment] = await reader.select({ id: userProgramSchedule.id })
+        const [assignment] = await reader
+          .select({ id: userProgramSchedule.id })
           .from(userProgramSchedule)
-          .where(and(eq(userProgramSchedule.userId, userId), eq(userProgramSchedule.programId, program.id)))
+          .where(
+            and(
+              eq(userProgramSchedule.userId, userId),
+              eq(userProgramSchedule.programId, program.id),
+            ),
+          )
           .limit(1);
         available = !!assignment;
       }
@@ -681,14 +845,23 @@ export class WorkoutsService {
       programSource,
       summary: {
         activeDurationSeconds: workout.durationSeconds || 0,
-        totalDurationSeconds: Math.max(0, Math.floor(
-          (workout.finishedAt!.getTime() - workout.createdAt.getTime()) / 1000,
-        )),
-        exerciseCount: new Set(actualRows.map(({ set }) => set.exerciseId)).size,
+        totalDurationSeconds: Math.max(
+          0,
+          Math.floor(
+            (workout.finishedAt!.getTime() - workout.createdAt.getTime()) /
+              1000,
+          ),
+        ),
+        exerciseCount: new Set(actualRows.map(({ set }) => set.exerciseId))
+          .size,
         setCount: actualRows.length,
-        volume: actualRows.reduce((total, { set }) => total + set.weight * set.reps, 0),
+        volume: actualRows.reduce(
+          (total, { set }) => total + set.weight * set.reps,
+          0,
+        ),
         averageRpe: rpeSets.length
-          ? rpeSets.reduce((total, { set }) => total + set.rpe!, 0) / rpeSets.length
+          ? rpeSets.reduce((total, { set }) => total + set.rpe!, 0) /
+            rpeSets.length
           : null,
         failureSets: actualRows.filter(({ set }) => set.isFailure).length,
         completionPercent: planCompletion(plan, actualSetCounts),
@@ -705,20 +878,34 @@ export class WorkoutsService {
       const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
       if (!openWorkout) throw new NotFoundException('Open workout not found');
 
-      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const { workout, autoPaused } = await this.autoPauseIfInactive(
+        openWorkout,
+        new Date(),
+        tx,
+      );
       if (autoPaused) return { workout, autoPaused };
 
       const now = new Date();
       const isPausing = workout.status === 'active';
       const pausedSeconds = isPausing
         ? workout.pausedSeconds
-        : workout.pausedSeconds + Math.max(0, Math.floor((now.getTime() - new Date(workout.pausedAt!).getTime()) / 1000));
-      const [updatedWorkout] = await tx.update(workouts).set({
-        status: isPausing ? 'paused' : 'active',
-        pausedAt: isPausing ? now : null,
-        pausedSeconds,
-        lastActivityAt: isPausing ? workout.lastActivityAt : now,
-      }).where(eq(workouts.id, workoutId)).returning();
+        : workout.pausedSeconds +
+          Math.max(
+            0,
+            Math.floor(
+              (now.getTime() - new Date(workout.pausedAt!).getTime()) / 1000,
+            ),
+          );
+      const [updatedWorkout] = await tx
+        .update(workouts)
+        .set({
+          status: isPausing ? 'paused' : 'active',
+          pausedAt: isPausing ? now : null,
+          pausedSeconds,
+          lastActivityAt: isPausing ? workout.lastActivityAt : now,
+        })
+        .where(eq(workouts.id, workoutId))
+        .returning();
       return { workout: updatedWorkout };
     });
     // Marked after commit, never inside the tx: a rollback must not count as a write.
@@ -737,7 +924,11 @@ export class WorkoutsService {
         .limit(1);
       if (!openWorkout) throw new NotFoundException('Open workout not found');
 
-      const { workout, autoPaused } = await this.autoPauseIfInactive(openWorkout, new Date(), tx);
+      const { workout, autoPaused } = await this.autoPauseIfInactive(
+        openWorkout,
+        new Date(),
+        tx,
+      );
       if (workout.status !== 'active') return { workout, autoPaused };
 
       return {
@@ -759,7 +950,8 @@ export class WorkoutsService {
         .set({ status: 'cancelled', pausedAt: null })
         .where(this.openWorkoutCondition(workoutId, userId))
         .returning();
-      if (!updatedWorkout) throw new NotFoundException('Open workout not found');
+      if (!updatedWorkout)
+        throw new NotFoundException('Open workout not found');
 
       const [{ setCount }] = await tx
         .select({ setCount: count() })
@@ -822,10 +1014,14 @@ export class WorkoutsService {
       .leftJoin(exercises, eq(sets.exerciseId, exercises.id))
       .where(eq(workouts.userId, userId));
 
-    const uniqueExercises = new Map<number, { exerciseId: number; exerciseName: string | null }>();
+    const uniqueExercises = new Map<
+      number,
+      { exerciseId: number; exerciseName: string | null }
+    >();
 
     for (const row of rows) {
-      if (row.exerciseId === null || uniqueExercises.has(row.exerciseId)) continue;
+      if (row.exerciseId === null || uniqueExercises.has(row.exerciseId))
+        continue;
       uniqueExercises.set(row.exerciseId, {
         exerciseId: row.exerciseId,
         exerciseName: row.exerciseName ?? null,
