@@ -101,7 +101,7 @@ curl -si http://127.0.0.1:3000/no-such-route -H 'X-Request-Id: demo_runbook_1'
 
 ### Траси
 
-**На захисті:** `X-Trace-Id` зв'язує HTTP, SQL і асинхронну публікацію relay після завершення запиту. Використайте finish-запит з наступного блоку, запишіть його `X-Trace-Id`, у Jaeger UI знайдіть service `hit-api` та trace ID: HTTP/pg spans і `hit-relay` producer span мають один trace. У Grafana Loki: `{service=~".+"} | traceId="<X-Trace-Id>"`; натисніть `traceId` у логах для переходу в Jaeger, а **Logs for this span** у Jaeger/Grafana — для повернення в Loki. Якщо вимкнути endpoint OTLP і перезапустити API/relay, HTTP продовжить працювати, але нових трас не буде. Поточний analytics consumer не створює CONSUMER span: це відома межа, не обіцяйте його у live-демо.
+**На захисті:** `X-Trace-Id` зв'язує HTTP, SQL і асинхронну обробку події. Використайте finish-запит з наступного блоку, запишіть його `X-Trace-Id`, у Jaeger UI знайдіть service `hit-api` та trace ID: в одному trace мають бути HTTP/pg spans `hit-api` → producer span `hit-relay` → CONSUMER span `hit-analytics` з `event.id`/`event.type` і вкладеними pg spans. У Grafana Explore оберіть Loki й виконайте `{service=~".+"} | traceId="<X-Trace-Id>"`: очікуйте логи `api` та `analytics` (у другому є `eventId`/`eventType`). Натисніть `traceId` у логу для переходу в Jaeger, а **Logs for this span** у Jaeger/Grafana — для повернення в Loki. Якщо вимкнути endpoint OTLP і перезапустити API/relay/analytics, HTTP продовжить працювати, але нових трас не буде.
 
 ### Тренування → outbox → Kafka → analytics
 
@@ -243,7 +243,7 @@ docker compose exec -T postgres dropdb -U postgres --maintenance-db=postgres run
 | 1:00–2:00 | 401/404 з `X-Request-Id`, знайти лог у Logs | Одна форма помилки та шлях від клієнта до логу. |
 | 2:00–4:00 | Web-клієнт: finish тренування, відкрити Analytics | Запис і подія атомарні; графіки з окремої read-моделі з'являються асинхронно. |
 | 4:00–5:00 | Kafka UI `hit.workout.v1`, SQL outbox | Доставка at-least-once, pending-рядок переживає падіння broker. |
-| 5:00–6:00 | Jaeger trace за `X-Trace-Id`, перехід до Loki | HTTP → pg → relay в одному trace; consumer-span обмеження вказане нижче. |
+| 5:00–6:00 | Jaeger trace за `X-Trace-Id`, перехід до Loki | HTTP → pg → relay → analytics CONSUMER в одному trace; Loki повертає логи API й analytics. |
 | 6:00–7:00 | Зупинити analytics, показати 503 і робоче тренування, запустити | Read-side відмовляє ізольовано та наздоганяє Kafka. |
 | 7:00–8:00 | SQL `pg_is_in_recovery`, lag | Читання з репліки, write/read-your-writes з primary. |
 | 8:00–9:00 | Показати `verify-restore: OK` або готовий manifest | Dump + bucket та реальний restore drill, GFS. |
@@ -268,6 +268,4 @@ docker compose exec -T postgres dropdb -U postgres --maintenance-db=postgres run
 
 ## Known issues
 
-- Analytics consumer у `services/analytics/src/consumer/message-handler.ts` поки лише документує майбутнє виділення `traceparent` і CONSUMER span; поточний Jaeger trace завершується на relay/Kafka producer. Повний HTTP → pg → relay → analytics span наразі відтворити неможливо.
 - Видалення тренування з write-моделі не породжує події видалення; analytics може зберегти його в агрегатах (`docs/diploma/analytics-cqrs.md`).
-- `README.md` у секції backup подає приклад `RESTORE_S3_SECRET_ACCESS_KEY=change_me_restore_readwrite_secret`; це placeholder, для drill потрібен реальний секрет.
