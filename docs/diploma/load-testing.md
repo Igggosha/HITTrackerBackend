@@ -248,6 +248,67 @@ polling) would cut it, at the price of more idle queries on the primary. The
 k6 figure has a resolution of the 50 ms poll interval plus one poll round
 trip.
 
+## After LISTEN/NOTIFY (T15)
+
+T15 (`OutboxService.enqueue` sends `pg_notify('outbox_events', '')` in the
+enqueuing transaction; the relay keeps a dedicated `LISTEN outbox_events`
+connection to the primary and wakes its batch loop immediately, with a
+5 s fallback poll, see `docs/diploma/outbox.md`) re-ran scenario C with the
+same parameters as the T12 study above: same seed (50 users, 7,500 workouts),
+same script (`scenarios/c-lag.js`), same arm (`replica`), 15 background VUs
++ writer (users lt021-lt050), 15 s warm-up, 60 s measured, 3 runs, median by
+k6 lag p50. Raw results: `load-tests/results/c-notify-{1,2,3}.{json,meta.json,lag.csv,log,docker-stats.txt}`;
+`load-tests/summarize.mjs` now reports both the before (`c-lag`) and after
+(`c-notify`) groups under "C. Eventual-consistency lag under load" in
+`load-tests/results/summary.md`.
+
+**Before (T12, median run `c-lag-2`) vs after (median run `c-notify-1`), ms:**
+
+| measure | n | p50 before | p50 after | p95 before | p95 after | p99 before | p99 after | max before | max after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| finish response -> visible in `/analytics/me/summary` (k6) | 31 | 326 | **59** | 531 | **91.5** | 542 | **95.5** | 545 | **97** |
+| outbox `occurred_at` -> relay `published_at` (DB) | 31 | 334 | **41** | 498 | 162 | 520 | 230 | 520 | 230 |
+| `published_at` -> consumer `processed_at` (DB) | 31 | 5 | 3 | 12 | 5 | 13 | 7 | 13 | 7 |
+| `occurred_at` -> `processed_at` (DB total) | 31 | 336 | **44** | 500 | 164 | 523 | 234 | 523 | 234 |
+
+All runs (p50/p95/max, ms), after: 59/92/97 (`c-notify-1`), 81/105/109
+(`c-notify-2`), 51/99/108 (`c-notify-3`) vs before: 397/543/604, 326/531/545,
+273/520/530. 92 workouts finished across the 3 after-runs (31/30/31), 0
+timeouts, same as before (93 workouts, 0 timeouts).
+
+**Relay wakeup reasons.** Read from the relay's own `/metrics`
+(`outbox_relay_wakeups_total{reason}`) right before tearing the stack down,
+so the counts are cumulative since the relay container started (backfill of
+11,417 events by direct `INSERT`, which bypasses `enqueue`/`pg_notify` and so
+only ever woke the relay via the timer, plus the seed/drain wait and all 3
+measured runs): `reason="notify"` 232, `reason="timer"` 72. During the
+measured runs themselves (93 workout finishes, each one `NOTIFY`) the large
+majority of wakeups are `notify`; the timer only matters for the bulk
+backfill and the idle gaps between runs, exactly as designed.
+
+**Headline: p50 lag dropped 326 ms -> 59 ms (5.5x), p95 531 ms -> 91.5 ms
+(5.8x), max 545 ms -> 97 ms (5.6x).** The DB-total breakdown shows why:
+`occurred_at -> published_at` (the relay's share) fell from 334 ms p50 to
+41 ms p50 - almost exactly the poll-interval component predicted in the T12
+interpretation - while `published_at -> processed_at` (Kafka + consumer) is
+unchanged (~3-5 ms p50 both before and after, as expected: T15 does not touch
+that path). The p95/p99/max of the relay's own share (162/230/230 ms) stay
+well above its own median (41 ms): `processBatch` still publishes claimed
+rows one at a time inside a single transaction, so when several
+`workout.finished` events commit close together and share one wakeup, the
+last ones in that batch wait behind the earlier ones' Kafka round trips -
+the coalescing this change adds (see `docs/diploma/outbox.md`) trades a few
+such tail-latency events for never running two batches concurrently. This is
+still 2-3x faster at p95/p99/max than the old poll-only relay.
+
+One after-run (`c-notify-1`, the picked median) shows an outlier
+`postgres-replica` CPU reading (367 % vs 80-92 % in every other C run, before
+or after, see `load-tests/results/c-notify-1.docker-stats.txt`) and higher
+write-endpoint p95s (144-216 ms vs 110-145 ms before); `c-notify-2`/`-3` show
+normal replica CPU and consistent low lag, so this looks like the
+one-machine/WSL2 noise already called out below rather than a regression
+caused by holding one extra `LISTEN` connection.
+
 ## Threats to validity
 
 - **One machine.** Load generator, API, both PostgreSQL servers, Kafka,

@@ -86,7 +86,9 @@ CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
 
 ## C. Eventual-consistency lag under load
 
-Median run `c-lag-2`: 15 background VUs (B read mix) + writer at a steady rate.
+### Before LISTEN/NOTIFY (RELAY_POLL_INTERVAL_MS timer only): median run `c-lag-2`
+
+15 background VUs (B read mix) + writer at a steady rate.
 
 | measure | n | p50 | p95 | p99 | max |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -115,3 +117,35 @@ CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
 | new_weekly_volume | 103.4 | 19.0 | 41.2 | 0.00 % |
 | new_exercise_progress | 103.4 | 27.2 | 50.4 | 0.00 % |
 | write_set | 2.6 | 51.5 | 120.1 | 0.00 % |
+
+### After LISTEN/NOTIFY: median run `c-notify-1`
+
+15 background VUs (B read mix) + writer at a steady rate.
+
+| measure | n | p50 | p95 | p99 | max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| finish response -> visible in /analytics/me/summary (k6) | 31 | 59.0 | 91.5 | 95.5 | 97.0 |
+| outbox occurred_at -> relay published_at | 31 | 41.0 | 162.0 | 230.0 | 230.0 |
+| published_at -> consumer processed_at | 31 | 3.0 | 5.0 | 7.0 | 7.0 |
+| occurred_at -> processed_at (DB total) | 31 | 44.0 | 164.0 | 234.0 | 234.0 |
+
+Workouts finished: 31; not visible within 30 s: 0; polls: 46. All runs p50/p95/max: 59/92/97, 81/105/109, 51/99/108 ms.
+
+CPU (100 % = one core) and memory 30 s into each median run (`docker stats`):
+
+| run | api | postgres | postgres-replica | analytics | relay | kafka |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| c-notify-1 | 123.85% / 460.6MiB | 20.70% / 152.4MiB | 367.84% / 112.1MiB | 43.06% / 221MiB | 3.37% / 64.32MiB | 1.04% / 609.6MiB |
+
+| background endpoint during C | req/s | p50 | p95 | errors |
+| --- | ---: | ---: | ---: | ---: |
+| new_exercise_progress | 103.1 | 18.5 | 51.4 | 0.00 % |
+| new_weekly_volume | 103.1 | 16.4 | 44.0 | 0.00 % |
+| write_finish | 0.5 | 51.0 | 205.8 | 0.00 % |
+| poll_summary | 0.8 | 16.7 | 51.1 | 0.00 % |
+| write_start | 0.5 | 56.5 | 215.5 | 0.00 % |
+| old_body_metrics | 103.1 | 12.1 | 40.6 | 0.00 % |
+| new_body_metrics | 103.1 | 17.6 | 46.3 | 0.00 % |
+| write_set | 2.6 | 37.2 | 143.7 | 0.00 % |
+| new_summary | 103.1 | 16.5 | 43.5 | 0.00 % |
+| old_exercise_sets | 103.2 | 42.1 | 86.6 | 0.00 % |
