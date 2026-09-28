@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
@@ -15,6 +19,7 @@ import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
+import type { DbTransaction } from '../outbox/transaction';
 
 @Injectable()
 export class ExercisesService {
@@ -64,7 +69,10 @@ export class ExercisesService {
         weight: exerciseInPrograms.weight,
       })
       .from(exerciseInPrograms)
-      .innerJoin(programContent, eq(programContent.id, exerciseInPrograms.programContentId))
+      .innerJoin(
+        programContent,
+        eq(programContent.id, exerciseInPrograms.programContentId),
+      )
       .innerJoin(exercises, eq(exercises.id, exerciseInPrograms.exerciseId))
       .where(
         and(
@@ -104,10 +112,7 @@ export class ExercisesService {
         exercisesTrainMuscles,
         eq(exercises.id, exercisesTrainMuscles.exerciseId),
       )
-      .leftJoin(
-        muscles,
-        eq(exercisesTrainMuscles.muscleId, muscles.id),
-      );
+      .leftJoin(muscles, eq(exercisesTrainMuscles.muscleId, muscles.id));
 
     // 2. Отримуємо кількість лайків для кожної вправи
     const likesData = await db
@@ -123,20 +128,41 @@ export class ExercisesService {
 
     // 3. Отримуємо лайки поточного користувача
     const userLikesSet = new Set<number>();
-    const bookmarked = currentUserId ? await db.select({ exerciseId: exerciseBookmarks.exerciseId })
-      .from(exerciseBookmarks).where(eq(exerciseBookmarks.userId, currentUserId)) : [];
+    const bookmarked = currentUserId
+      ? await db
+          .select({ exerciseId: exerciseBookmarks.exerciseId })
+          .from(exerciseBookmarks)
+          .where(eq(exerciseBookmarks.userId, currentUserId))
+      : [];
     const bookmarks = new Set(bookmarked.map((row) => row.exerciseId));
     if (currentUserId) {
       const userLikesData = await db
         .select({ exerciseId: exerciseLikes.exerciseId })
         .from(exerciseLikes)
         .where(eq(exerciseLikes.userId, currentUserId));
-      
+
       userLikesData.forEach((row) => userLikesSet.add(row.exerciseId));
     }
 
     // 4. Формуємо фінальний результат з масивом `muscles`
-    const exercisesMap = new Map<number, any>();
+    type ExerciseWithMuscles = {
+      id: number;
+      name: string;
+      description: string | null;
+      videoUrl: string | null;
+      imageKey: string | null;
+      difficulty: number;
+      likesCount: number;
+      isLiked: boolean;
+      isBookmarked: boolean;
+      muscles: Array<{
+        id: number;
+        name: string | null;
+        commonName: string | null;
+        scientificName: string | null;
+      }>;
+    };
+    const exercisesMap = new Map<number, ExerciseWithMuscles>();
 
     for (const row of rows) {
       if (!exercisesMap.has(row.id)) {
@@ -155,9 +181,9 @@ export class ExercisesService {
       }
 
       if (row.muscleId !== null) {
-        const currentMuscles = exercisesMap.get(row.id).muscles;
-        const exists = currentMuscles.some((m: any) => m.id === row.muscleId);
-        
+        const currentMuscles = exercisesMap.get(row.id)!.muscles;
+        const exists = currentMuscles.some((m) => m.id === row.muscleId);
+
         if (!exists) {
           currentMuscles.push({
             id: row.muscleId,
@@ -187,7 +213,10 @@ export class ExercisesService {
         scientificName: muscles.scientificName,
       })
       .from(exercises)
-      .leftJoin(exercisesTrainMuscles, eq(exercises.id, exercisesTrainMuscles.exerciseId))
+      .leftJoin(
+        exercisesTrainMuscles,
+        eq(exercises.id, exercisesTrainMuscles.exerciseId),
+      )
       .leftJoin(muscles, eq(exercisesTrainMuscles.muscleId, muscles.id))
       .where(eq(exercises.id, id));
 
@@ -200,12 +229,18 @@ export class ExercisesService {
       videoUrl: exercise.videoUrl,
       imageKey: exercise.imageKey,
       difficulty: exercise.difficulty,
-      muscles: rows.flatMap((row) => row.muscleId === null ? [] : [{
-        id: row.muscleId,
-        name: row.muscleCommonName,
-        commonName: row.muscleCommonName,
-        scientificName: row.scientificName,
-      }]),
+      muscles: rows.flatMap((row) =>
+        row.muscleId === null
+          ? []
+          : [
+              {
+                id: row.muscleId,
+                name: row.muscleCommonName,
+                commonName: row.muscleCommonName,
+                scientificName: row.scientificName,
+              },
+            ],
+      ),
     });
   }
 
@@ -222,83 +257,117 @@ export class ExercisesService {
       .limit(1);
 
     if (existing.length > 0) {
-      throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
+      throw new ConflictException(
+        `Exercise "${trimmedName}" already exists in the database.`,
+      );
     }
 
     // The pre-check gives a friendly error; the unique index on name is what
     // actually decides a race between two identical creates.
-    return db.transaction(async (tx: any) => {
-      const [newExercise] = await tx
-        .insert(exercises)
-        .values({
-          name: trimmedName,
-          description: data.description?.trim() || null,
-          videoUrl: data.videoUrl?.trim() || null,
-          difficulty: data.difficulty || 1,
-        })
-        .returning();
+    return db
+      .transaction(async (tx: DbTransaction) => {
+        const [newExercise] = await tx
+          .insert(exercises)
+          .values({
+            name: trimmedName,
+            description: data.description?.trim() || null,
+            videoUrl: data.videoUrl?.trim() || null,
+            difficulty: data.difficulty || 1,
+          })
+          .returning();
 
-      if (data.muscleIds && data.muscleIds.length > 0) {
-        const uniqueMuscleIds = Array.from(new Set(data.muscleIds));
-        const relations = uniqueMuscleIds.map((muscleId) => ({
-          exerciseId: newExercise.id,
-          muscleId: muscleId,
-        }));
-        await tx.insert(exercisesTrainMuscles).values(relations);
-      }
-
-      return {
-        ...newExercise,
-        muscleIds: data.muscleIds || [],
-      };
-    }).then(
-      (created) => this.withImageUrl(created),
-      (error: any) => {
-        if (error?.code === '23505') {
-          throw new ConflictException(`Exercise "${trimmedName}" already exists in the database.`);
+        if (data.muscleIds && data.muscleIds.length > 0) {
+          const uniqueMuscleIds = Array.from(new Set(data.muscleIds));
+          const relations = uniqueMuscleIds.map((muscleId) => ({
+            exerciseId: newExercise.id,
+            muscleId: muscleId,
+          }));
+          await tx.insert(exercisesTrainMuscles).values(relations);
         }
-        throw error;
-      },
-    );
+
+        return {
+          ...newExercise,
+          muscleIds: data.muscleIds || [],
+        };
+      })
+      .then(
+        (created) => this.withImageUrl(created),
+        (error: unknown) => {
+          if (
+            typeof error === 'object' &&
+            error !== null &&
+            'code' in error &&
+            error.code === '23505'
+          ) {
+            throw new ConflictException(
+              `Exercise "${trimmedName}" already exists in the database.`,
+            );
+          }
+          throw error;
+        },
+      );
   }
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
     const { muscleIds, ...exercise } = data;
     const changes = {
       ...(exercise.name !== undefined ? { name: exercise.name.trim() } : {}),
-      ...(exercise.description !== undefined ? { description: exercise.description.trim() || null } : {}),
-      ...(exercise.videoUrl !== undefined ? { videoUrl: exercise.videoUrl.trim() || null } : {}),
-      ...(exercise.difficulty !== undefined ? { difficulty: exercise.difficulty } : {}),
+      ...(exercise.description !== undefined
+        ? { description: exercise.description.trim() || null }
+        : {}),
+      ...(exercise.videoUrl !== undefined
+        ? { videoUrl: exercise.videoUrl.trim() || null }
+        : {}),
+      ...(exercise.difficulty !== undefined
+        ? { difficulty: exercise.difficulty }
+        : {}),
     };
 
     try {
-      return await db.transaction(async (tx: any) => {
-        let updated;
-        if (Object.keys(changes).length) {
-          [updated] = await tx
-            .update(exercises)
-            .set(changes)
-            .where(eq(exercises.id, id))
-            .returning();
-        } else {
-          [updated] = await tx.select().from(exercises).where(eq(exercises.id, id)).limit(1);
-        }
-        if (!updated) throw new NotFoundException('Exercise not found');
-
-        if (muscleIds !== undefined) {
-          await tx.delete(exercisesTrainMuscles).where(eq(exercisesTrainMuscles.exerciseId, id));
-          if (muscleIds.length) {
-            await tx.insert(exercisesTrainMuscles).values(
-              muscleIds.map((muscleId) => ({ exerciseId: id, muscleId })),
-            );
+      return await db
+        .transaction(async (tx: DbTransaction) => {
+          let updated: typeof exercises.$inferSelect | undefined;
+          if (Object.keys(changes).length) {
+            [updated] = await tx
+              .update(exercises)
+              .set(changes)
+              .where(eq(exercises.id, id))
+              .returning();
+          } else {
+            [updated] = await tx
+              .select()
+              .from(exercises)
+              .where(eq(exercises.id, id))
+              .limit(1);
           }
-        }
+          if (!updated) throw new NotFoundException('Exercise not found');
 
-        return { ...updated, muscleIds: muscleIds ?? undefined };
-      }).then((result) => this.withImageUrl(result));
-    } catch (error: any) {
-      if (error?.code === '23505') {
-        throw new ConflictException(`Exercise "${changes.name}" already exists in the database.`);
+          if (muscleIds !== undefined) {
+            await tx
+              .delete(exercisesTrainMuscles)
+              .where(eq(exercisesTrainMuscles.exerciseId, id));
+            if (muscleIds.length) {
+              await tx
+                .insert(exercisesTrainMuscles)
+                .values(
+                  muscleIds.map((muscleId) => ({ exerciseId: id, muscleId })),
+                );
+            }
+          }
+
+          return { ...updated, muscleIds: muscleIds ?? undefined };
+        })
+        .then((result) => this.withImageUrl(result));
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        throw new ConflictException(
+          `Exercise "${changes.name}" already exists in the database.`,
+        );
       }
       throw error;
     }
@@ -391,12 +460,26 @@ export class ExercisesService {
   }
 
   async toggleBookmark(userId: number, exerciseId: number) {
-    const [exercise] = await db.select({ id: exercises.id }).from(exercises).where(eq(exercises.id, exerciseId)).limit(1);
+    const [exercise] = await db
+      .select({ id: exercises.id })
+      .from(exercises)
+      .where(eq(exercises.id, exerciseId))
+      .limit(1);
     if (!exercise) throw new NotFoundException('Exercise not found');
-    const removed = await db.delete(exerciseBookmarks).where(and(
-      eq(exerciseBookmarks.userId, userId), eq(exerciseBookmarks.exerciseId, exerciseId),
-    )).returning();
-    if (!removed.length) await db.insert(exerciseBookmarks).values({ userId, exerciseId }).onConflictDoNothing();
+    const removed = await db
+      .delete(exerciseBookmarks)
+      .where(
+        and(
+          eq(exerciseBookmarks.userId, userId),
+          eq(exerciseBookmarks.exerciseId, exerciseId),
+        ),
+      )
+      .returning();
+    if (!removed.length)
+      await db
+        .insert(exerciseBookmarks)
+        .values({ userId, exerciseId })
+        .onConflictDoNothing();
     return { isBookmarked: !removed.length };
   }
 
@@ -410,7 +493,10 @@ export class ExercisesService {
     );
     const removed = await db.delete(exerciseLikes).where(condition).returning();
     if (!removed.length) {
-      await db.insert(exerciseLikes).values({ userId, exerciseId }).onConflictDoNothing();
+      await db
+        .insert(exerciseLikes)
+        .values({ userId, exerciseId })
+        .onConflictDoNothing();
     }
     return { isLiked: !removed.length };
   }

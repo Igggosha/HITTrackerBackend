@@ -28,8 +28,7 @@ import { MetricsService } from '../src/metrics/metrics.service';
 // `OAUTH_SESSION_SECRET` to construct without throwing, and `JwtStrategy`
 // needs a `JWT_SECRET`; none of them are ever read, since no request here
 // carries a session cookie or a real JWT.
-process.env.DATABASE_URL ??=
-  'postgres://stub:stub@127.0.0.1:5432/stub_test_db';
+process.env.DATABASE_URL ??= 'postgres://stub:stub@127.0.0.1:5432/stub_test_db';
 process.env.OAUTH_SESSION_SECRET ??= 'metrics-middleware-test-secret';
 process.env.JWT_SECRET ??= 'metrics-middleware-test-jwt-secret-value-24c';
 
@@ -150,7 +149,9 @@ describe('metrics middleware (e2e)', () => {
     const snapshot = await metrics.requests.get();
     expect(
       snapshot.values.some(
-        (entry) => entry.labels.route === '/items/123' || entry.labels.route === '/items/456',
+        (entry) =>
+          entry.labels.route === '/items/123' ||
+          entry.labels.route === '/items/456',
       ),
     ).toBe(false);
   });

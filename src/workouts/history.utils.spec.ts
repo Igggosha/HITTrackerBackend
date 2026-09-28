@@ -8,12 +8,19 @@ import {
 describe('workout history helpers', () => {
   it('round-trips a stable cursor', () => {
     const date = new Date('2026-09-13T10:30:00.000Z');
-    expect(decodeHistoryCursor(encodeHistoryCursor(date, 42))).toEqual({ finishedAt: date, id: 42 });
+    expect(decodeHistoryCursor(encodeHistoryCursor(date, 42))).toEqual({
+      finishedAt: date,
+      id: 42,
+    });
     expect(decodeHistoryCursor('broken')).toBeNull();
   });
 
   it('matches all normalized keywords', () => {
-    expect(historyKeywords('  Full   BODY press ')).toEqual(['full', 'body', 'press']);
+    expect(historyKeywords('  Full   BODY press ')).toEqual([
+      'full',
+      'body',
+      'press',
+    ]);
   });
 
   it('does not let extra sets replace a missed exercise', () => {

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
 import { MinimumRole } from '../auth/minimum-role.decorator';
@@ -48,11 +59,18 @@ export class AdminUsersController {
     @Param('id', ParseIntPipe) targetUserId: number,
     @Body() dto: UpdateUserRoleDto,
   ) {
-    return this.usersService.updateUserRole(request.user!.id!, targetUserId, dto.role);
+    return this.usersService.updateUserRole(
+      request.user!.id!,
+      targetUserId,
+      dto.role,
+    );
   }
 
   @Delete(':id')
-  remove(@Req() request: Request, @Param('id', ParseIntPipe) targetUserId: number) {
+  remove(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) targetUserId: number,
+  ) {
     return this.usersService.deleteUser(request.user!.id!, targetUserId);
   }
 }

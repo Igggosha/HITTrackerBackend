@@ -5,7 +5,7 @@
 # the environment/.env, both of which still take precedence over `name:`
 # here. Keep this in sync with the `ALLOY_COMPOSE_PROJECT` default on the
 # `alloy` service below.
-name: hittrackerbackend
+name: hit-tracker-backend
 
 services:
   postgres:
@@ -253,6 +253,13 @@ services:
       # `events` profile the name does not resolve and those routes answer
       # 503 ANALYTICS_UNAVAILABLE; nothing else changes.
       ANALYTICS_URL: ${ANALYTICS_URL:-http://analytics:3000}
+      # Read-only, admin-gated operational summary. These names are reachable
+      # only inside Compose; no credentials or observability ports are exposed.
+      PROMETHEUS_INTERNAL_URL: http://prometheus:9090
+      LOKI_INTERNAL_URL: http://loki:3100
+      JAEGER_INTERNAL_URL: http://jaeger:16686
+      GRAFANA_INTERNAL_URL: http://grafana:3000
+      MINIO_INTERNAL_URL: http://minio:9000
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -263,6 +270,7 @@ services:
     networks:
       - private
       - edge
+      - observability
 
   kafka:
     image: apache/kafka:3.9.1
@@ -645,13 +653,13 @@ services:
     environment:
       # Which Compose project's containers to collect (see config.alloy).
       # Tracks whatever project name Compose itself resolved: the top-level
-      # `name: hittrackerbackend` above unless overridden by a custom
+      # `name: hit-tracker-backend` above unless overridden by a custom
       # `-p <name>` or `COMPOSE_PROJECT_NAME` (also export/set it here so
       # this default matches). If the Logs dashboard or
       # `{project="..."}` queries come back empty, verify what Alloy is
       # actually shipping with the `project` label values check described in
       # docs/diploma/observability.md ("Verifying container discovery").
-      ALLOY_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-hittrackerbackend}
+      ALLOY_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-hit-tracker-backend}
     volumes:
       - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

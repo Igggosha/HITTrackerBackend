@@ -213,338 +213,332 @@ export const exerciseLikes = pgTable(
   (table) => ({
     pk: primaryKey({
       columns: [table.userId, table.exerciseId],
-        }),
-    })
+    }),
+  }),
 );
-
 
 export const exercisesTrainMuscles = pgTable(
-    "exercises_train_muscles",
-    {
-        muscleId: integer("muscle_id")
-            .notNull()
-            .references(() => muscles.id, {
-                onDelete: "cascade",
-            }),
+  'exercises_train_muscles',
+  {
+    muscleId: integer('muscle_id')
+      .notNull()
+      .references(() => muscles.id, {
+        onDelete: 'cascade',
+      }),
 
-        exerciseId: integer("exercise_id")
-            .notNull()
-            .references(() => exercises.id, {
-                onDelete: "cascade",
-            }),
-    },
-    (table) => ({
-        pk: primaryKey({
-            columns: [
-                table.muscleId,
-                table.exerciseId,
-            ],
-        }),
-    })
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.muscleId, table.exerciseId],
+    }),
+  }),
 );
-
 
 // ================= PROGRAM TEMPLATES =================
 
 export const workoutPrograms = pgTable(
-    "workout_programs",
-    {
-        id: serial("id").primaryKey(),
+  'workout_programs',
+  {
+    id: serial('id').primaryKey(),
 
-        name: text("name")
-            .notNull(),
+    name: text('name').notNull(),
 
-        description: text("description"),
+    description: text('description'),
 
-        videoUrl: text("video_url"),
+    videoUrl: text('video_url'),
 
-        imageKey: text("image_key"),
+    imageKey: text('image_key'),
 
-        isPersonal: boolean("is_personal")
-            .notNull()
-            .default(false),
+    isPersonal: boolean('is_personal').notNull().default(false),
 
-        isActive: boolean("is_active")
-            .notNull()
-            .default(true),
+    isActive: boolean('is_active').notNull().default(true),
 
-        createdById: integer("created_by_id")
-            .references(() => users.id, {
-                onDelete: "set null",
-            }),
+    createdById: integer('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
 
-        shareToken: text("share_token").unique(),
+    shareToken: text('share_token').unique(),
 
-        sourceProgramId: integer("source_program_id"),
+    sourceProgramId: integer('source_program_id'),
 
-        createdAt: timestamp("created_at")
-            .defaultNow()
-            .notNull(),
-    },
-    (table) => [
-        foreignKey({
-            columns: [table.sourceProgramId],
-            foreignColumns: [table.id],
-            name: "workout_programs_source_program_id_fkey",
-        }).onDelete("set null"),
-        uniqueIndex("workout_programs_owner_source_unique")
-            .on(table.createdById, table.sourceProgramId)
-            .where(sql`${table.sourceProgramId} is not null`),
-        index("workout_programs_personal_owner_idx").on(table.isPersonal, table.createdById),
-    ],
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.sourceProgramId],
+      foreignColumns: [table.id],
+      name: 'workout_programs_source_program_id_fkey',
+    }).onDelete('set null'),
+    uniqueIndex('workout_programs_owner_source_unique')
+      .on(table.createdById, table.sourceProgramId)
+      .where(sql`${table.sourceProgramId} is not null`),
+    index('workout_programs_personal_owner_idx').on(
+      table.isPersonal,
+      table.createdById,
+    ),
+  ],
 );
-
 
 // A replicated weekly snapshot of a program
-export const programLikes = pgTable('program_likes', {
-    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    programId: integer('program_id').notNull().references(() => workoutPrograms.id, { onDelete: 'cascade' }),
-}, (table) => ({
+export const programLikes = pgTable(
+  'program_likes',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    programId: integer('program_id')
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
     pk: primaryKey({ columns: [table.userId, table.programId] }),
     programIdx: index('program_likes_program_id_idx').on(table.programId),
-}));
-
-export const exerciseBookmarks = pgTable('exercise_bookmarks', {
-    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    exerciseId: integer('exercise_id').notNull().references(() => exercises.id, { onDelete: 'cascade' }),
-}, (table) => ({ pk: primaryKey({ columns: [table.userId, table.exerciseId] }) }));
-
-export const programContent = pgTable(
-    "program_content",
-    {
-        id: serial("id").primaryKey(),
-
-        week: integer("week_number")
-            .notNull(),
-
-        programId: integer("program_id")
-            .notNull()
-            .references(() => workoutPrograms.id, {
-                onDelete: "cascade",
-            }),
-    },
-    (table) => [index('program_content_program_week_idx').on(table.programId, table.week)],
+  }),
 );
 
+export const exerciseBookmarks = pgTable(
+  'exercise_bookmarks',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.exerciseId] }),
+  }),
+);
+
+export const programContent = pgTable(
+  'program_content',
+  {
+    id: serial('id').primaryKey(),
+
+    week: integer('week_number').notNull(),
+
+    programId: integer('program_id')
+      .notNull()
+      .references(() => workoutPrograms.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (table) => [
+    index('program_content_program_week_idx').on(table.programId, table.week),
+  ],
+);
 
 // Exercises inside a planned week
 
 export const exerciseInPrograms = pgTable(
-    "exercises_in_programs",
-    {
-        id: serial("id").primaryKey(),
+  'exercises_in_programs',
+  {
+    id: serial('id').primaryKey(),
 
-        programContentId: integer("program_content_id")
-            .notNull()
-            .references(() => programContent.id, {
-                onDelete: "cascade",
-            }),
+    programContentId: integer('program_content_id')
+      .notNull()
+      .references(() => programContent.id, {
+        onDelete: 'cascade',
+      }),
 
-        exerciseId: integer("exercise_id")
-            .notNull()
-            .references(() => exercises.id, {
-                onDelete: "cascade",
-            }),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, {
+        onDelete: 'cascade',
+      }),
 
+    sets: integer('sets').notNull(),
 
-        sets: integer("sets")
-            .notNull(),
+    // Planned starting values
+    firstSetRepCount: integer('first_set_rep_count'),
 
+    weight: real('weight'),
 
-        // Planned starting values
-        firstSetRepCount: integer(
-            "first_set_rep_count"
-        ),
-
-        weight: real("weight"),
-
-
-        // 0 = Monday, 6 = Sunday
-        weekDay: integer("week_day")
-            .notNull(),
-    },
-    (table) => [index('exercises_in_programs_content_id_idx').on(table.programContentId)],
+    // 0 = Monday, 6 = Sunday
+    weekDay: integer('week_day').notNull(),
+  },
+  (table) => [
+    index('exercises_in_programs_content_id_idx').on(table.programContentId),
+  ],
 );
-
 
 // User currently assigned program
 
-export const usersWorkoutPrograms = pgTable(
-    "users_current_workout_programs",
-    {
-        userId: integer("user_id")
-            .primaryKey()
-            .references(() => users.id, {
-                onDelete: "cascade",
-            }),
+export const usersWorkoutPrograms = pgTable('users_current_workout_programs', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, {
+      onDelete: 'cascade',
+    }),
 
-        programId: integer("program_id")
-            .notNull()
-            .references(() => workoutPrograms.id, {
-                onDelete: "cascade",
-            }),
+  programId: integer('program_id')
+    .notNull()
+    .references(() => workoutPrograms.id, {
+      onDelete: 'cascade',
+    }),
 
-        dayInProgram: integer("day_in_program")
-            .notNull()
-            .default(0)
-    }
-);
+  dayInProgram: integer('day_in_program').notNull().default(0),
+});
 
 // A weekly program plan. Calendar entries are materialized only for dates the user views.
 export const userProgramScheduleSeries = pgTable(
-    "user_program_schedule_series",
-    {
-        id: serial("id").primaryKey(),
-        userId: integer("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
-        programId: integer("program_id")
-            .notNull()
-            .references(() => workoutPrograms.id, { onDelete: "cascade" }),
-        startsOn: date("starts_on").notNull(),
-        endsOn: date("ends_on"),
-        createdAt: timestamp("created_at").defaultNow().notNull(),
-    },
-    (table) => [index('user_program_schedule_series_user_starts_idx').on(table.userId, table.startsOn)],
+  'user_program_schedule_series',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    programId: integer('program_id')
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: 'cascade' }),
+    startsOn: date('starts_on').notNull(),
+    endsOn: date('ends_on'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('user_program_schedule_series_user_starts_idx').on(
+      table.userId,
+      table.startsOn,
+    ),
+  ],
 );
 
 // A personal calendar assignment. One user can plan multiple programs per date.
 export const userProgramSchedule = pgTable(
-    "user_program_schedule",
-    {
-        id: serial("id").primaryKey(),
-        userId: integer("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
-        scheduledFor: date("scheduled_for").notNull(),
-        programId: integer("program_id")
-            .notNull()
-            .references(() => workoutPrograms.id, { onDelete: "cascade" }),
-        seriesId: integer("series_id")
-            .references(() => userProgramScheduleSeries.id, { onDelete: "cascade" }),
-        status: text("status").notNull().default("planned"),
-        createdAt: timestamp("created_at").defaultNow().notNull(),
-    },
-    (table) => [uniqueIndex('user_program_schedule_unique_assignment_idx').on(table.userId, table.scheduledFor, table.programId)],
+  'user_program_schedule',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    scheduledFor: date('scheduled_for').notNull(),
+    programId: integer('program_id')
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: 'cascade' }),
+    seriesId: integer('series_id').references(
+      () => userProgramScheduleSeries.id,
+      { onDelete: 'cascade' },
+    ),
+    status: text('status').notNull().default('planned'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('user_program_schedule_unique_assignment_idx').on(
+      table.userId,
+      table.scheduledFor,
+      table.programId,
+    ),
+  ],
 );
-
 
 // ================= COMPLETED WORKOUT HISTORY =================
 
 export type WorkoutHistoryPlanItem = {
-    exerciseId: number;
-    name: string;
-    sets: number;
-    reps: number | null;
-    weight: number | null;
+  exerciseId: number;
+  name: string;
+  sets: number;
+  reps: number | null;
+  weight: number | null;
 };
 
 export type WorkoutHistorySnapshot = {
-    programId: number | null;
-    programName: string | null;
-    scheduledFor: string | null;
-    plan: WorkoutHistoryPlanItem[];
+  programId: number | null;
+  programName: string | null;
+  scheduledFor: string | null;
+  plan: WorkoutHistoryPlanItem[];
 };
 
-
 export const workouts = pgTable(
-    "workouts",
-    {
-        id: serial("id").primaryKey(),
+  'workouts',
+  {
+    id: serial('id').primaryKey(),
 
-        userId: integer("user_id")
-            .notNull()
-            .references(() => users.id, {
-                onDelete: "cascade",
-            }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
 
+    // optional link back to planned program day
+    programContentId: integer('program_content_id').references(
+      () => programContent.id,
+      {
+        onDelete: 'set null',
+      },
+    ),
 
-        // optional link back to planned program day
-        programContentId: integer(
-            "program_content_id"
-        )
-            .references(() => programContent.id, {
-                onDelete: "set null",
-            }),
+    type: text('type').notNull(),
 
+    // A workout is kept after cancellation so it never appears as completed history.
+    status: text('status').notNull().default('active'),
+    pausedAt: timestamp('paused_at'),
+    pausedSeconds: integer('paused_seconds').notNull().default(0),
+    lastActivityAt: timestamp('last_activity_at').notNull().defaultNow(),
 
-        type: text("type")
-            .notNull(),
+    notes: text('notes'),
 
-        // A workout is kept after cancellation so it never appears as completed history.
-        status: text("status").notNull().default("active"),
-        pausedAt: timestamp("paused_at"),
-        pausedSeconds: integer("paused_seconds").notNull().default(0),
-        lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
+    durationSeconds: integer('duration_seconds'), // Тривалість тренування в секундах
+    finishedAt: timestamp('finished_at'),
+    scheduleId: integer('schedule_id').references(
+      () => userProgramSchedule.id,
+      { onDelete: 'set null' },
+    ),
 
-        notes: text("notes"),
+    // Immutable source plan used by completed-workout history.
+    historySnapshot: jsonb('history_snapshot').$type<WorkoutHistorySnapshot>(),
 
-        durationSeconds: integer("duration_seconds"), // Тривалість тренування в секундах
-        finishedAt: timestamp("finished_at"),
-        scheduleId: integer("schedule_id")
-            .references(() => userProgramSchedule.id, { onDelete: "set null" }),
-
-        // Immutable source plan used by completed-workout history.
-        historySnapshot: jsonb("history_snapshot").$type<WorkoutHistorySnapshot>(),
-
-        createdAt: timestamp("created_at")
-            .defaultNow()
-            .notNull(),
-    },
-    (table) => [
-        index('workouts_user_finished_id_idx').on(table.userId, table.finishedAt.desc(), table.id.desc()),
-        index('workouts_schedule_id_idx').on(table.scheduleId),
-    ],
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('workouts_user_finished_id_idx').on(
+      table.userId,
+      table.finishedAt.desc(),
+      table.id.desc(),
+    ),
+    index('workouts_schedule_id_idx').on(table.scheduleId),
+  ],
 );
-
 
 // Actual performed sets
 
 export const sets = pgTable(
-    "sets",
-    {
-        id: serial("id").primaryKey(),
+  'sets',
+  {
+    id: serial('id').primaryKey(),
 
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id, {
+        onDelete: 'cascade',
+      }),
 
-        workoutId: integer("workout_id")
-            .notNull()
-            .references(() => workouts.id, {
-                onDelete: "cascade",
-            }),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, {
+        onDelete: 'cascade',
+      }),
 
+    weight: real('weight').notNull(),
 
-        exerciseId: integer("exercise_id")
-            .notNull()
-            .references(() => exercises.id, {
-                onDelete: "cascade",
-            }),
+    reps: integer('reps').notNull(),
 
+    isFailure: boolean('is_failure').default(false).notNull(),
 
-        weight: real("weight")
-            .notNull(),
+    isDropSet: boolean('is_drop_set').default(false).notNull(),
 
-        reps: integer("reps")
-            .notNull(),
-
-
-        isFailure: boolean("is_failure")
-            .default(false)
-            .notNull(),
-
-
-        isDropSet: boolean("is_drop_set")
-            .default(false)
-            .notNull(),
-
-
-        rpe: integer("rpe"),
-    },
-    (table) => [
-        index('sets_workout_id_idx').on(table.workoutId),
-        index('sets_exercise_workout_idx').on(table.exerciseId, table.workoutId),
-    ],
+    rpe: integer('rpe'),
+  },
+  (table) => [
+    index('sets_workout_id_idx').on(table.workoutId),
+    index('sets_exercise_workout_idx').on(table.exerciseId, table.workoutId),
+  ],
 );
-
 
 // ================= TRANSACTIONAL OUTBOX =================
 
@@ -555,32 +549,38 @@ export const sets = pgTable(
 // example `user.deleted`), and the table is meant to be range-partitioned by
 // `occurred_at` later.
 export const outboxEvents = pgTable(
-    "outbox_events",
-    {
-        id: uuid("id").primaryKey().defaultRandom(),
-        aggregateType: text("aggregate_type").notNull(),
-        aggregateId: text("aggregate_id").notNull(),
-        eventType: text("event_type").notNull(),
-        eventVersion: integer("event_version").notNull(),
-        payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-        traceContext: jsonb("trace_context").$type<{ traceparent: string; tracestate?: string }>(),
-        occurredAt: timestamp("occurred_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
-        publishedAt: timestamp("published_at", { withTimezone: true }),
-        attempts: integer("attempts").notNull().default(0),
-        lastError: text("last_error"),
-    },
-    (table) => [
-        check("outbox_events_event_version_positive", sql`${table.eventVersion} > 0`),
-        check("outbox_events_attempts_non_negative", sql`${table.attempts} >= 0`),
-        index("outbox_events_unpublished_idx")
-            .on(table.occurredAt)
-            .where(sql`${table.publishedAt} is null`),
-        index("outbox_events_aggregate_idx").on(
-            table.aggregateType,
-            table.aggregateId,
-            table.occurredAt,
-        ),
-    ],
+  'outbox_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    aggregateType: text('aggregate_type').notNull(),
+    aggregateId: text('aggregate_id').notNull(),
+    eventType: text('event_type').notNull(),
+    eventVersion: integer('event_version').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    traceContext: jsonb('trace_context').$type<{
+      traceparent: string;
+      tracestate?: string;
+    }>(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+  },
+  (table) => [
+    check(
+      'outbox_events_event_version_positive',
+      sql`${table.eventVersion} > 0`,
+    ),
+    check('outbox_events_attempts_non_negative', sql`${table.attempts} >= 0`),
+    index('outbox_events_unpublished_idx')
+      .on(table.occurredAt)
+      .where(sql`${table.publishedAt} is null`),
+    index('outbox_events_aggregate_idx').on(
+      table.aggregateType,
+      table.aggregateId,
+      table.occurredAt,
+    ),
+  ],
 );

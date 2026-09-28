@@ -1,5 +1,17 @@
 import { Type } from 'class-transformer';
-import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateExerciseDto {
   @IsOptional()

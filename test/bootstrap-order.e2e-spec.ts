@@ -21,8 +21,7 @@ import { MetricsService } from '../src/metrics/metrics.service';
 // `OAUTH_SESSION_SECRET` to construct without throwing, so both are stubbed
 // below; neither is ever actually queried or read by the requests this file
 // sends, since none of them carry a session cookie.
-process.env.DATABASE_URL ??=
-  'postgres://stub:stub@127.0.0.1:5432/stub_test_db';
+process.env.DATABASE_URL ??= 'postgres://stub:stub@127.0.0.1:5432/stub_test_db';
 process.env.OAUTH_SESSION_SECRET ??= 'e2e-bootstrap-order-test-secret';
 
 @Module({
@@ -79,9 +78,7 @@ describe('bootstrap middleware order (e2e)', () => {
   });
 
   it('gives a normal route an X-Request-Id header', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/')
-      .expect(200);
+    const response = await request(app.getHttpServer()).get('/').expect(200);
 
     expect(response.headers['x-request-id']).toMatch(/^[A-Za-z0-9_-]{1,64}$/);
   });
@@ -120,7 +117,9 @@ describe('bootstrap middleware order (e2e)', () => {
   });
 
   it('labels an unknown path "unmatched" and still counts the 404', async () => {
-    await request(app.getHttpServer()).get('/this-route-does-not-exist').expect(404);
+    await request(app.getHttpServer())
+      .get('/this-route-does-not-exist')
+      .expect(404);
 
     expect(
       await counterValue(metrics, {
@@ -135,9 +134,9 @@ describe('bootstrap middleware order (e2e)', () => {
     await request(app.getHttpServer()).get('/metrics').expect(401);
 
     const snapshot = await metrics.requests.get();
-    expect(snapshot.values.some((entry) => entry.labels.route === '/metrics')).toBe(
-      false,
-    );
+    expect(
+      snapshot.values.some((entry) => entry.labels.route === '/metrics'),
+    ).toBe(false);
   });
 
   it('returns 400 for malformed JSON, with a request id', async () => {

@@ -1,5 +1,16 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString, IsUrl, Matches, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Matches,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 import { ProgramExerciseDto } from './create-workout-program.dto';
 
 export class UpdateWorkoutProgramDto {

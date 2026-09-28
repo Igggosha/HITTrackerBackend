@@ -3,10 +3,18 @@ import { validate } from 'class-validator';
 import { RecordSetDto, UpdateSetDto } from './workout.dto';
 
 describe('workout set DTOs', () => {
-  const validSet = { exerciseId: 1, weight: 0, reps: 8, rpe: 7, isFailure: false };
+  const validSet = {
+    exerciseId: 1,
+    weight: 0,
+    reps: 8,
+    rpe: 7,
+    isFailure: false,
+  };
 
   it('accepts bodyweight sets with an explicit RPE', async () => {
-    expect(await validate(Object.assign(new RecordSetDto(), validSet))).toHaveLength(0);
+    expect(
+      await validate(Object.assign(new RecordSetDto(), validSet)),
+    ).toHaveLength(0);
     expect(
       await validate(Object.assign(new UpdateSetDto(), validSet)),
     ).toHaveLength(0);

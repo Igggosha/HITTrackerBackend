@@ -25,7 +25,14 @@ describe('PROFILE-USERNAME-006 username validation', () => {
   });
 
   it('reserves staff and product identity usernames', () => {
-    for (const username of ['admin', 'moderator', 'support', 'official', 'adm', 'moder']) {
+    for (const username of [
+      'admin',
+      'moderator',
+      'support',
+      'official',
+      'adm',
+      'moder',
+    ]) {
       expect(isReservedUsername(username)).toBe(true);
     }
     expect(isReservedUsername('regular_user')).toBe(false);

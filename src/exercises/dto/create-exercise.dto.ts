@@ -1,5 +1,16 @@
 import { Type } from 'class-transformer';
-import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateExerciseDto {
   @IsString()

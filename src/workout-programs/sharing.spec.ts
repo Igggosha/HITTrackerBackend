@@ -29,7 +29,13 @@ function query(rows: unknown[]) {
 }
 
 describe('Shared workout programs', () => {
-  const service = new WorkoutProgramsService({ getUrl: jest.fn().mockResolvedValue(null), getUrls: jest.fn().mockResolvedValue([]) } as any, new OutboxService());
+  const service = new WorkoutProgramsService(
+    {
+      getUrl: jest.fn().mockResolvedValue(null),
+      getUrls: jest.fn().mockResolvedValue([]),
+    } as any,
+    new OutboxService(),
+  );
 
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());
@@ -107,23 +113,35 @@ describe('Shared workout programs', () => {
     });
     jest.mocked(db.select).mockReturnValueOnce(query([]));
     jest.spyOn(service as any, 'getScheduleExercises').mockResolvedValue([
-      { exerciseId: 2, sets: 3 }, { exerciseId: 4, sets: 3 }, { exerciseId: 4, sets: 3 },
+      { exerciseId: 2, sets: 3 },
+      { exerciseId: 4, sets: 3 },
+      { exerciseId: 4, sets: 3 },
     ]);
-    jest.spyOn(service as any, 'findMatchingPersonalProgram').mockResolvedValue(12);
+    jest
+      .spyOn(service as any, 'findMatchingPersonalProgram')
+      .mockResolvedValue(12);
 
     await expect(
       service.importSharedProgram(8, '6eb8f447-2940-4c70-ae18-355c75ff56ed'),
-    ).resolves.toEqual({ programId: 12, imported: false, alreadyImported: true });
+    ).resolves.toEqual({
+      programId: 12,
+      imported: false,
+      alreadyImported: true,
+    });
   });
 
   it('matches exercise compositions only when every exercise and duplicate count agrees', () => {
-    expect(hasSameExerciseMultiset(
-      [{ exerciseId: 4 }, { exerciseId: 2 }, { exerciseId: 4 }],
-      [{ exerciseId: 2 }, { exerciseId: 4 }, { exerciseId: 4 }],
-    )).toBe(true);
-    expect(hasSameExerciseMultiset(
-      [{ exerciseId: 4 }, { exerciseId: 2 }, { exerciseId: 4 }],
-      [{ exerciseId: 2 }, { exerciseId: 4 }],
-    )).toBe(false);
+    expect(
+      hasSameExerciseMultiset(
+        [{ exerciseId: 4 }, { exerciseId: 2 }, { exerciseId: 4 }],
+        [{ exerciseId: 2 }, { exerciseId: 4 }, { exerciseId: 4 }],
+      ),
+    ).toBe(true);
+    expect(
+      hasSameExerciseMultiset(
+        [{ exerciseId: 4 }, { exerciseId: 2 }, { exerciseId: 4 }],
+        [{ exerciseId: 2 }, { exerciseId: 4 }],
+      ),
+    ).toBe(false);
   });
 });

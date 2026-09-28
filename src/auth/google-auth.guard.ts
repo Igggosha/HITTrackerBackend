@@ -1,4 +1,8 @@
-import { BadRequestException, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ExecutionContext,
+  Injectable,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 
@@ -11,8 +15,13 @@ export class GoogleAuthGuard extends AuthGuard('google') {
     // parameter, so it must not be repurposed for application data.
     if (request.query.platform === 'mobile') {
       const codeChallenge = request.query.code_challenge;
-      if (typeof codeChallenge !== 'string' || !/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) {
-        throw new BadRequestException('A valid PKCE code_challenge is required for mobile OAuth.');
+      if (
+        typeof codeChallenge !== 'string' ||
+        !/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)
+      ) {
+        throw new BadRequestException(
+          'A valid PKCE code_challenge is required for mobile OAuth.',
+        );
       }
       request.session.oauthPlatform = 'mobile';
       request.session.oauthCodeChallenge = codeChallenge;
@@ -21,9 +30,17 @@ export class GoogleAuthGuard extends AuthGuard('google') {
     return { scope: ['email', 'profile'], session: false, state: true };
   }
 
-  handleRequest(err: unknown, user: unknown, info: unknown, context: ExecutionContext, status?: unknown) {
-    const request = context.switchToHttp().getRequest();
-    if (request.query.error === 'access_denied') return { cancelled: true };
-    return super.handleRequest(err, user, info, context, status);
+  handleRequest<TUser = unknown>(
+    err: unknown,
+    user: unknown,
+    info: unknown,
+    context: ExecutionContext,
+    status?: unknown,
+  ): TUser {
+    const request = context.switchToHttp().getRequest<Request>();
+    if (request.query.error === 'access_denied') {
+      return { cancelled: true } as TUser;
+    }
+    return super.handleRequest<TUser>(err, user, info, context, status);
   }
 }
