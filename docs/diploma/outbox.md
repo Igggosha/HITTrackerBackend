@@ -21,6 +21,10 @@ de-duplicate by event `id`).
   user row, and the table must stay partitionable.
 - `OutboxService.enqueue(tx, event)` only accepts a `DbTransaction`; the root
   `db` does not type-check (it has no `rollback()`) and is rejected at runtime.
+  It also calls `pg_notify('outbox_events', '')` in that transaction. PostgreSQL
+  delivers the empty wake-up notification only after commit and coalesces
+  repeated notifications in one transaction. Rollbacks send none; event data
+  stays in the table, never in the notification payload.
 - `src/outbox/events.ts`: typed, versioned payloads. Breaking change → new
   `…V2` type + bumped `version`; consumers branch on `event_version`.
 
@@ -52,6 +56,17 @@ attempt. Each iteration's transaction also carries a `SET LOCAL
 statement_timeout`/`idle_in_transaction_session_timeout`
 (`RELAY_DB_TX_TIMEOUT_MS`, default 10s) as a backstop independent of whatever
 bound the caller's own `publish` puts on its broker calls.
+
+The relay keeps a dedicated `LISTEN outbox_events` connection to the primary
+database (`DATABASE_URL`). Streaming replicas do not receive primary-server
+notifications. A notification wakes the single batch loop immediately; bursts
+coalesce into one extra iteration, with no concurrent batches. The fallback
+poll runs every 5 seconds by default (`RELAY_FALLBACK_POLL_INTERVAL_MS`;
+`RELAY_POLL_INTERVAL_MS` remains a supported fallback setting) and catches
+missed notifications during listener reconnects or before `LISTEN` starts.
+The listener reconnects with capped backoff; this costs one PostgreSQL
+connection per relay. Notifications are only hints: delivery still depends on
+the durable outbox table and `FOR UPDATE SKIP LOCKED`.
 
 ## Activity log in the same transaction
 

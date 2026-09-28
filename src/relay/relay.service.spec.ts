@@ -4,6 +4,30 @@ import {
   topicFor,
 } from '../../packages/event-contracts/events';
 import { RelayService } from './relay.service';
+import { EventEmitter } from 'node:events';
+
+const mockClients: (EventEmitter & {
+  connect: jest.Mock;
+  query: jest.Mock;
+  end: jest.Mock;
+})[] = [];
+jest.mock('pg', () => ({
+  ...jest.requireActual<typeof import('pg')>('pg'),
+  Client: jest.fn().mockImplementation(() => {
+    const client = Object.assign(
+      new (jest.requireActual<typeof import('node:events')>(
+        'node:events',
+      ).EventEmitter)(),
+      {
+        connect: jest.fn().mockResolvedValue(undefined),
+        query: jest.fn().mockResolvedValue(undefined),
+        end: jest.fn().mockResolvedValue(undefined),
+      },
+    );
+    mockClients.push(client);
+    return client;
+  }),
+}));
 
 const send = jest.fn().mockResolvedValue(undefined);
 const connect = jest.fn().mockResolvedValue(undefined);
@@ -29,6 +53,8 @@ const row = {
 const metrics = {
   outboxPublished: { inc: jest.fn() },
   outboxPublishFailures: { inc: jest.fn() },
+  outboxListenerConnected: { set: jest.fn() },
+  outboxRelayWakeups: { inc: jest.fn() },
 };
 
 describe('event contracts', () => {
@@ -59,6 +85,7 @@ describe('RelayService', () => {
     if (prior === undefined) delete process.env.KAFKA_BROKERS;
     else process.env.KAFKA_BROKERS = prior;
     jest.clearAllMocks();
+    mockClients.length = 0;
   });
 
   it('does not connect when brokers are unset', async () => {
@@ -101,6 +128,25 @@ describe('RelayService', () => {
       messages: [{ key: '42', headers: { 'event-id': row.id } }],
     });
     expect(disconnect).toHaveBeenCalled();
+    expect(mockClients[0].end.mock.invocationCallOrder[0]).toBeLessThan(
+      disconnect.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('starts the next batch on notification while otherwise idle', async () => {
+    process.env.KAFKA_BROKERS = 'kafka:9092';
+    const empty = { claimed: 0, published: [], failed: null };
+    const outbox = {
+      processDeadLetters: jest.fn().mockResolvedValue(empty),
+      processBatch: jest.fn().mockResolvedValue(empty),
+    };
+    const relay = new RelayService(outbox as never, metrics as never);
+    relay.onModuleInit();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    mockClients[0].emit('notification', { channel: 'outbox_events' });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(outbox.processBatch).toHaveBeenCalledTimes(2);
+    await relay.onModuleDestroy();
   });
 
   it('counts publish failure and waits before retrying', async () => {
@@ -121,6 +167,63 @@ describe('RelayService', () => {
     await relay.onModuleDestroy();
     expect(metrics.outboxPublishFailures.inc).toHaveBeenCalledWith(1);
     expect(outbox.processBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('wakes immediately and coalesces notifications without concurrent batches', async () => {
+    process.env.KAFKA_BROKERS = 'kafka:9092';
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => (release = resolve));
+    let active = 0;
+    let maximum = 0;
+    const empty = { claimed: 0, published: [], failed: null };
+    const outbox = {
+      processDeadLetters: jest.fn().mockResolvedValue(empty),
+      processBatch: jest.fn(async () => {
+        active++;
+        maximum = Math.max(maximum, active);
+        if (outbox.processBatch.mock.calls.length === 1) await blocked;
+        active--;
+        return empty;
+      }),
+    };
+    const relay = new RelayService(outbox as never, metrics as never);
+    relay.onModuleInit();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mockClients[0].query).toHaveBeenCalledWith('LISTEN outbox_events');
+    for (let i = 0; i < 20; i++)
+      mockClients[0].emit('notification', { channel: 'outbox_events' });
+    expect(outbox.processBatch).toHaveBeenCalledTimes(1);
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(outbox.processBatch).toHaveBeenCalledTimes(2);
+    expect(maximum).toBe(1);
+    expect(metrics.outboxRelayWakeups.inc).toHaveBeenCalledWith({
+      reason: 'notify',
+    });
+    await relay.onModuleDestroy();
+  });
+
+  it('reconnects after listener error while timer polling continues', async () => {
+    process.env.KAFKA_BROKERS = 'kafka:9092';
+    process.env.RELAY_FALLBACK_POLL_INTERVAL_MS = '20';
+    const empty = { claimed: 0, published: [], failed: null };
+    const outbox = {
+      processDeadLetters: jest.fn().mockResolvedValue(empty),
+      processBatch: jest.fn().mockResolvedValue(empty),
+    };
+    const relay = new RelayService(outbox as never, metrics as never);
+    relay.onModuleInit();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    mockClients[0].emit('error', new Error('connection lost'));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(mockClients).toHaveLength(2);
+    expect(mockClients[1].query).toHaveBeenCalledWith('LISTEN outbox_events');
+    expect(outbox.processBatch.mock.calls.length).toBeGreaterThan(2);
+    expect(metrics.outboxRelayWakeups.inc).toHaveBeenCalledWith({
+      reason: 'timer',
+    });
+    await relay.onModuleDestroy();
+    delete process.env.RELAY_FALLBACK_POLL_INTERVAL_MS;
   });
 
   describe('bounded broker calls', () => {

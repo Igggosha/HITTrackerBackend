@@ -18,6 +18,7 @@ const mockTxFor = jest.fn(() => ({ limit: mockTxLimit }));
 const mockUpsertReturning = jest.fn();
 const tx = {
   rollback: jest.fn(),
+  execute: jest.fn(),
   select: jest.fn(() => ({
     from: () => ({ where: () => ({ limit: mockTxLimit, for: mockTxFor }) }),
   })),

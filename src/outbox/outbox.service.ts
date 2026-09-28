@@ -65,6 +65,7 @@ export class OutboxService {
       payload: event.payload,
       ...(traceContext ? { traceContext } : {}),
     });
+    await tx.execute(sql`select pg_notify('outbox_events', '')`);
   }
 
   /**

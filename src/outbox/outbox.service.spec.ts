@@ -59,6 +59,11 @@ describe('OutboxService', () => {
         deletedAt: '2026-09-27T10:00:00.000Z',
       },
     });
+    const [notify] = fake.committed('execute');
+    expect(notify.scope).toBe('tx');
+    expect(renderSql(notify.args[0])).toContain(
+      "select pg_notify('outbox_events', '')",
+    );
   });
 
   it('refuses the autocommit connection instead of a transaction', async () => {
@@ -86,6 +91,7 @@ describe('OutboxService', () => {
 
     expect(fake.find('insert', outboxEvents)).toHaveLength(1);
     expect(fake.committed('insert', outboxEvents)).toHaveLength(0);
+    expect(fake.committed('execute')).toHaveLength(0);
   });
 
   it('claims the oldest unpublished events with FOR UPDATE SKIP LOCKED', async () => {

@@ -11,6 +11,14 @@ a crash between them can lose the message. Business services instead write an
 committed rows and then marks them published. A broker outage leaves rows in
 PostgreSQL for later delivery.
 
+The enqueue transaction also sends an empty PostgreSQL `NOTIFY outbox_events`.
+It reaches the relay only after commit, so rolled-back changes cannot wake it.
+The relay uses a dedicated primary-database `LISTEN` connection (notifications
+do not stream to the read replica), reconnects on loss, and retains a 5-second
+fallback poll for missed hints. Each relay consumes one extra database
+connection. The notification carries no event data and never replaces the
+durable outbox query with `FOR UPDATE SKIP LOCKED`.
+
 The envelope is `{ id, type, version, occurredAt, aggregateType, aggregateId,
 payload }`. Types and seven JSON Schemas live in `packages/event-contracts`.
 `workout.*` goes to `hit.workout.v1`; `user.*`, `program.*`, and
@@ -73,7 +81,8 @@ belong to the relay process, which serves its own `/metrics` on
 protected by the same `METRICS_TOKEN` bearer check as the API's endpoint.
 Prometheus's `relay` scrape job (`docker/observability/prometheus/prometheus.yml`)
 only resolves this target when both the `events` and `observability` profiles
-are running together.
+are running together. The relay also exports `outbox_listener_connected` (0/1)
+and `outbox_relay_wakeups_total{reason="notify|timer"}`.
 
 Every broker call the relay makes (a normal publish or a DLQ publish) is
 bounded twice: kafkajs's own `requestTimeout`/`connectionTimeout` (both

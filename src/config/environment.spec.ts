@@ -73,6 +73,7 @@ describe('environment validation', () => {
       validateEnvironment({
         ...secureEnvironment,
         RELAY_POLL_INTERVAL_MS: '500',
+        RELAY_FALLBACK_POLL_INTERVAL_MS: '5000',
       }),
     ).not.toThrow();
   });
@@ -87,6 +88,7 @@ describe('validateRelayEnvironment', () => {
     expect(() =>
       validateRelayEnvironment({
         RELAY_POLL_INTERVAL_MS: '500',
+        RELAY_FALLBACK_POLL_INTERVAL_MS: '5000',
         RELAY_PUBLISH_TIMEOUT_MS: '5000',
         RELAY_CONNECTION_TIMEOUT_MS: '5000',
         RELAY_DB_TX_TIMEOUT_MS: '10000',
@@ -99,6 +101,9 @@ describe('validateRelayEnvironment', () => {
     expect(() =>
       validateRelayEnvironment({ RELAY_PUBLISH_TIMEOUT_MS: '99' }),
     ).toThrow('RELAY_PUBLISH_TIMEOUT_MS');
+    expect(() =>
+      validateRelayEnvironment({ RELAY_FALLBACK_POLL_INTERVAL_MS: '99' }),
+    ).toThrow('RELAY_FALLBACK_POLL_INTERVAL_MS');
     expect(() =>
       validateRelayEnvironment({ RELAY_CONNECTION_TIMEOUT_MS: 'abc' }),
     ).toThrow('RELAY_CONNECTION_TIMEOUT_MS');

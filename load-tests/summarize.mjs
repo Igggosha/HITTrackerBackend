@@ -233,14 +233,13 @@ function bSection(prefix, title) {
 bSection('', '## B. CQRS: computed on request vs read models');
 
 // ---- C -------------------------------------------------------------------
-if (groups['c-lag']) {
-  const list = groups['c-lag'];
+function cSection(title, list) {
   const best = pickMedian(list, (r) => r.m('visibility_lag_ms').med);
   const lag = best.m('visibility_lag_ms');
   line();
-  line('## C. Eventual-consistency lag under load');
+  line(`### ${title}: median run \`${best.meta.label}\``);
   line();
-  line(`Median run \`${best.meta.label}\`: ${best.meta.vus} background VUs (B read mix) + writer at a steady rate.`);
+  line(`${best.meta.vus} background VUs (B read mix) + writer at a steady rate.`);
   line();
   line('| measure | n | p50 | p95 | p99 | max |');
   line('| --- | ---: | ---: | ---: | ---: | ---: |');
@@ -262,6 +261,13 @@ if (groups['c-lag']) {
     const lat = best.m(`lat_${name}`);
     line(`| ${name} | ${fmt(rps(best, name))} | ${fmt(lat.med)} | ${fmt(lat['p(95)'])} | ${pct(best.m(`err_${name}`).value)} |`);
   }
+  return best;
+}
+if (groups['c-lag'] || groups['c-notify']) {
+  line();
+  line('## C. Eventual-consistency lag under load');
+  if (groups['c-lag']) cSection('Before LISTEN/NOTIFY (RELAY_POLL_INTERVAL_MS timer only)', groups['c-lag']);
+  if (groups['c-notify']) cSection('After LISTEN/NOTIFY', groups['c-notify']);
 }
 
 aSection('after-', '## After indexes: A. Read replica');
