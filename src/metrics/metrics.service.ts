@@ -56,6 +56,54 @@ export class MetricsService {
     labelNames: ['reason'] as const,
     registers: [this.registry],
   });
+  readonly searchRequests = new Counter({
+    name: 'catalog_search_requests_total',
+    help: 'Catalog search requests by safe outcome; query text is never a label.',
+    labelNames: ['result'] as const,
+    registers: [this.registry],
+  });
+  readonly searchDuration = new Histogram({
+    name: 'catalog_search_duration_seconds',
+    help: 'Catalog search duration without query text labels.',
+    labelNames: ['result'] as const,
+    buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+    registers: [this.registry],
+  });
+  readonly searchIndexerEvents = new Counter({
+    name: 'search_indexer_events_total',
+    help: 'Validated search projection events by safe type and result.',
+    labelNames: ['type', 'result'] as const,
+    registers: [this.registry],
+  });
+  readonly searchIndexerRetries = new Counter({
+    name: 'search_indexer_retries_total',
+    help: 'Search projection retries by event type.',
+    labelNames: ['type'] as const,
+    registers: [this.registry],
+  });
+  readonly searchIndexerDlq = new Counter({
+    name: 'search_indexer_dlq_total',
+    help: 'Search projection dead letters by reason.',
+    labelNames: ['reason'] as const,
+    registers: [this.registry],
+  });
+  readonly searchIndexerLag = new Gauge({
+    name: 'search_indexer_consumer_lag',
+    help: 'Uncommitted catalog messages by topic and partition.',
+    labelNames: ['topic', 'partition'] as const,
+    registers: [this.registry],
+  });
+  readonly searchElasticsearchHealthy = new Gauge({
+    name: 'search_elasticsearch_healthy',
+    help: 'Whether the indexer can reach a non-red Elasticsearch cluster.',
+    registers: [this.registry],
+  });
+  readonly searchDocuments = new Gauge({
+    name: 'search_documents',
+    help: 'Visible documents in the active search indices.',
+    labelNames: ['section'] as const,
+    registers: [this.registry],
+  });
 
   private activeWorkoutsGauge: Gauge<string>;
   private activeWorkouts = 0;

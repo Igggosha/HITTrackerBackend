@@ -12,6 +12,7 @@ const envNames = [
   'GRAFANA_INTERNAL_URL',
   'MINIO_INTERNAL_URL',
   'ANALYTICS_URL',
+  'SEARCH_INDEXER_INTERNAL_URL',
 ] as const;
 const originalFetch = global.fetch;
 const originalEnv = Object.fromEntries(
@@ -58,6 +59,7 @@ describe('AdminObservabilityService', () => {
     process.env.GRAFANA_INTERNAL_URL = 'http://grafana:3000';
     process.env.MINIO_INTERNAL_URL = 'http://minio:9000';
     process.env.ANALYTICS_URL = 'http://analytics:3000';
+    process.env.SEARCH_INDEXER_INTERNAL_URL = 'http://search-indexer:9465';
   });
 
   it('parses safe metrics, log counts, targets, and tracing services', async () => {
@@ -91,9 +93,13 @@ describe('AdminObservabilityService', () => {
         return Promise.resolve(
           response({
             data: {
-              activeTargets: ['api', 'relay', 'analytics', 'postgres'].map(
-                (job) => ({ labels: { job }, health: 'up' }),
-              ),
+              activeTargets: [
+                'api',
+                'relay',
+                'analytics',
+                'search',
+                'postgres',
+              ].map((job) => ({ labels: { job }, health: 'up' })),
             },
           }),
         );
@@ -140,7 +146,13 @@ describe('AdminObservabilityService', () => {
       if (url.pathname === '/api/services') {
         return Promise.resolve(
           response({
-            data: ['hit-api', 'hit-relay', 'hit-analytics', 'internal-secret'],
+            data: [
+              'hit-api',
+              'hit-relay',
+              'hit-analytics',
+              'hit-search-indexer',
+              'internal-secret',
+            ],
           }),
         );
       }
@@ -168,11 +180,13 @@ describe('AdminObservabilityService', () => {
       { service: 'api', warnings5m: 3, errors5m: 2 },
       { service: 'relay', warnings5m: 0, errors5m: 1 },
       { service: 'analytics', warnings5m: 4, errors5m: 0 },
+      { service: 'search-indexer', warnings5m: 0, errors5m: 0 },
     ]);
     expect(result.tracingServices).toEqual([
       'hit-api',
       'hit-relay',
       'hit-analytics',
+      'hit-search-indexer',
     ]);
     expect(result.components.every(({ status }) => status === 'up')).toBe(true);
   });

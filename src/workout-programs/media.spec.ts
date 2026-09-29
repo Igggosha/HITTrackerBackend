@@ -2,10 +2,10 @@ import { ForbiddenException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
 import { WorkoutProgramsService } from './workout-programs.service';
-import { OutboxService } from '../outbox/outbox.service';
 import { UpdateWorkoutProgramDto } from './dto/update-workout-program.dto';
 
 jest.mock('../db/db', () => ({ db: { select: jest.fn() } }));
+const outbox = { enqueue: jest.fn() };
 
 function query(rows: unknown[]) {
   const chain: any = {
@@ -42,10 +42,7 @@ describe('Workout program media', () => {
     const storage = {
       getUrl: jest.fn().mockResolvedValue('https://cdn.test/program.webp'),
     };
-    const service = new WorkoutProgramsService(
-      storage as any,
-      new OutboxService(),
-    );
+    const service = new WorkoutProgramsService(storage as any, outbox as any);
     jest.spyOn(service as any, 'findSharedProgram').mockResolvedValue({
       id: 4,
       name: 'Strength',
@@ -73,10 +70,7 @@ describe('Workout program media', () => {
       .mocked(db.select)
       .mockReturnValueOnce(query([{ id: 3, isPersonal: true }]));
     const storage = { uploadImage: jest.fn(), getUrl: jest.fn() };
-    const service = new WorkoutProgramsService(
-      storage as any,
-      new OutboxService(),
-    );
+    const service = new WorkoutProgramsService(storage as any, outbox as any);
     await expect(service.setImage(3, {} as any)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
@@ -97,10 +91,7 @@ describe('Workout program media', () => {
     (db as any).transaction = jest
       .fn()
       .mockRejectedValue(new Error('db failed'));
-    const service = new WorkoutProgramsService(
-      storage as any,
-      new OutboxService(),
-    );
+    const service = new WorkoutProgramsService(storage as any, outbox as any);
     await expect(service.setImage(3, {} as any)).rejects.toThrow('db failed');
     expect(storage.remove).toHaveBeenCalledWith('uploads/programs/3/new.webp');
   });
@@ -139,16 +130,20 @@ describe('Workout program media', () => {
         .mockResolvedValue({ key: 'uploads/programs/3/new.webp' }),
       remove: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new WorkoutProgramsService(
-      storage as any,
-      new OutboxService(),
-    );
+    const service = new WorkoutProgramsService(storage as any, outbox as any);
     jest.spyOn(service, 'getProgramById').mockResolvedValue({ id: 3 } as any);
     await service.setImage(3, {});
     expect(update.mock.results[0].value.set).toHaveBeenCalledWith({
       imageKey: 'uploads/programs/3/new.webp',
       videoUrl: null,
     });
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        type: 'catalog.program.changed',
+        aggregateId: 3,
+      }),
+    );
     expect(storage.remove).toHaveBeenCalledWith('uploads/programs/3/old.webp');
   });
 });

@@ -471,6 +471,21 @@ design, rebuild-from-log, backfill
 (`scripts/backfill-analytics-events.ts`) and the demo are in
 [docs/diploma/analytics-cqrs.md](docs/diploma/analytics-cqrs.md).
 
+## Catalog search / Пошук каталогу
+
+The optional `search` profile runs private Elasticsearch, the existing outbox/Kafka
+relay, and a catalog indexer. PostgreSQL remains authoritative: Elasticsearch
+returns ranked IDs and the guarded Nest endpoint rechecks visibility and reloads
+the response from PostgreSQL. Start it with
+`docker compose --profile search up -d --build`; repeat a zero-downtime rebuild
+with `docker compose --profile search run --rm search-rebuild`.
+
+Опційний профіль `search` запускає приватний Elasticsearch, наявний outbox/Kafka
+relay та catalog indexer. PostgreSQL залишається джерелом істини: Elasticsearch
+повертає лише ранжовані ID, а захищений Nest endpoint повторно перевіряє видимість
+і читає відповідь із PostgreSQL. Повний контракт, відновлення та перевірки описані
+в [catalog-search guide](docs/diploma/catalog-search.md).
+
 ## Project setup
 
 ```bash

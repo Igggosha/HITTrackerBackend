@@ -89,6 +89,17 @@ export type UserDeletedV1 = {
   deletedAt: string;
 };
 
+export type CatalogProgramChangedV1 = {
+  programId: number;
+  ownerId: number | null;
+  change: 'upsert' | 'retire' | 'delete';
+};
+
+export type CatalogExerciseChangedV1 = {
+  exerciseId: number;
+  change: 'upsert' | 'delete';
+};
+
 export type OutboxEventPayloads = {
   'workout.started': WorkoutStartedV1;
   'workout.finished': WorkoutFinishedV1;
@@ -97,6 +108,8 @@ export type OutboxEventPayloads = {
   'body_metric.recorded': BodyMetricRecordedV1;
   'user.registered': UserRegisteredV1;
   'user.deleted': UserDeletedV1;
+  'catalog.program.changed': CatalogProgramChangedV1;
+  'catalog.exercise.changed': CatalogExerciseChangedV1;
 };
 
 export type OutboxEventType = keyof OutboxEventPayloads;
@@ -114,6 +127,8 @@ export const outboxEventDefinitions: {
   'body_metric.recorded': { aggregateType: 'user', version: 1 },
   'user.registered': { aggregateType: 'user', version: 1 },
   'user.deleted': { aggregateType: 'user', version: 1 },
+  'catalog.program.changed': { aggregateType: 'program', version: 1 },
+  'catalog.exercise.changed': { aggregateType: 'exercise', version: 1 },
 };
 
 /** The aggregate ID identifies the changed record, not the Kafka key. */
@@ -151,6 +166,9 @@ export function topicFor(type: OutboxEventType): string {
     case 'user.registered':
     case 'user.deleted':
       return 'hit.user.v1';
+    case 'catalog.program.changed':
+    case 'catalog.exercise.changed':
+      return 'hit.catalog.v1';
     default: {
       const exhaustive: never = type;
       throw new Error(`Unhandled outbox event type: ${String(exhaustive)}`);
@@ -158,8 +176,11 @@ export function topicFor(type: OutboxEventType): string {
   }
 }
 
-export function eventKey(payload: { userId: number }): string {
-  return String(payload.userId);
+export function eventKey(
+  envelope: Pick<EventEnvelope, 'type' | 'aggregateId' | 'payload'>,
+): string {
+  if (envelope.type.startsWith('catalog.')) return envelope.aggregateId;
+  return String((envelope.payload as { userId: number }).userId);
 }
 
 export function envelopeFrom(row: {

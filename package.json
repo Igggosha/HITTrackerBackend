@@ -22,11 +22,13 @@
     "db:baseline": "tsx scripts/baseline-drizzle.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:seed": "docker compose run --rm seed",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "search:rebuild": "tsx scripts/rebuild-search-index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
+    "@elastic/elasticsearch": "9.4.3",
     "@nestjs-modules/mailer": "^2.3.7",
     "@nestjs/common": "^11.2.6",
     "@nestjs/config": "^4.0.4",
@@ -45,6 +47,8 @@
     "@opentelemetry/resources": "^2.11.0",
     "@opentelemetry/sdk-node": "0.222.0",
     "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

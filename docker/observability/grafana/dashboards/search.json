@@ -1,0 +1,80 @@
+{
+  "title": "Hit Tracker Catalog Search",
+  "uid": "hit-search",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Elasticsearch healthy",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "search_elasticsearch_healthy{job=\"search\"}" }]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Indexed documents",
+      "gridPos": { "x": 4, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "search_documents{job=\"search\"}",
+          "legendFormat": "{{section}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Search requests",
+      "gridPos": { "x": 0, "y": 4, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(catalog_search_requests_total{job=\"api\"}[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Search p95 latency",
+      "gridPos": { "x": 8, "y": 4, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(catalog_search_duration_seconds_bucket{job=\"api\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Indexer lag",
+      "gridPos": { "x": 0, "y": 11, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum by (topic) (search_indexer_consumer_lag{job=\"search\"})",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Indexer retries / DLQ",
+      "gridPos": { "x": 8, "y": 11, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "expr": "sum(rate(search_indexer_retries_total{job=\"search\"}[5m]))",
+          "legendFormat": "retries"
+        },
+        {
+          "expr": "sum(rate(search_indexer_dlq_total{job=\"search\"}[5m]))",
+          "legendFormat": "dlq"
+        }
+      ]
+    }
+  ]
+}

@@ -59,6 +59,11 @@ export class Projector {
   apply(envelope: KnownEnvelope, source: EventSource): Promise<ApplyResult> {
     return this.store.transaction(async (tx) => {
       if (!(await tx.markProcessed(envelope, source))) return 'duplicate';
+      if (
+        envelope.type === 'catalog.program.changed' ||
+        envelope.type === 'catalog.exercise.changed'
+      )
+        return 'ignored';
       await tx.lockUser(envelope.payload.userId);
       switch (envelope.type) {
         case 'workout.finished':

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "catalog.program.changed v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "catalog.program.changed"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "programId": {
+          "type": "integer"
+        },
+        "ownerId": {
+          "type": ["integer", "null"]
+        },
+        "change": {
+          "enum": ["upsert", "retire", "delete"]
+        }
+      },
+      "required": ["programId", "ownerId", "change"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

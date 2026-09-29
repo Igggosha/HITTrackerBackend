@@ -66,7 +66,15 @@ describe('event contracts', () => {
       'body_metric.recorded',
     ] as const)
       expect(topicFor(type)).toBe('hit.user.v1');
-    expect(eventKey(row.payload)).toBe('42');
+    expect(eventKey(envelopeFrom(row))).toBe('42');
+    expect(topicFor('catalog.program.changed')).toBe('hit.catalog.v1');
+    expect(
+      eventKey({
+        type: 'catalog.program.changed',
+        aggregateId: '99',
+        payload: { programId: 99, ownerId: 42, change: 'upsert' },
+      }),
+    ).toBe('99');
     expect(envelopeFrom(row)).toEqual({
       id: row.id,
       type: row.eventType,

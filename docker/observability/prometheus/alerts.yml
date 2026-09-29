@@ -36,3 +36,23 @@ groups:
           severity: warning
         annotations:
           summary: Analytics read models are more than 100 events behind Kafka
+      - alert: SearchElasticsearchUnhealthy
+        expr: search_elasticsearch_healthy{job="search"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Catalog indexer cannot reach a healthy Elasticsearch cluster
+      - alert: SearchIndexerLagging
+        expr: sum(search_indexer_consumer_lag{job="search"}) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Catalog search is more than 100 events behind Kafka
+      - alert: SearchIndexerDeadLetters
+        expr: sum(increase(search_indexer_dlq_total{job="search"}[15m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Catalog search indexer sent an event to the DLQ

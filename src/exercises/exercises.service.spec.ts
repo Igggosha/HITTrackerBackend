@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import { ExercisesService } from './exercises.service';
 import type { StorageService } from '../storage/storage.service';
+import type { OutboxService } from '../outbox/outbox.service';
 
 // Storage is switched off in these tests: `getUrl` answers null for every key,
 // which is exactly what the service sees when S3_BUCKET is unset.
@@ -10,6 +11,7 @@ const storage = {
   uploadImage: jest.fn(),
   limits: { exerciseImageMaxDimension: 1280 },
 } as unknown as StorageService;
+const outbox = { enqueue: jest.fn() } as unknown as OutboxService;
 
 jest.mock('../db/db', () => ({
   db: {
@@ -31,9 +33,14 @@ function query(rows: unknown[]) {
 }
 
 describe('ExercisesService likes', () => {
-  const service = new ExercisesService(storage);
+  const service = new ExercisesService(storage, outbox);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .mocked(db.transaction)
+      .mockImplementation((callback: any) => callback(db as any));
+  });
 
   it('adds one exercise like, then removes it on the next click', async () => {
     const returning = jest.fn().mockResolvedValue([]);
@@ -85,7 +92,7 @@ describe('ExercisesService likes', () => {
 });
 
 describe('ExercisesService concurrent creation', () => {
-  const service = new ExercisesService(storage);
+  const service = new ExercisesService(storage, outbox);
 
   it('maps a unique violation from a concurrent identical create to 409', async () => {
     // Both requests passed the name pre-check; the unique index decides.
