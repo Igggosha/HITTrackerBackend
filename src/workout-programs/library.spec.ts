@@ -2,12 +2,17 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
 import { WorkoutProgramsService } from './workout-programs.service';
-import { OutboxService } from '../outbox/outbox.service';
 import { UpdateExerciseDto } from '../exercises/dto/update-exercise.dto';
 
 jest.mock('../db/db', () => ({
-  db: { select: jest.fn(), delete: jest.fn(), insert: jest.fn() },
+  db: {
+    select: jest.fn(),
+    delete: jest.fn(),
+    insert: jest.fn(),
+    transaction: jest.fn(),
+  },
 }));
+const outbox = { enqueue: jest.fn() };
 
 function query(rows: unknown[]) {
   const chain: any = {
@@ -32,9 +37,14 @@ describe('Library access and program cards', () => {
       getUrl: jest.fn().mockResolvedValue(null),
       getUrls: jest.fn().mockResolvedValue([]),
     } as any,
-    new OutboxService(),
+    outbox as any,
   );
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest
+      .mocked(db.transaction)
+      .mockImplementation((callback: any) => callback(db as any));
+  });
   afterEach(() => jest.restoreAllMocks());
 
   it.each(['moderator', 'admin', 'super_admin'] as const)(
@@ -81,6 +91,13 @@ describe('Library access and program cards', () => {
       isLiked: true,
     });
     expect(onConflictDoNothing).toHaveBeenCalledTimes(1);
+    expect(outbox.enqueue).toHaveBeenLastCalledWith(
+      db,
+      expect.objectContaining({
+        type: 'catalog.program.changed',
+        aggregateId: 1,
+      }),
+    );
 
     returning.mockResolvedValueOnce([{ userId: 7, programId: 1 }]);
     await expect(service.toggleLike(7, 'user', 1)).resolves.toEqual({

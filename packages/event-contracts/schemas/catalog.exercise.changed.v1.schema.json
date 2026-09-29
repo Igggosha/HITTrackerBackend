@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "catalog.exercise.changed v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "catalog.exercise.changed"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "exerciseId": {
+          "type": "integer"
+        },
+        "change": {
+          "enum": ["upsert", "delete"]
+        }
+      },
+      "required": ["exerciseId", "change"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}

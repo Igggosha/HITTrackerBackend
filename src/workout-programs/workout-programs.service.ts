@@ -419,6 +419,7 @@ export class WorkoutProgramsService {
         .select({
           imageKey: workoutPrograms.imageKey,
           isPersonal: workoutPrograms.isPersonal,
+          createdById: workoutPrograms.createdById,
         })
         .from(workoutPrograms)
         .where(eq(workoutPrograms.id, programId))
@@ -433,6 +434,11 @@ export class WorkoutProgramsService {
         .update(workoutPrograms)
         .set({ imageKey, videoUrl: imageKey ? null : undefined })
         .where(eq(workoutPrograms.id, programId));
+      await this.enqueueSearchChange(
+        tx,
+        { id: programId, createdById: current.createdById },
+        'upsert',
+      );
       return current.imageKey === imageKey ? null : current.imageKey;
     });
   }
@@ -512,18 +518,24 @@ export class WorkoutProgramsService {
   }
 
   async toggleLike(userId: number, role: UserRole, programId: number) {
-    await this.getProgramById(programId, userId, role);
-    const condition = and(
-      eq(programLikes.userId, userId),
-      eq(programLikes.programId, programId),
-    );
-    const removed = await db.delete(programLikes).where(condition).returning();
-    if (!removed.length)
-      await db
-        .insert(programLikes)
-        .values({ userId, programId })
-        .onConflictDoNothing();
-    return { isLiked: !removed.length };
+    const program = await this.getProgramById(programId, userId, role);
+    return db.transaction(async (tx: DbTransaction) => {
+      const condition = and(
+        eq(programLikes.userId, userId),
+        eq(programLikes.programId, programId),
+      );
+      const removed = await tx
+        .delete(programLikes)
+        .where(condition)
+        .returning();
+      if (!removed.length)
+        await tx
+          .insert(programLikes)
+          .values({ userId, programId })
+          .onConflictDoNothing();
+      await this.enqueueSearchChange(tx, program, 'upsert');
+      return { isLiked: !removed.length };
+    });
   }
 
   async getProgramById(id: number, userId: number, role: UserRole) {
@@ -588,6 +600,7 @@ export class WorkoutProgramsService {
         })
         .returning();
       await this.replaceSchedule(tx, program.id, dto.exercises);
+      await this.enqueueSearchChange(tx, program, 'upsert');
       return this.withImageUrl(program);
     });
   }
@@ -622,6 +635,7 @@ export class WorkoutProgramsService {
         await this.ensureExercisesExist(tx, dto.exercises);
         await this.replaceSchedule(tx, id, dto.exercises);
       }
+      await this.enqueueSearchChange(tx, program, 'upsert');
       return {
         program,
         replacedKey: dto.videoUrl !== undefined ? current.imageKey : null,
@@ -688,6 +702,8 @@ export class WorkoutProgramsService {
         .update(workoutPrograms)
         .set({ isActive: false })
         .where(eq(workoutPrograms.id, program.id));
+      await this.enqueueSearchChange(tx, program, 'retire');
+      await this.enqueueSearchChange(tx, revision, 'upsert');
       return { revision, replacedKey };
     });
     await this.storageService.remove(result.replacedKey);
@@ -705,6 +721,22 @@ export class WorkoutProgramsService {
       .where(or(...ids.map((id) => eq(exercises.id, id))));
     if (found.length !== ids.length)
       throw new BadRequestException('One or more exercises do not exist');
+  }
+
+  private enqueueSearchChange(
+    tx: DbTransaction,
+    program: { id: number; createdById: number | null },
+    change: 'upsert' | 'retire' | 'delete',
+  ) {
+    return this.outbox.enqueue(tx, {
+      type: 'catalog.program.changed',
+      aggregateId: program.id,
+      payload: {
+        programId: program.id,
+        ownerId: program.createdById,
+        change,
+      },
+    });
   }
 
   private async replaceSchedule(

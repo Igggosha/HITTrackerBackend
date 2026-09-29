@@ -21,6 +21,7 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 import { requestIds } from './common/request-id';
 import { context, trace } from '@opentelemetry/api';
 import { AdminObservabilityModule } from './admin-observability/admin-observability.module';
+import { CatalogSearchModule } from './catalog-search/catalog-search.module';
 
 @Module({
   controllers: [AppController],
@@ -117,6 +118,7 @@ import { AdminObservabilityModule } from './admin-observability/admin-observabil
     TracingShutdownModule,
     AnalyticsProxyModule,
     AdminObservabilityModule,
+    CatalogSearchModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

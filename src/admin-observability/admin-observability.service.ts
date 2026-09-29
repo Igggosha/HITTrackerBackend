@@ -5,6 +5,7 @@ type ComponentId =
   | 'api'
   | 'relay'
   | 'analytics'
+  | 'search'
   | 'postgres'
   | 'prometheus'
   | 'loki'
@@ -18,6 +19,7 @@ const componentIds: ComponentId[] = [
   'api',
   'relay',
   'analytics',
+  'search',
   'postgres',
   'prometheus',
   'loki',
@@ -30,6 +32,7 @@ const traceServices = new Set([
   'hit-api',
   'hit-relay',
   'hit-analytics',
+  'hit-search-indexer',
   'jaeger-all-in-one',
 ]);
 const metricQueries = [
@@ -51,15 +54,23 @@ const metricQueries = [
 @Injectable()
 export class AdminObservabilityService {
   async summary() {
-    const [prometheus, loki, jaeger, grafana, minio, analyticsProbe] =
-      await Promise.all([
-        this.prometheus(),
-        this.loki(),
-        this.jaeger(),
-        this.probe('GRAFANA_INTERNAL_URL', '/api/health'),
-        this.probe('MINIO_INTERNAL_URL', '/minio/health/live'),
-        this.probe('ANALYTICS_URL', '/health'),
-      ]);
+    const [
+      prometheus,
+      loki,
+      jaeger,
+      grafana,
+      minio,
+      analyticsProbe,
+      searchProbe,
+    ] = await Promise.all([
+      this.prometheus(),
+      this.loki(),
+      this.jaeger(),
+      this.probe('GRAFANA_INTERNAL_URL', '/api/health'),
+      this.probe('MINIO_INTERNAL_URL', '/minio/health/live'),
+      this.probe('ANALYTICS_URL', '/health'),
+      this.probe('SEARCH_INDEXER_INTERNAL_URL', '/health'),
+    ]);
 
     const analytics = this.combineStatus(
       prometheus.targets.analytics,
@@ -70,6 +81,7 @@ export class AdminObservabilityService {
       api,
       relay: prometheus.targets.relay,
       analytics,
+      search: this.combineStatus(prometheus.targets.search, searchProbe),
       postgres: prometheus.targets.postgres,
       prometheus: prometheus.status,
       loki: loki.status,
@@ -164,13 +176,16 @@ export class AdminObservabilityService {
 
   private async prometheus() {
     const metrics = this.emptyMetrics();
-    const targets: Record<'api' | 'relay' | 'analytics' | 'postgres', Status> =
-      {
-        api: 'unknown',
-        relay: 'unknown',
-        analytics: 'unknown',
-        postgres: 'unknown',
-      };
+    const targets: Record<
+      'api' | 'relay' | 'analytics' | 'search' | 'postgres',
+      Status
+    > = {
+      api: 'unknown',
+      relay: 'unknown',
+      analytics: 'unknown',
+      search: 'unknown',
+      postgres: 'unknown',
+    };
     const base = process.env.PROMETHEUS_INTERNAL_URL;
     if (!base) return { status: 'unknown' as Status, metrics, targets };
 
@@ -234,15 +249,17 @@ export class AdminObservabilityService {
   }
 
   private async loki() {
-    const logs = ['api', 'relay', 'analytics'].map((service) => ({
-      service,
-      warnings5m: 0,
-      errors5m: 0,
-    }));
+    const logs = ['api', 'relay', 'analytics', 'search-indexer'].map(
+      (service) => ({
+        service,
+        warnings5m: 0,
+        errors5m: 0,
+      }),
+    );
     const base = process.env.LOKI_INTERNAL_URL;
     if (!base) return { status: 'unknown' as Status, logs: [] as typeof logs };
     const expression =
-      'sum by (service, level) (count_over_time({service=~"api|relay|analytics", level=~"warn|error|fatal"}[5m]))';
+      'sum by (service, level) (count_over_time({service=~"api|relay|analytics|search-indexer", level=~"warn|error|fatal"}[5m]))';
     const data = (await this.fetchJson(
       `${this.url(base, '/loki/api/v1/query')}?query=${encodeURIComponent(expression)}`,
     )) as {

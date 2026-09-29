@@ -253,6 +253,10 @@ services:
       # `events` profile the name does not resolve and those routes answer
       # 503 ANALYTICS_UNAVAILABLE; nothing else changes.
       ANALYTICS_URL: ${ANALYTICS_URL:-http://analytics:3000}
+      SEARCH_URL: ${SEARCH_URL:-http://elasticsearch:9200}
+      SEARCH_READER_USERNAME: ${SEARCH_READER_USERNAME:-hit_search_reader}
+      SEARCH_READER_PASSWORD: ${SEARCH_READER_PASSWORD:-change_me}
+      SEARCH_TIMEOUT_MS: ${SEARCH_TIMEOUT_MS:-2000}
       # Read-only, admin-gated operational summary. These names are reachable
       # only inside Compose; no credentials or observability ports are exposed.
       PROMETHEUS_INTERNAL_URL: http://prometheus:9090
@@ -260,6 +264,8 @@ services:
       JAEGER_INTERNAL_URL: http://jaeger:16686
       GRAFANA_INTERNAL_URL: http://grafana:3000
       MINIO_INTERNAL_URL: http://minio:9000
+      SEARCH_INTERNAL_URL: http://elasticsearch:9200
+      SEARCH_INDEXER_INTERNAL_URL: http://search-indexer:9465
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -274,7 +280,7 @@ services:
 
   kafka:
     image: apache/kafka:3.9.1
-    profiles: [events]
+    profiles: [events, search]
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -294,7 +300,7 @@ services:
 
   kafka-init:
     image: apache/kafka:3.9.1
-    profiles: [events]
+    profiles: [events, search]
     depends_on: [kafka]
     entrypoint: ["/bin/bash"]
     # Domain topics keep every event (retention.ms=-1): they are the log the
@@ -310,7 +316,7 @@ services:
       - >-
         set -e;
         until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
-        for topic in hit.workout.v1 hit.user.v1 hit.events.dlq; do
+        for topic in hit.workout.v1 hit.user.v1 hit.catalog.v1 hit.events.dlq; do
           if [ "$$topic" = hit.events.dlq ]; then retention="$$DLQ_RETENTION_MS"; else retention="$$DOMAIN_TOPIC_RETENTION_MS"; fi;
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1 --config retention.ms=$$retention;
           /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter --entity-type topics --entity-name $$topic --add-config retention.ms=$$retention;
@@ -321,7 +327,7 @@ services:
   relay:
     image: hit-tracker-api:20260928
     build: .
-    profiles: [events]
+    profiles: [events, search]
     depends_on:
       migrate: { condition: service_completed_successfully }
       kafka-init: { condition: service_completed_successfully }
@@ -418,6 +424,105 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
+    networks: [private]
+    restart: unless-stopped
+
+  # ---- Rebuildable catalog search read side, profile `search` -------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.4
+    profiles: [search]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-change_me_search_admin}
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u elastic:$$ELASTIC_PASSWORD 'http://127.0.0.1:9200/_cluster/health?wait_for_status=yellow&timeout=5s' >/dev/null"]
+      interval: 10s
+      timeout: 7s
+      retries: 12
+      start_period: 45s
+    networks: [private]
+    restart: unless-stopped
+
+  search-init:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.4
+    profiles: [search]
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-change_me_search_admin}
+      SEARCH_READER_USERNAME: ${SEARCH_READER_USERNAME:-hit_search_reader}
+      SEARCH_READER_PASSWORD: ${SEARCH_READER_PASSWORD:-change_me}
+      SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
+      SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >-
+        set -e;
+        auth=(-u "elastic:$$ELASTIC_PASSWORD" -H 'content-type: application/json' --retry 15 --retry-delay 2 --retry-all-errors);
+        echo 'Configuring Elasticsearch search roles and users';
+        curl --fail-with-body -sS "$${auth[@]}" -X PUT http://elasticsearch:9200/_security/role/hit_search_reader \
+          -d '{"cluster":["monitor"],"indices":[{"names":["hit-programs-read","hit-exercises-read"],"privileges":["read","view_index_metadata"]}]}' >/dev/null;
+        echo 'Reader role configured';
+        curl --fail-with-body -sS "$${auth[@]}" -X PUT http://elasticsearch:9200/_security/role/hit_search_writer \
+          -d '{"cluster":["monitor"],"indices":[{"names":["hit-programs-*","hit-exercises-*"],"privileges":["create_index","manage","read","write","delete_index","view_index_metadata"]}]}' >/dev/null;
+        echo 'Writer role configured';
+        curl --fail-with-body -sS "$${auth[@]}" -X POST "http://elasticsearch:9200/_security/user/$$SEARCH_READER_USERNAME" \
+          -d "{\"password\":\"$$SEARCH_READER_PASSWORD\",\"roles\":[\"hit_search_reader\"]}" >/dev/null;
+        echo 'Reader user configured';
+        curl --fail-with-body -sS "$${auth[@]}" -X POST "http://elasticsearch:9200/_security/user/$$SEARCH_WRITER_USERNAME" \
+          -d "{\"password\":\"$$SEARCH_WRITER_PASSWORD\",\"roles\":[\"hit_search_writer\"]}" >/dev/null;
+        echo 'Writer user configured'
+    networks: [private]
+    restart: "no"
+
+  search-rebuild:
+    build:
+      context: .
+      target: search-tools
+    profiles: [search]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      seed: { condition: service_completed_successfully }
+      search-init: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      SEARCH_URL: http://elasticsearch:9200
+      SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
+      SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
+    networks: [private]
+    restart: "no"
+
+  search-indexer:
+    image: hit-tracker-api:20260929-search
+    build: .
+    profiles: [search]
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      search-rebuild: { condition: service_completed_successfully }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      KAFKA_BROKERS: kafka:9092
+      SEARCH_URL: http://elasticsearch:9200
+      SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
+      SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
+      SEARCH_INDEXER_MAX_ATTEMPTS: ${SEARCH_INDEXER_MAX_ATTEMPTS:-5}
+      SEARCH_INDEXER_METRICS_PORT: 9465
+      METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
+      OTEL_SERVICE_NAME: hit-search-indexer
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    command: ["node", "dist/src/search-indexer/main.js"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:9465/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
       start_period: 15s
     networks: [private]
     restart: unless-stopped
@@ -678,6 +783,7 @@ volumes:
   grafana_data:
   metrics_token:
   loki_data:
+  elasticsearch_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.

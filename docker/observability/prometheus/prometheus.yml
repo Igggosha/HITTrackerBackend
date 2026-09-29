@@ -38,3 +38,10 @@ scrape_configs:
       credentials_file: /run/metrics/metrics-token
     static_configs:
       - targets: [analytics:3000]
+  - job_name: search
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /run/metrics/metrics-token
+    static_configs:
+      - targets: [search-indexer:9465]

@@ -20,10 +20,14 @@ import { UpdateExerciseDto } from './dto/update-exercise.dto';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
 import type { DbTransaction } from '../outbox/transaction';
+import { OutboxService } from '../outbox/outbox.service';
 
 @Injectable()
 export class ExercisesService {
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    private readonly storageService: StorageService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   /**
    * Отримати вправи для конкретного користувача на основі його програми
@@ -285,6 +289,8 @@ export class ExercisesService {
           await tx.insert(exercisesTrainMuscles).values(relations);
         }
 
+        await this.enqueueSearchChange(tx, newExercise.id);
+
         return {
           ...newExercise,
           muscleIds: data.muscleIds || [],
@@ -354,6 +360,8 @@ export class ExercisesService {
                 );
             }
           }
+
+          await this.enqueueSearchChange(tx, id);
 
           return { ...updated, muscleIds: muscleIds ?? undefined };
         })
@@ -435,6 +443,8 @@ export class ExercisesService {
         .set({ imageKey })
         .where(eq(exercises.id, exerciseId));
 
+      await this.enqueueSearchChange(tx, exerciseId);
+
       return current.imageKey === imageKey ? null : current.imageKey;
     });
   }
@@ -487,17 +497,31 @@ export class ExercisesService {
    * Поставити або прибрати лайк
    */
   async toggleLike(userId: number, exerciseId: number) {
-    const condition = and(
-      eq(exerciseLikes.userId, userId),
-      eq(exerciseLikes.exerciseId, exerciseId),
-    );
-    const removed = await db.delete(exerciseLikes).where(condition).returning();
-    if (!removed.length) {
-      await db
-        .insert(exerciseLikes)
-        .values({ userId, exerciseId })
-        .onConflictDoNothing();
-    }
-    return { isLiked: !removed.length };
+    return db.transaction(async (tx: DbTransaction) => {
+      const condition = and(
+        eq(exerciseLikes.userId, userId),
+        eq(exerciseLikes.exerciseId, exerciseId),
+      );
+      const removed = await tx
+        .delete(exerciseLikes)
+        .where(condition)
+        .returning();
+      if (!removed.length) {
+        await tx
+          .insert(exerciseLikes)
+          .values({ userId, exerciseId })
+          .onConflictDoNothing();
+      }
+      await this.enqueueSearchChange(tx, exerciseId);
+      return { isLiked: !removed.length };
+    });
+  }
+
+  private enqueueSearchChange(tx: DbTransaction, exerciseId: number) {
+    return this.outbox.enqueue(tx, {
+      type: 'catalog.exercise.changed',
+      aggregateId: exerciseId,
+      payload: { exerciseId, change: 'upsert' },
+    });
   }
 }

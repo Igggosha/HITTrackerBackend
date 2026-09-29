@@ -236,7 +236,7 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
             acks: -1,
             messages: [
               {
-                key: eventKey(envelope.payload),
+                key: eventKey(envelope),
                 value: JSON.stringify(envelope),
                 headers: {
                   'event-id': envelope.id,
