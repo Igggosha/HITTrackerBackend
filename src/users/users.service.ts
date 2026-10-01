@@ -23,6 +23,8 @@ import {
 } from 'drizzle-orm';
 import { db, primaryDb } from '../db/db';
 import {
+  notificationPreferences,
+  pushDevices,
   sets,
   userActivityEvents,
   usernameReservations,
@@ -42,6 +44,7 @@ import {
   ListBodyMetricsDto,
 } from './dto/body-metrics.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { PresenceDto } from './dto/presence.dto';
 import {
   aggregateBodyMetrics,
   getBodyMetricRangeDetails,
@@ -378,11 +381,28 @@ export class UsersService {
     return paginateUserActivity(sources, page, limit);
   }
 
-  async touchPresence(userId: number) {
-    await db
-      .update(users)
-      .set({ lastSeenAt: new Date() })
-      .where(eq(users.id, userId));
+  async touchPresence(userId: number, dto: PresenceDto = {}) {
+    const now = new Date();
+    await db.update(users).set({ lastSeenAt: now }).where(eq(users.id, userId));
+
+    if (dto.installationId && dto.platform) {
+      await db
+        .insert(pushDevices)
+        .values({
+          userId,
+          installationId: dto.installationId,
+          platform: dto.platform,
+          lastSeenAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [pushDevices.userId, pushDevices.installationId],
+          set: { platform: dto.platform, lastSeenAt: now },
+        });
+      await db
+        .insert(notificationPreferences)
+        .values({ userId })
+        .onConflictDoNothing();
+    }
   }
 
   /**

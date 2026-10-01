@@ -3,6 +3,7 @@ dist
 coverage
 .git
 .env
+secrets/
 npm-debug.log*
 Dockerfile*
 docker-compose*.yml

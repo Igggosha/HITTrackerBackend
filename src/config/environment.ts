@@ -1,4 +1,5 @@
 import { validateStorageEnvironment } from '../storage/storage.config';
+import { validateFirebaseEnvironment } from '../firebase/firebase.config';
 
 // 24 random URL-safe characters provide at least 144 bits of entropy.
 const SECRET_MINIMUM_LENGTH = 24;
@@ -72,6 +73,7 @@ export function validateEnvironment(
   validateRelayEnvironment(environment);
 
   validateAnalyticsProxyEnvironment(environment);
+  validateFirebaseEnvironment(environment);
 
   return environment;
 }
