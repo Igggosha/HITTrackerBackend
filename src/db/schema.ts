@@ -11,6 +11,7 @@ import {
   real,
   serial,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -123,6 +124,188 @@ export const authRefreshSessions = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [index('auth_refresh_sessions_user_id_idx').on(table.userId)],
+);
+
+// A client-generated installation ID can recur across accounts on one device.
+// The push token is encrypted by the API; only its digest is used for lookup.
+export const pushDevices = pgTable(
+  'push_devices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    installationId: uuid('installation_id').notNull(),
+    platform: text('platform').$type<'android' | 'ios' | 'web'>().notNull(),
+    deviceModel: text('device_model'),
+    osVersion: text('os_version'),
+    appVersion: text('app_version'),
+    locale: text('locale'),
+    timeZone: text('time_zone'),
+    permissionStatus: text('permission_status')
+      .$type<'unknown' | 'granted' | 'denied'>()
+      .notNull()
+      .default('unknown'),
+    tokenHash: text('token_hash'),
+    tokenCiphertext: text('token_ciphertext'),
+    tokenUpdatedAt: timestamp('token_updated_at', { withTimezone: true }),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('push_devices_user_installation_unique').on(
+      table.userId,
+      table.installationId,
+    ),
+    uniqueIndex('push_devices_id_user_unique').on(table.id, table.userId),
+    uniqueIndex('push_devices_active_token_hash_unique')
+      .on(table.tokenHash)
+      .where(
+        sql`${table.tokenHash} is not null and ${table.revokedAt} is null`,
+      ),
+    index('push_devices_installation_id_idx').on(table.installationId),
+    check(
+      'push_devices_platform_check',
+      sql`${table.platform} in ('android', 'ios', 'web')`,
+    ),
+    check(
+      'push_devices_permission_status_check',
+      sql`${table.permissionStatus} in ('unknown', 'granted', 'denied')`,
+    ),
+    check(
+      'push_devices_token_pair_check',
+      sql`(${table.tokenHash} is null) = (${table.tokenCiphertext} is null)`,
+    ),
+  ],
+);
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  pushEnabled: boolean('push_enabled').notNull().default(false),
+  generalEnabled: boolean('general_enabled').notNull().default(false),
+  workoutRemindersEnabled: boolean('workout_reminders_enabled')
+    .notNull()
+    .default(false),
+  measurementRemindersEnabled: boolean('measurement_reminders_enabled')
+    .notNull()
+    .default(false),
+  achievementsEnabled: boolean('achievements_enabled').notNull().default(false),
+  newsEnabled: boolean('news_enabled').notNull().default(false),
+  reminderTime: time('reminder_time'),
+  timeZone: text('time_zone'),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    category: text('category')
+      .$type<'general' | 'workout' | 'measurements' | 'achievements' | 'news'>()
+      .notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    payload: jsonb('payload')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    dedupeKey: text('dedupe_key'),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('notifications_id_user_unique').on(table.id, table.userId),
+    uniqueIndex('notifications_user_dedupe_unique')
+      .on(table.userId, table.dedupeKey)
+      .where(sql`${table.dedupeKey} is not null`),
+    index('notifications_user_created_idx').on(
+      table.userId,
+      table.createdAt.desc(),
+    ),
+    check(
+      'notifications_category_check',
+      sql`${table.category} in ('general', 'workout', 'measurements', 'achievements', 'news')`,
+    ),
+    check(
+      'notifications_expiry_check',
+      sql`${table.expiresAt} is null or ${table.expiresAt} > ${table.scheduledAt}`,
+    ),
+  ],
+);
+
+export const notificationDeliveries = pgTable(
+  'notification_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: integer('user_id').notNull(),
+    notificationId: uuid('notification_id').notNull(),
+    pushDeviceId: uuid('push_device_id').notNull(),
+    status: text('status')
+      .$type<'pending' | 'sending' | 'sent' | 'failed' | 'skipped'>()
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    lastErrorCode: text('last_error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.notificationId, table.userId],
+      foreignColumns: [notifications.id, notifications.userId],
+      name: 'notification_deliveries_notification_user_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.pushDeviceId, table.userId],
+      foreignColumns: [pushDevices.id, pushDevices.userId],
+      name: 'notification_deliveries_device_user_fk',
+    }).onDelete('cascade'),
+    uniqueIndex('notification_deliveries_notification_device_unique').on(
+      table.notificationId,
+      table.pushDeviceId,
+    ),
+    index('notification_deliveries_due_idx')
+      .on(table.nextAttemptAt)
+      .where(sql`${table.status} = 'pending'`),
+    index('notification_deliveries_expired_lease_idx')
+      .on(table.leaseUntil)
+      .where(sql`${table.status} = 'sending'`),
+    check(
+      'notification_deliveries_status_check',
+      sql`${table.status} in ('pending', 'sending', 'sent', 'failed', 'skipped')`,
+    ),
+    check(
+      'notification_deliveries_attempts_check',
+      sql`${table.attempts} >= 0`,
+    ),
+  ],
 );
 
 // A password is never turned into an account until the email owner proves access.

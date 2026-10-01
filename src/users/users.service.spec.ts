@@ -124,6 +124,30 @@ describe('UsersService profile identity', () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
+  it('associates a known user with an installation idempotently', async () => {
+    const deviceUpsert = jest.fn().mockResolvedValue(undefined);
+    const preferencesUpsert = jest.fn().mockResolvedValue(undefined);
+    (db.insert as jest.Mock)
+      .mockImplementationOnce(() => ({
+        values: () => ({ onConflictDoUpdate: deviceUpsert }),
+      }))
+      .mockImplementationOnce(() => ({
+        values: () => ({ onConflictDoNothing: preferencesUpsert }),
+      }));
+
+    const installationId = '328f90c4-7fa6-46d6-8cb6-1ba743b3c1a2';
+    await service.touchPresence(42, { installationId, platform: 'android' });
+
+    expect(deviceUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.any(Array),
+        set: expect.objectContaining({ platform: 'android' }),
+      }),
+    );
+    expect(preferencesUpsert).toHaveBeenCalled();
+    expect(db.insert).toHaveBeenCalledTimes(2);
+  });
+
   it('removes a deleted user avatar without exposing its object key', async () => {
     mockTxLockRows.mockResolvedValueOnce([
       { id: 1, role: 'super_admin' },

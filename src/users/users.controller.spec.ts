@@ -9,6 +9,7 @@ describe('UsersController body metrics', () => {
   const usersService = {
     createBodyMetric: jest.fn(),
     getBodyMetrics: jest.fn(),
+    touchPresence: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -38,5 +39,15 @@ describe('UsersController body metrics', () => {
     });
     expect(usersService.createBodyMetric).toHaveBeenCalledWith(42, createDto);
     expect(usersService.getBodyMetrics).toHaveBeenCalledWith(42, listDto);
+  });
+
+  it('uses the authenticated user when registering an installation', async () => {
+    const request = { user: { id: 42 } } as unknown as Request;
+    const dto = {
+      installationId: '328f90c4-7fa6-46d6-8cb6-1ba743b3c1a2',
+      platform: 'android' as const,
+    };
+    await controller.updatePresence(request, dto);
+    expect(usersService.touchPresence).toHaveBeenCalledWith(42, dto);
   });
 });

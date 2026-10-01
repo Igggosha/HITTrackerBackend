@@ -19,6 +19,7 @@ import { MAX_IMAGE_UPLOAD_BYTES } from '../storage/storage.config';
 import type { UploadedFile as UploadedImage } from '../storage/upload-validation';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
+import { PresenceDto } from './dto/presence.dto';
 import {
   CreateBodyMetricDto,
   ListBodyMetricsDto,
@@ -65,8 +66,8 @@ export class UsersController {
   }
 
   @Post('me/presence')
-  updatePresence(@Req() request: Request) {
-    return this.usersService.touchPresence(request.user!.id!);
+  updatePresence(@Req() request: Request, @Body() dto: PresenceDto) {
+    return this.usersService.touchPresence(request.user!.id!, dto);
   }
 
   @Post('me/body-metrics')

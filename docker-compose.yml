@@ -20,7 +20,7 @@ services:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql.utf16:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -48,8 +48,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/enable-replication.sh:/enable-replication.sh:ro
-    command: ["sh", "/enable-replication.sh"]
-    restart: "no"
+    command: ['sh', '/enable-replication.sh']
+    restart: 'no'
     networks:
       - private
 
@@ -69,9 +69,13 @@ services:
     volumes:
       - postgres_replica_data:/var/lib/postgresql/data
       - ./docker/start-replica.sh:/start-replica.sh:ro
-    entrypoint: ["sh", "/start-replica.sh"]
+    entrypoint: ['sh', '/start-replica.sh']
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} && test \"$(psql -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -tAc 'SELECT pg_is_in_recovery()')\" = t"]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} && test "$(psql -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -tAc ''SELECT pg_is_in_recovery()'')" = t',
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -90,8 +94,8 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
-    command: ["sh", "-c", "npm run db:baseline && npm run db:migrate"]
-    restart: "no"
+    command: ['sh', '-c', 'npm run db:baseline && npm run db:migrate']
+    restart: 'no'
     networks:
       - private
 
@@ -109,8 +113,8 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql.utf16:ro
-    command: ["/bin/sh", "/docker-entrypoint-initdb.d/00-init-db.sh"]
-    restart: "no"
+    command: ['/bin/sh', '/docker-entrypoint-initdb.d/00-init-db.sh']
+    restart: 'no'
     networks:
       - private
 
@@ -126,7 +130,7 @@ services:
         MINIO_COMMIT: ${MINIO_SOURCE_COMMIT:-9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a}
     image: hit-tracker-minio:${MINIO_IMAGE_TAG:-RELEASE.2025-10-15T17-29-55Z}
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -137,9 +141,16 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+      - '127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:9000/minio/health/live"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--spider',
+          '--quiet',
+          'http://127.0.0.1:9000/minio/health/live',
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -171,17 +182,17 @@ services:
       BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
       RESTORE_S3_ACCESS_KEY_ID: ${RESTORE_S3_ACCESS_KEY_ID:-}
       RESTORE_S3_SECRET_ACCESS_KEY: ${RESTORE_S3_SECRET_ACCESS_KEY:-}
-    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/minio-init.sh"]
+    entrypoint: ['/bin/sh', '/docker-entrypoint-init.d/minio-init.sh']
     volumes:
       - ./docker/minio-init.sh:/docker-entrypoint-init.d/minio-init.sh:ro
-    restart: "no"
+    restart: 'no'
     networks:
       - private
 
   # Opt-in daily PostgreSQL + bucket backups. Run immediately with
   # `docker compose --profile backup run --rm backup run-now`.
   backup:
-    profiles: ["backup"]
+    profiles: ['backup']
     build:
       context: ./docker/backup
       args:
@@ -234,7 +245,7 @@ services:
         condition: service_completed_successfully
     ports:
       # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
-      - "127.0.0.1:${PORT:-3000}:3000"
+      - '127.0.0.1:${PORT:-3000}:3000'
     env_file:
       - .env
     environment:
@@ -245,9 +256,10 @@ services:
       # Inside Compose the API reaches MinIO by service name; presigned URLs
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
-      KAFKA_BROKERS: ""
+      KAFKA_BROKERS: ''
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
       # Thin proxy for GET /analytics/* (src/analytics-proxy). Without the
       # `events` profile the name does not resolve and those routes answer
@@ -266,9 +278,17 @@ services:
       MINIO_INTERNAL_URL: http://minio:9000
       SEARCH_INTERNAL_URL: http://elasticsearch:9200
       SEARCH_INDEXER_INTERNAL_URL: http://search-indexer:9465
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -293,7 +313,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
       KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
     networks: [private]
     restart: unless-stopped
@@ -302,7 +322,7 @@ services:
     image: apache/kafka:3.9.1
     profiles: [events, search]
     depends_on: [kafka]
-    entrypoint: ["/bin/bash"]
+    entrypoint: ['/bin/bash']
     # Domain topics keep every event (retention.ms=-1): they are the log the
     # analytics read models are rebuilt from (docs/diploma/analytics-cqrs.md).
     # The DLQ keeps 30 days for inspection/replay. `kafka-configs --alter`
@@ -322,7 +342,7 @@ services:
           /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter --entity-type topics --entity-name $$topic --add-config retention.ms=$$retention;
         done
     networks: [private]
-    restart: "no"
+    restart: 'no'
 
   relay:
     image: hit-tracker-api:20260928
@@ -350,7 +370,7 @@ services:
       # src/relay/main.ts); no host port is published for it.
       RELAY_METRICS_PORT: ${RELAY_METRICS_PORT:-9464}
       METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
-    command: ["node", "dist/src/relay/main.js"]
+    command: ['node', 'dist/src/relay/main.js']
     networks: [private]
     restart: unless-stopped
 
@@ -372,8 +392,8 @@ services:
       ANALYTICS_DB_PASSWORD: ${ANALYTICS_DB_PASSWORD:-change_me}
     volumes:
       - ./docker/analytics-db-init.sh:/docker-entrypoint-init.d/analytics-db-init.sh:ro
-    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/analytics-db-init.sh"]
-    restart: "no"
+    entrypoint: ['/bin/sh', '/docker-entrypoint-init.d/analytics-db-init.sh']
+    restart: 'no'
     networks: [private]
 
   analytics-migrate:
@@ -387,7 +407,7 @@ services:
         condition: service_completed_successfully
     environment:
       ANALYTICS_DATABASE_URL: postgresql://analytics_app:${ANALYTICS_DB_PASSWORD:-change_me}@postgres:5432/analytics
-    restart: "no"
+    restart: 'no'
     networks: [private]
 
   analytics:
@@ -420,7 +440,13 @@ services:
     # No host port: the mobile app reaches it only through the main API
     # (GET /analytics/*); Prometheus scrapes it on the private network.
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -434,14 +460,18 @@ services:
     profiles: [search]
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "true"
-      xpack.security.http.ssl.enabled: "false"
+      xpack.security.enabled: 'true'
+      xpack.security.http.ssl.enabled: 'false'
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-change_me_search_admin}
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -u elastic:$$ELASTIC_PASSWORD 'http://127.0.0.1:9200/_cluster/health?wait_for_status=yellow&timeout=5s' >/dev/null"]
+      test:
+        [
+          'CMD-SHELL',
+          "curl -fsS -u elastic:$$ELASTIC_PASSWORD 'http://127.0.0.1:9200/_cluster/health?wait_for_status=yellow&timeout=5s' >/dev/null",
+        ]
       interval: 10s
       timeout: 7s
       retries: 12
@@ -460,7 +490,7 @@ services:
       SEARCH_READER_PASSWORD: ${SEARCH_READER_PASSWORD:-change_me}
       SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
       SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
-    entrypoint: ["/bin/bash", "-c"]
+    entrypoint: ['/bin/bash', '-c']
     command:
       - >-
         set -e;
@@ -479,7 +509,7 @@ services:
           -d "{\"password\":\"$$SEARCH_WRITER_PASSWORD\",\"roles\":[\"hit_search_writer\"]}" >/dev/null;
         echo 'Writer user configured'
     networks: [private]
-    restart: "no"
+    restart: 'no'
 
   search-rebuild:
     build:
@@ -496,7 +526,7 @@ services:
       SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
       SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
     networks: [private]
-    restart: "no"
+    restart: 'no'
 
   search-indexer:
     image: hit-tracker-api:20260929-search
@@ -517,9 +547,15 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
       OTEL_SERVICE_NAME: hit-search-indexer
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-    command: ["node", "dist/src/search-indexer/main.js"]
+    command: ['node', 'dist/src/search-indexer/main.js']
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:9465/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:9465/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -536,12 +572,12 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: hit-tracker
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    ports: ["127.0.0.1:${KAFKA_UI_PORT:-8085}:8080"]
+    ports: ['127.0.0.1:${KAFKA_UI_PORT:-8085}:8080']
     networks: [private, edge]
     restart: unless-stopped
 
   frontend:
-    profiles: ["edge"]
+    profiles: ['edge']
     build:
       context: ../hit-tracker-mobile
       dockerfile: Dockerfile
@@ -555,7 +591,7 @@ services:
   # Background outbound-only connector. It is opt-in and has no access to the
   # internal PostgreSQL network. Its storage network can only reach MinIO.
   cloudflared:
-    profiles: ["edge"]
+    profiles: ['edge']
     image: cloudflare/cloudflared:latest
     depends_on:
       api:
@@ -577,8 +613,13 @@ services:
       PGPASSWORD: ${DB_PASSWORD:-password}
     volumes:
       - ./seed.sql:/seed.sql:ro
-    command: ["sh", "-c", "psql -h postgres -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -f /seed.sql"]
-    restart: "no"
+    command:
+      [
+        'sh',
+        '-c',
+        'psql -h postgres -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-nestdb} -f /seed.sql',
+      ]
+    restart: 'no'
     networks:
       - private
 
@@ -586,7 +627,7 @@ services:
     build:
       context: .
       target: migration
-    profiles: ["tools"]
+    profiles: ['tools']
     depends_on:
       postgres:
         condition: service_healthy
@@ -594,9 +635,10 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
-    command: ["npm", "run", "db:studio", "--", "--host", "0.0.0.0", "--port", "4983"]
+    command:
+      ['npm', 'run', 'db:studio', '--', '--host', '0.0.0.0', '--port', '4983']
     ports:
-      - "127.0.0.1:4983:4983"
+      - '127.0.0.1:4983:4983'
     networks:
       - private
 
@@ -605,10 +647,15 @@ services:
     profiles: [observability]
     environment:
       METRICS_TOKEN: ${METRICS_TOKEN:-change_me}
-    command: ["sh", "-c", "umask 077; printf '%s' \"$$METRICS_TOKEN\" > /token/metrics-token; chmod 0444 /token/metrics-token"]
+    command:
+      [
+        'sh',
+        '-c',
+        'umask 077; printf ''%s'' "$$METRICS_TOKEN" > /token/metrics-token; chmod 0444 /token/metrics-token',
+      ]
     volumes:
       - metrics_token:/token
-    restart: "no"
+    restart: 'no'
     # Only writes to the `metrics_token` volume; it never talks to another
     # container or the network.
     network_mode: none
@@ -633,8 +680,8 @@ services:
       METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:-change_me}
     volumes:
       - ./docker/observability/metrics-role-init.sh:/docker-entrypoint-init.d/metrics-role-init.sh:ro
-    entrypoint: ["/bin/sh", "/docker-entrypoint-init.d/metrics-role-init.sh"]
-    restart: "no"
+    entrypoint: ['/bin/sh', '/docker-entrypoint-init.d/metrics-role-init.sh']
+    restart: 'no'
     networks:
       - private
 
@@ -649,7 +696,7 @@ services:
       - --storage.tsdb.retention.time=7d
       - --storage.tsdb.path=/prometheus
     ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
     volumes:
       - ./docker/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./docker/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
@@ -686,10 +733,10 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     ports:
-      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+      - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
     volumes:
       - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -702,10 +749,10 @@ services:
     image: jaegertracing/all-in-one:1.76.0
     profiles: [observability]
     environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      MEMORY_MAX_TRACES: "10000"
+      COLLECTOR_OTLP_ENABLED: 'true'
+      MEMORY_MAX_TRACES: '10000'
     ports:
-      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+      - '127.0.0.1:${JAEGER_UI_PORT:-16686}:16686'
     mem_limit: 512m
     networks: [private, observability]
     restart: unless-stopped
@@ -720,7 +767,7 @@ services:
   loki:
     image: grafana/loki:3.7.8
     profiles: [observability]
-    command: ["-config.file=/etc/loki/loki.yml"]
+    command: ['-config.file=/etc/loki/loki.yml']
     mem_limit: 512m
     volumes:
       - ./docker/observability/loki/loki.yml:/etc/loki/loki.yml:ro
@@ -746,13 +793,13 @@ services:
   alloy:
     image: grafana/alloy:v1.20.0
     profiles: [observability]
-    user: "0:0"
+    user: '0:0'
     command:
       [
-        "run",
-        "--server.http.listen-addr=0.0.0.0:12345",
-        "--storage.path=/var/lib/alloy/data",
-        "/etc/alloy/config.alloy",
+        'run',
+        '--server.http.listen-addr=0.0.0.0:12345',
+        '--storage.path=/var/lib/alloy/data',
+        '/etc/alloy/config.alloy',
       ]
     mem_limit: 256m
     environment:

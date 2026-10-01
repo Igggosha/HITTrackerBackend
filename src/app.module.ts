@@ -22,6 +22,7 @@ import { requestIds } from './common/request-id';
 import { context, trace } from '@opentelemetry/api';
 import { AdminObservabilityModule } from './admin-observability/admin-observability.module';
 import { CatalogSearchModule } from './catalog-search/catalog-search.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   controllers: [AppController],
@@ -119,6 +120,7 @@ import { CatalogSearchModule } from './catalog-search/catalog-search.module';
     AnalyticsProxyModule,
     AdminObservabilityModule,
     CatalogSearchModule,
+    FirebaseModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
