@@ -194,13 +194,15 @@ export class CreateAdminNotificationDto {
   @IsIn(notificationCategories)
   category!: NotificationCategory;
 
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  title!: string;
+  title?: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
-  body!: string;
+  body?: string;
 
   @IsOptional()
   @IsObject()
@@ -212,6 +214,15 @@ export class CreateAdminNotificationDto {
   imageUrl?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  imageMediaId?: string;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(2048)
+  videoUrl?: string;
+
+  @IsOptional()
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(2048)
   actionUrl?: string;
@@ -219,6 +230,10 @@ export class CreateAdminNotificationDto {
   @IsOptional()
   @IsISO8601()
   scheduledAt?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/)
+  scheduledLocalAt?: string;
 
   @IsOptional()
   @IsISO8601()

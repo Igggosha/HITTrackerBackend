@@ -280,6 +280,65 @@ export const notificationPreferences = pgTable(
   ],
 );
 
+export const notificationMedia = pgTable(
+  'notification_media',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    uploadedBy: integer('uploaded_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    objectKey: text('object_key').notNull().unique(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('notification_media_created_idx').on(table.createdAt.desc()),
+  ],
+);
+
+export const notificationCampaigns = pgTable(
+  'notification_campaigns',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdBy: integer('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    audience: text('audience').$type<'all' | 'users'>().notNull(),
+    targetUserIds: jsonb('target_user_ids').$type<number[]>(),
+    category: text('category')
+      .$type<'general' | 'workout' | 'measurements' | 'achievements' | 'news'>()
+      .notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    mediaId: uuid('media_id').references(() => notificationMedia.id, {
+      onDelete: 'set null',
+    }),
+    videoUrl: text('video_url'),
+    actionUrl: text('action_url'),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    scheduledLocalAt: text('scheduled_local_at'),
+    recipientCount: integer('recipient_count').notNull().default(0),
+    deliveryCount: integer('delivery_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('notification_campaigns_created_idx').on(table.createdAt.desc()),
+    check(
+      'notification_campaigns_audience_check',
+      sql`${table.audience} in ('all', 'users')`,
+    ),
+    check(
+      'notification_campaigns_category_check',
+      sql`${table.category} in ('general', 'workout', 'measurements', 'achievements', 'news')`,
+    ),
+  ],
+);
+
 export const notifications = pgTable(
   'notifications',
   {
@@ -287,6 +346,12 @@ export const notifications = pgTable(
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    campaignId: uuid('campaign_id').references(() => notificationCampaigns.id, {
+      onDelete: 'set null',
+    }),
+    mediaId: uuid('media_id').references(() => notificationMedia.id, {
+      onDelete: 'set null',
+    }),
     category: text('category')
       .$type<'general' | 'workout' | 'measurements' | 'achievements' | 'news'>()
       .notNull(),

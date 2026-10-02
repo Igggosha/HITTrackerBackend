@@ -16,11 +16,13 @@ import {
 import { primaryDb } from '../db/db';
 import {
   notificationDeliveries,
+  notificationMedia,
   notifications,
   pushDevices,
 } from '../db/schema';
 import { FIREBASE_APP } from '../firebase/firebase.module';
 import { PushTokenCrypto } from './push-token.crypto';
+import { StorageService } from '../storage/storage.service';
 
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000];
@@ -36,9 +38,18 @@ type ClaimedDelivery = {
   title: string;
   body: string;
   payload: Record<string, unknown>;
+  mediaId: string | null;
 };
 
 type ProviderFailure = Error & { permanent?: boolean; code?: string };
+
+const youtubeThumbnail = (url: unknown) => {
+  if (typeof url !== 'string') return undefined;
+  const id = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&/]+)/,
+  )?.[1];
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : undefined;
+};
 
 @Injectable()
 export class NotificationDeliveryService {
@@ -47,9 +58,31 @@ export class NotificationDeliveryService {
   constructor(
     @Inject(FIREBASE_APP) private readonly firebaseApp: App | null,
     private readonly tokenCrypto: PushTokenCrypto,
+    private readonly storage: StorageService,
   ) {}
 
   async processBatch(limit = 100) {
+    const now = new Date();
+    await primaryDb
+      .update(notificationDeliveries)
+      .set({ status: 'skipped', leaseUntil: null, updatedAt: now })
+      .where(
+        and(
+          inArray(notificationDeliveries.status, ['pending', 'sending']),
+          inArray(
+            notificationDeliveries.pushDeviceId,
+            primaryDb
+              .select({ id: pushDevices.id })
+              .from(pushDevices)
+              .where(
+                or(
+                  isNotNull(pushDevices.revokedAt),
+                  isNull(pushDevices.tokenCiphertext),
+                ),
+              ),
+          ),
+        ),
+      );
     const claimed = await this.claim(limit);
     let sent = 0;
     let failed = 0;
@@ -153,6 +186,7 @@ export class NotificationDeliveryService {
           title: notifications.title,
           body: notifications.body,
           payload: notifications.payload,
+          mediaId: notifications.mediaId,
         })
         .from(notificationDeliveries)
         .innerJoin(
@@ -213,14 +247,25 @@ export class NotificationDeliveryService {
   }
 
   private async send(delivery: ClaimedDelivery, token: string) {
+    const [media] = delivery.mediaId
+      ? await primaryDb
+          .select({ key: notificationMedia.objectKey })
+          .from(notificationMedia)
+          .where(eq(notificationMedia.id, delivery.mediaId))
+          .limit(1)
+      : [];
+    const storedImageUrl = await this.storage.getUrl(media?.key);
     const imageUrl =
-      typeof delivery.payload.imageUrl === 'string'
+      storedImageUrl ??
+      (typeof delivery.payload.imageUrl === 'string'
         ? delivery.payload.imageUrl
-        : undefined;
+        : youtubeThumbnail(delivery.payload.videoUrl));
     const actionUrl =
       typeof delivery.payload.actionUrl === 'string'
         ? delivery.payload.actionUrl
-        : undefined;
+        : typeof delivery.payload.videoUrl === 'string'
+          ? delivery.payload.videoUrl
+          : undefined;
     const data = {
       notificationId: delivery.notificationId,
       category: delivery.category,
@@ -248,6 +293,8 @@ export class NotificationDeliveryService {
           priority: 'high',
           notification: {
             channelId: 'default',
+            color: '#E32222',
+            icon: 'notification_icon',
             sound: 'default',
             ...(imageUrl ? { imageUrl } : {}),
           },

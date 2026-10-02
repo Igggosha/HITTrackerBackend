@@ -2,6 +2,7 @@ import {
   addCalendarDays,
   getDueReminderKey,
   getLocalReminderContext,
+  zonedLocalDateTimeToUtc,
 } from './reminder-schedule';
 
 describe('notification reminder schedule', () => {
@@ -52,5 +53,23 @@ describe('notification reminder schedule', () => {
 
   it('adds local calendar days without DST arithmetic', () => {
     expect(addCalendarDays('2026-10-31', 1)).toBe('2026-11-01');
+  });
+
+  it('converts each recipient local clock time to UTC and rejects DST gaps', () => {
+    expect(
+      zonedLocalDateTimeToUtc(
+        '2026-10-02T18:00',
+        'Europe/Berlin',
+      )?.toISOString(),
+    ).toBe('2026-10-02T16:00:00.000Z');
+    expect(
+      zonedLocalDateTimeToUtc(
+        '2026-10-02T18:00',
+        'America/New_York',
+      )?.toISOString(),
+    ).toBe('2026-10-02T22:00:00.000Z');
+    expect(
+      zonedLocalDateTimeToUtc('2026-03-29T02:30', 'Europe/Berlin'),
+    ).toBeNull();
   });
 });

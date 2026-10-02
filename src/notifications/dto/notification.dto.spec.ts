@@ -53,18 +53,31 @@ describe('notification DTOs', () => {
     expect(await validate(dto)).toHaveLength(0);
   });
 
-  it('allows only HTTPS notification images and links', async () => {
+  it('allows media and recipient-local scheduling with safe HTTPS links', async () => {
     const dto = Object.assign(new CreateAdminNotificationDto(), {
       audience: 'all',
       category: 'news',
       title: 'Title',
       body: 'Body',
       imageUrl: 'https://example.com/image.jpg',
+      imageMediaId: '399cc332-6c6c-4aa6-a165-af966d6b84f7',
+      videoUrl: 'https://youtube.com/watch?v=abc',
       actionUrl: 'https://example.com/news',
+      scheduledLocalAt: '2026-10-02T18:00',
     });
 
     expect(await validate(dto)).toHaveLength(0);
     dto.actionUrl = 'javascript:alert(1)';
     expect(await validate(dto)).not.toHaveLength(0);
+  });
+
+  it('allows the service to accept media-only notification DTOs', async () => {
+    const dto = Object.assign(new CreateAdminNotificationDto(), {
+      audience: 'all',
+      category: 'general',
+      imageMediaId: '399cc332-6c6c-4aa6-a165-af966d6b84f7',
+    });
+
+    expect(await validate(dto)).toHaveLength(0);
   });
 });

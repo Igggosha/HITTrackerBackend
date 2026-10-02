@@ -46,6 +46,68 @@ export function addCalendarDays(date: string, days: number) {
   return value.toISOString().slice(0, 10);
 }
 
+export function zonedLocalDateTimeToUtc(
+  localDateTime: string,
+  timeZone: string,
+): Date | null {
+  const match = localDateTime.match(
+    /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/,
+  );
+  if (!match) return null;
+  const desired = match.slice(1).map(Number);
+  const desiredUtcLike = Date.UTC(
+    desired[0],
+    desired[1] - 1,
+    desired[2],
+    desired[3],
+    desired[4],
+  );
+  const calendarCheck = new Date(desiredUtcLike);
+  if (
+    calendarCheck.getUTCFullYear() !== desired[0] ||
+    calendarCheck.getUTCMonth() !== desired[1] - 1 ||
+    calendarCheck.getUTCDate() !== desired[2]
+  ) {
+    return null;
+  }
+
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat('en-CA', {
+      day: '2-digit',
+      hour: '2-digit',
+      hourCycle: 'h23',
+      minute: '2-digit',
+      month: '2-digit',
+      timeZone,
+      year: 'numeric',
+    });
+  } catch {
+    return null;
+  }
+
+  let instant = desiredUtcLike;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(instant))
+        .filter((part) => part.type !== 'literal')
+        .map((part) => [part.type, Number(part.value)]),
+    );
+    const represented = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+    );
+    const adjustment = desiredUtcLike - represented;
+    if (adjustment === 0) return new Date(instant);
+    instant += adjustment;
+  }
+  return null;
+}
+
 export function getDueReminderKey(
   now: Date,
   timeZone: string,

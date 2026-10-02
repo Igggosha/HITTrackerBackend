@@ -3,16 +3,30 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+} from 'drizzle-orm';
 import { primaryDb } from '../db/db';
 import {
+  notificationCampaigns,
   notificationDeliveries,
+  notificationMedia,
   notificationPreferences,
   notifications,
   pushDevices,
   users,
 } from '../db/schema';
 import type { DbTransaction } from '../outbox/transaction';
+import { StorageService } from '../storage/storage.service';
+import type { UploadedFile } from '../storage/upload-validation';
 import type {
   CreateAdminNotificationDto,
   NotificationCategory,
@@ -20,6 +34,7 @@ import type {
   UpdateNotificationPreferencesDto,
 } from './dto/notification.dto';
 import { PushTokenCrypto, hashPushToken } from './push-token.crypto';
+import { zonedLocalDateTimeToUtc } from './reminder-schedule';
 
 const categoryPreference = {
   general: 'generalEnabled',
@@ -28,6 +43,8 @@ const categoryPreference = {
   achievements: 'achievementsEnabled',
   news: 'newsEnabled',
 } as const;
+const ADMIN_NOTIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const LOGIN_DELIVERY_BACKFILL_LIMIT = 25;
 
 type NotificationInput = {
   category: NotificationCategory;
@@ -35,13 +52,19 @@ type NotificationInput = {
   body: string;
   payload?: Record<string, unknown>;
   scheduledAt?: Date;
+  scheduledLocalAt?: string;
   expiresAt?: Date;
   dedupeKey?: string;
+  campaignId?: string;
+  mediaId?: string;
 };
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly tokenCrypto: PushTokenCrypto) {}
+  constructor(
+    private readonly tokenCrypto: PushTokenCrypto,
+    private readonly storage: StorageService,
+  ) {}
 
   async getPreferences(userId: number) {
     await primaryDb
@@ -118,7 +141,7 @@ export class NotificationsService {
           })
           .where(eq(pushDevices.tokenHash, tokenHash));
       }
-      await tx
+      const [device] = await tx
         .insert(pushDevices)
         .values({
           userId,
@@ -154,11 +177,67 @@ export class NotificationsService {
             locale: dto.locale,
             timeZone: dto.timeZone,
           },
-        });
+        })
+        .returning({ id: pushDevices.id });
       await tx
         .insert(notificationPreferences)
         .values({ userId })
         .onConflictDoNothing();
+      if (token && device) {
+        const [preferences] = await tx
+          .select({ pushEnabled: notificationPreferences.pushEnabled })
+          .from(notificationPreferences)
+          .where(eq(notificationPreferences.userId, userId))
+          .limit(1);
+        if (preferences?.pushEnabled) {
+          const candidates = await tx
+            .select({
+              id: notifications.id,
+              scheduledAt: notifications.scheduledAt,
+              scheduledLocalAt: notificationCampaigns.scheduledLocalAt,
+            })
+            .from(notifications)
+            .innerJoin(
+              notificationCampaigns,
+              eq(notifications.campaignId, notificationCampaigns.id),
+            )
+            .where(
+              and(
+                eq(notifications.userId, userId),
+                isNotNull(notifications.campaignId),
+                isNull(notifications.readAt),
+                or(
+                  isNull(notifications.expiresAt),
+                  gt(notifications.expiresAt, now),
+                ),
+              ),
+            )
+            .orderBy(desc(notifications.createdAt))
+            .limit(LOGIN_DELIVERY_BACKFILL_LIMIT);
+          if (candidates.length) {
+            await tx
+              .insert(notificationDeliveries)
+              .values(
+                candidates.map((notification) => ({
+                  userId,
+                  notificationId: notification.id,
+                  pushDeviceId: device.id,
+                  nextAttemptAt: (() => {
+                    const local = notification.scheduledLocalAt
+                      ? zonedLocalDateTimeToUtc(
+                          notification.scheduledLocalAt,
+                          dto.timeZone ?? 'UTC',
+                        )
+                      : null;
+                    const dueAt = local ?? notification.scheduledAt;
+                    return dueAt > now ? dueAt : now;
+                  })(),
+                })),
+              )
+              .onConflictDoNothing();
+          }
+        }
+      }
     });
     return { registered: Boolean(token) };
   }
@@ -199,7 +278,39 @@ export class NotificationsService {
         .from(notifications)
         .where(unreadFilter),
     ]);
-    return { items, page, limit, total, unreadCount };
+    const mediaIds = [
+      ...new Set(items.map((item) => item.mediaId).filter(Boolean)),
+    ] as string[];
+    const mediaRows = mediaIds.length
+      ? await primaryDb
+          .select({
+            id: notificationMedia.id,
+            key: notificationMedia.objectKey,
+          })
+          .from(notificationMedia)
+          .where(inArray(notificationMedia.id, mediaIds))
+      : [];
+    const mediaUrls = await this.storage.getUrls(
+      mediaRows.map((row) => row.key),
+    );
+    const urlByMediaId = new Map(
+      mediaRows.map((row, index) => [row.id, mediaUrls[index]]),
+    );
+    return {
+      items: items.map((item) => ({
+        ...item,
+        payload: {
+          ...item.payload,
+          ...(item.mediaId && urlByMediaId.get(item.mediaId)
+            ? { imageUrl: urlByMediaId.get(item.mediaId) }
+            : {}),
+        },
+      })),
+      page,
+      limit,
+      total,
+      unreadCount,
+    };
   }
 
   async markRead(userId: number, notificationId: string) {
@@ -280,17 +391,103 @@ export class NotificationsService {
     );
   }
 
-  async createAdminNotification(dto: CreateAdminNotificationDto) {
+  async uploadAdminMedia(userId: number, file: UploadedFile | undefined) {
+    const stored = await this.storage.uploadImage({
+      scope: 'notifications',
+      ownerId: userId,
+      file,
+      maxDimension: this.storage.limits.exerciseImageMaxDimension,
+    });
+    try {
+      const [media] = await primaryDb
+        .insert(notificationMedia)
+        .values({
+          uploadedBy: userId,
+          objectKey: stored.key,
+          width: stored.width,
+          height: stored.height,
+        })
+        .returning();
+      return {
+        id: media.id,
+        uploadedBy: media.uploadedBy,
+        width: media.width,
+        height: media.height,
+        createdAt: media.createdAt,
+        imageUrl: await this.storage.getUrl(media.objectKey),
+      };
+    } catch (error) {
+      await this.storage.remove(stored.key);
+      throw error;
+    }
+  }
+
+  async listAdminMedia() {
+    const items = await primaryDb
+      .select()
+      .from(notificationMedia)
+      .orderBy(desc(notificationMedia.createdAt))
+      .limit(50);
+    const urls = await this.storage.getUrls(
+      items.map((item) => item.objectKey),
+    );
+    return {
+      items: items.map((item, index) => ({
+        id: item.id,
+        uploadedBy: item.uploadedBy,
+        width: item.width,
+        height: item.height,
+        createdAt: item.createdAt,
+        imageUrl: urls[index],
+      })),
+    };
+  }
+
+  async listAdminHistory() {
+    const items = await primaryDb
+      .select()
+      .from(notificationCampaigns)
+      .orderBy(desc(notificationCampaigns.createdAt))
+      .limit(50);
+    const mediaIds = [
+      ...new Set(items.map((item) => item.mediaId).filter(Boolean)),
+    ] as string[];
+    const media = mediaIds.length
+      ? await primaryDb
+          .select({
+            id: notificationMedia.id,
+            key: notificationMedia.objectKey,
+          })
+          .from(notificationMedia)
+          .where(inArray(notificationMedia.id, mediaIds))
+      : [];
+    const urls = await this.storage.getUrls(media.map((item) => item.key));
+    const urlById = new Map(media.map((item, index) => [item.id, urls[index]]));
+    return {
+      items: items.map((item) => ({
+        ...item,
+        imageUrl: item.mediaId ? (urlById.get(item.mediaId) ?? null) : null,
+      })),
+    };
+  }
+
+  async createAdminNotification(
+    dto: CreateAdminNotificationDto,
+    createdBy: number,
+  ) {
     const scheduledAt = dto.scheduledAt
       ? new Date(dto.scheduledAt)
-      : new Date();
+      : dto.scheduledLocalAt
+        ? undefined
+        : new Date();
     const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : undefined;
-    if (expiresAt && expiresAt <= scheduledAt) {
+    if (expiresAt && scheduledAt && expiresAt <= scheduledAt) {
       throw new BadRequestException({ code: 'INVALID_NOTIFICATION_EXPIRY' });
     }
     const payload = {
       ...dto.payload,
       ...(dto.imageUrl ? { imageUrl: dto.imageUrl } : {}),
+      ...(dto.videoUrl ? { videoUrl: dto.videoUrl } : {}),
       ...(dto.actionUrl ? { actionUrl: dto.actionUrl } : {}),
     };
     if (JSON.stringify(payload).length > 4096) {
@@ -298,6 +495,15 @@ export class NotificationsService {
     }
     if (dto.audience === 'users' && !dto.userIds?.length) {
       throw new BadRequestException({ code: 'NOTIFICATION_USERS_REQUIRED' });
+    }
+    if (dto.imageMediaId) {
+      const [media] = await primaryDb
+        .select({ id: notificationMedia.id })
+        .from(notificationMedia)
+        .where(eq(notificationMedia.id, dto.imageMediaId))
+        .limit(1);
+      if (!media)
+        throw new BadRequestException({ code: 'NOTIFICATION_MEDIA_NOT_FOUND' });
     }
 
     const targetRows = await primaryDb
@@ -308,18 +514,44 @@ export class NotificationsService {
       );
     const input: NotificationInput = {
       category: dto.category,
-      title: dto.title.trim(),
-      body: dto.body.trim(),
+      title: dto.title?.trim() ?? '',
+      body: dto.body?.trim() ?? '',
       payload,
       scheduledAt,
+      scheduledLocalAt: dto.scheduledLocalAt,
       expiresAt,
       dedupeKey: dto.dedupeKey,
+      mediaId: dto.imageMediaId,
     };
-    if (!input.title || !input.body) {
+    if (
+      !input.title &&
+      !input.body &&
+      !dto.imageUrl &&
+      !dto.imageMediaId &&
+      !dto.videoUrl &&
+      !dto.actionUrl
+    ) {
       throw new BadRequestException({ code: 'EMPTY_NOTIFICATION' });
     }
 
     return primaryDb.transaction(async (tx) => {
+      const [campaign] = await tx
+        .insert(notificationCampaigns)
+        .values({
+          createdBy,
+          audience: dto.audience,
+          targetUserIds: dto.audience === 'users' ? dto.userIds : null,
+          category: input.category,
+          title: input.title,
+          body: input.body,
+          mediaId: input.mediaId,
+          videoUrl: dto.videoUrl,
+          actionUrl: dto.actionUrl,
+          scheduledAt,
+          scheduledLocalAt: dto.scheduledLocalAt,
+        })
+        .returning({ id: notificationCampaigns.id });
+      input.campaignId = campaign.id;
       let recipientCount = 0;
       let deliveryCount = 0;
       for (const target of targetRows) {
@@ -327,7 +559,11 @@ export class NotificationsService {
         if (result.notificationId) recipientCount += 1;
         deliveryCount += result.deliveryCount;
       }
-      return { recipientCount, deliveryCount };
+      await tx
+        .update(notificationCampaigns)
+        .set({ recipientCount, deliveryCount })
+        .where(eq(notificationCampaigns.id, campaign.id));
+      return { campaignId: campaign.id, recipientCount, deliveryCount };
     });
   }
 
@@ -347,9 +583,69 @@ export class NotificationsService {
       return { notificationId: null, deliveryCount: 0 };
     }
 
+    const devices =
+      input.scheduledLocalAt || preferences?.pushEnabled
+        ? await tx
+            .select({ id: pushDevices.id, timeZone: pushDevices.timeZone })
+            .from(pushDevices)
+            .where(
+              and(
+                eq(pushDevices.userId, userId),
+                eq(pushDevices.permissionStatus, 'granted'),
+                isNotNull(pushDevices.tokenHash),
+                isNotNull(pushDevices.tokenCiphertext),
+                isNull(pushDevices.revokedAt),
+              ),
+            )
+            .orderBy(desc(pushDevices.lastSeenAt))
+        : [];
+    const resolveLocalSchedule = (timeZone: string | null | undefined) =>
+      input.scheduledLocalAt
+        ? (zonedLocalDateTimeToUtc(
+            input.scheduledLocalAt,
+            timeZone ?? preferences?.timeZone ?? 'UTC',
+          ) ??
+          zonedLocalDateTimeToUtc(
+            input.scheduledLocalAt,
+            preferences?.timeZone ?? 'UTC',
+          ))
+        : null;
+    const deviceSchedules = devices.map((device) =>
+      resolveLocalSchedule(device.timeZone),
+    );
+    const scheduledAt = input.scheduledLocalAt
+      ? ((deviceSchedules.filter(Boolean) as Date[]).sort(
+          (left, right) => left.getTime() - right.getTime(),
+        )[0] ?? resolveLocalSchedule(null))
+      : (input.scheduledAt ?? new Date());
+    if (!scheduledAt) {
+      throw new BadRequestException({
+        code: 'INVALID_LOCAL_NOTIFICATION_TIME',
+      });
+    }
+    const expiresAt =
+      input.expiresAt ??
+      (input.campaignId
+        ? new Date(scheduledAt.getTime() + ADMIN_NOTIFICATION_TTL_MS)
+        : undefined);
+    if (expiresAt && expiresAt <= scheduledAt) {
+      throw new BadRequestException({ code: 'INVALID_NOTIFICATION_EXPIRY' });
+    }
+
     const [notification] = await tx
       .insert(notifications)
-      .values({ userId, ...input })
+      .values({
+        userId,
+        campaignId: input.campaignId,
+        mediaId: input.mediaId,
+        category: input.category,
+        title: input.title,
+        body: input.body,
+        payload: input.payload,
+        scheduledAt,
+        expiresAt,
+        dedupeKey: input.dedupeKey,
+      })
       .onConflictDoNothing()
       .returning({ id: notifications.id });
     if (!notification) return { notificationId: null, deliveryCount: 0 };
@@ -357,25 +653,13 @@ export class NotificationsService {
     if (!preferences?.pushEnabled) {
       return { notificationId: notification.id, deliveryCount: 0 };
     }
-    const devices = await tx
-      .select({ id: pushDevices.id })
-      .from(pushDevices)
-      .where(
-        and(
-          eq(pushDevices.userId, userId),
-          eq(pushDevices.permissionStatus, 'granted'),
-          isNotNull(pushDevices.tokenHash),
-          isNotNull(pushDevices.tokenCiphertext),
-          isNull(pushDevices.revokedAt),
-        ),
-      );
     if (devices.length) {
       await tx.insert(notificationDeliveries).values(
-        devices.map((device) => ({
+        devices.map((device, index) => ({
           userId,
           notificationId: notification.id,
           pushDeviceId: device.id,
-          nextAttemptAt: input.scheduledAt ?? new Date(),
+          nextAttemptAt: deviceSchedules[index] ?? scheduledAt,
         })),
       );
     }
