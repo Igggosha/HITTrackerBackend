@@ -1,0 +1,314 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { App } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
+import { primaryDb } from '../db/db';
+import {
+  notificationDeliveries,
+  notifications,
+  pushDevices,
+} from '../db/schema';
+import { FIREBASE_APP } from '../firebase/firebase.module';
+import { PushTokenCrypto } from './push-token.crypto';
+
+const MAX_ATTEMPTS = 5;
+const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000];
+
+type ClaimedDelivery = {
+  id: string;
+  pushDeviceId: string;
+  attempts: number;
+  provider: 'fcm' | 'expo';
+  tokenCiphertext: string;
+  notificationId: string;
+  category: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+};
+
+type ProviderFailure = Error & { permanent?: boolean; code?: string };
+
+@Injectable()
+export class NotificationDeliveryService {
+  private readonly logger = new Logger(NotificationDeliveryService.name);
+
+  constructor(
+    @Inject(FIREBASE_APP) private readonly firebaseApp: App | null,
+    private readonly tokenCrypto: PushTokenCrypto,
+  ) {}
+
+  async processBatch(limit = 100) {
+    const claimed = await this.claim(limit);
+    let sent = 0;
+    let failed = 0;
+    for (const delivery of claimed) {
+      try {
+        const token = this.tokenCrypto.decrypt(delivery.tokenCiphertext);
+        await this.send(delivery, token);
+        await primaryDb
+          .update(notificationDeliveries)
+          .set({
+            status: 'sent',
+            sentAt: new Date(),
+            leaseUntil: null,
+            lastErrorCode: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(notificationDeliveries.id, delivery.id));
+        sent += 1;
+      } catch (cause) {
+        const error = this.normalizeFailure(cause);
+        const permanent = error.permanent || delivery.attempts >= MAX_ATTEMPTS;
+        await primaryDb.transaction(async (tx) => {
+          await tx
+            .update(notificationDeliveries)
+            .set({
+              status: permanent ? 'failed' : 'pending',
+              leaseUntil: null,
+              nextAttemptAt: permanent
+                ? new Date()
+                : new Date(
+                    Date.now() +
+                      RETRY_DELAYS_MS[
+                        Math.min(
+                          delivery.attempts - 1,
+                          RETRY_DELAYS_MS.length - 1,
+                        )
+                      ],
+                  ),
+              lastErrorCode: error.code ?? 'provider_error',
+              updatedAt: new Date(),
+            })
+            .where(eq(notificationDeliveries.id, delivery.id));
+          if (error.permanent) {
+            await tx
+              .update(pushDevices)
+              .set({
+                tokenHash: null,
+                tokenCiphertext: null,
+                revokedAt: new Date(),
+                tokenUpdatedAt: new Date(),
+              })
+              .where(eq(pushDevices.id, delivery.pushDeviceId));
+          }
+        });
+        this.logger.warn({
+          event: 'push_delivery_failed',
+          deliveryId: delivery.id,
+          provider: delivery.provider,
+          code: error.code ?? 'provider_error',
+          permanent,
+        });
+        failed += 1;
+      }
+    }
+    return { claimed: claimed.length, sent, failed };
+  }
+
+  private async claim(limit: number): Promise<ClaimedDelivery[]> {
+    const now = new Date();
+    await primaryDb
+      .update(notificationDeliveries)
+      .set({ status: 'skipped', leaseUntil: null, updatedAt: now })
+      .where(
+        and(
+          inArray(notificationDeliveries.status, ['pending', 'sending']),
+          inArray(
+            notificationDeliveries.notificationId,
+            primaryDb
+              .select({ id: notifications.id })
+              .from(notifications)
+              .where(
+                and(
+                  isNotNull(notifications.expiresAt),
+                  lte(notifications.expiresAt, now),
+                ),
+              ),
+          ),
+        ),
+      );
+
+    return primaryDb.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          id: notificationDeliveries.id,
+          pushDeviceId: notificationDeliveries.pushDeviceId,
+          attempts: notificationDeliveries.attempts,
+          provider: pushDevices.provider,
+          tokenCiphertext: pushDevices.tokenCiphertext,
+          notificationId: notifications.id,
+          category: notifications.category,
+          title: notifications.title,
+          body: notifications.body,
+          payload: notifications.payload,
+        })
+        .from(notificationDeliveries)
+        .innerJoin(
+          notifications,
+          eq(notificationDeliveries.notificationId, notifications.id),
+        )
+        .innerJoin(
+          pushDevices,
+          eq(notificationDeliveries.pushDeviceId, pushDevices.id),
+        )
+        .where(
+          and(
+            or(
+              and(
+                eq(notificationDeliveries.status, 'pending'),
+                lte(notificationDeliveries.nextAttemptAt, now),
+              ),
+              and(
+                eq(notificationDeliveries.status, 'sending'),
+                lte(notificationDeliveries.leaseUntil, now),
+              ),
+            ),
+            lte(notifications.scheduledAt, now),
+            or(
+              isNull(notifications.expiresAt),
+              gt(notifications.expiresAt, now),
+            ),
+            isNull(pushDevices.revokedAt),
+            isNotNull(pushDevices.tokenCiphertext),
+          ),
+        )
+        .orderBy(asc(notificationDeliveries.nextAttemptAt))
+        .limit(Math.max(1, Math.min(limit, 500)))
+        .for('update', { skipLocked: true });
+
+      if (!rows.length) return [];
+      const leaseUntil = new Date(Date.now() + 60_000);
+      await tx
+        .update(notificationDeliveries)
+        .set({
+          status: 'sending',
+          attempts: sql`${notificationDeliveries.attempts} + 1`,
+          leaseUntil,
+          updatedAt: now,
+        })
+        .where(
+          inArray(
+            notificationDeliveries.id,
+            rows.map((row) => row.id),
+          ),
+        );
+      return rows.map((row) => ({
+        ...row,
+        attempts: row.attempts + 1,
+        tokenCiphertext: row.tokenCiphertext!,
+      }));
+    });
+  }
+
+  private async send(delivery: ClaimedDelivery, token: string) {
+    const imageUrl =
+      typeof delivery.payload.imageUrl === 'string'
+        ? delivery.payload.imageUrl
+        : undefined;
+    const actionUrl =
+      typeof delivery.payload.actionUrl === 'string'
+        ? delivery.payload.actionUrl
+        : undefined;
+    const data = {
+      notificationId: delivery.notificationId,
+      category: delivery.category,
+      payload: JSON.stringify(delivery.payload ?? {}),
+      screen: 'Notifications',
+      ...(actionUrl ? { actionUrl } : {}),
+    };
+    if (delivery.provider === 'fcm') {
+      if (!this.firebaseApp) throw new Error('Firebase is not configured');
+      const webAppUrl = process.env.FRONTEND_URL;
+      const webLink =
+        actionUrl ??
+        (webAppUrl?.startsWith('https://')
+          ? new URL('/notifications', webAppUrl).toString()
+          : undefined);
+      await getMessaging(this.firebaseApp).send({
+        token,
+        notification: {
+          title: delivery.title,
+          body: delivery.body,
+          ...(imageUrl ? { imageUrl } : {}),
+        },
+        data,
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'default',
+            sound: 'default',
+            ...(imageUrl ? { imageUrl } : {}),
+          },
+        },
+        webpush: {
+          notification: {
+            icon: '/favicon.png',
+            ...(imageUrl ? { image: imageUrl } : {}),
+          },
+          ...(webLink ? { fcmOptions: { link: webLink } } : {}),
+        },
+      });
+      return;
+    }
+
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: token,
+        title: delivery.title,
+        body: delivery.body,
+        data,
+        sound: 'default',
+        channelId: 'default',
+        ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
+      }),
+    });
+    if (!response.ok) throw new Error(`Expo push HTTP ${response.status}`);
+    const ticket = (await response.json()) as {
+      data?: {
+        status?: string;
+        details?: { error?: string };
+        message?: string;
+      };
+    };
+    if (ticket.data?.status === 'error') {
+      const error = new Error(
+        ticket.data.message ?? 'Expo push failed',
+      ) as ProviderFailure;
+      error.code = ticket.data.details?.error ?? 'expo_error';
+      error.permanent = error.code === 'DeviceNotRegistered';
+      throw error;
+    }
+  }
+
+  private normalizeFailure(cause: unknown): ProviderFailure {
+    const error: ProviderFailure =
+      cause instanceof Error ? cause : new Error(String(cause));
+    const firebaseCode = (cause as { code?: string })?.code;
+    if (firebaseCode) error.code = firebaseCode;
+    if (
+      firebaseCode === 'messaging/registration-token-not-registered' ||
+      firebaseCode === 'messaging/invalid-registration-token' ||
+      firebaseCode === 'messaging/mismatched-credential'
+    ) {
+      error.permanent = true;
+    }
+    return error;
+  }
+}

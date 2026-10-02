@@ -137,6 +137,7 @@ export const pushDevices = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     installationId: uuid('installation_id').notNull(),
     platform: text('platform').$type<'android' | 'ios' | 'web'>().notNull(),
+    provider: text('provider').$type<'fcm' | 'expo'>().notNull().default('fcm'),
     deviceModel: text('device_model'),
     osVersion: text('os_version'),
     appVersion: text('app_version'),
@@ -174,6 +175,10 @@ export const pushDevices = pgTable(
       sql`${table.platform} in ('android', 'ios', 'web')`,
     ),
     check(
+      'push_devices_provider_check',
+      sql`${table.provider} in ('fcm', 'expo')`,
+    ),
+    check(
       'push_devices_permission_status_check',
       sql`${table.permissionStatus} in ('unknown', 'granted', 'denied')`,
     ),
@@ -184,26 +189,96 @@ export const pushDevices = pgTable(
   ],
 );
 
-export const notificationPreferences = pgTable('notification_preferences', {
-  userId: integer('user_id')
-    .primaryKey()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  pushEnabled: boolean('push_enabled').notNull().default(false),
-  generalEnabled: boolean('general_enabled').notNull().default(false),
-  workoutRemindersEnabled: boolean('workout_reminders_enabled')
-    .notNull()
-    .default(false),
-  measurementRemindersEnabled: boolean('measurement_reminders_enabled')
-    .notNull()
-    .default(false),
-  achievementsEnabled: boolean('achievements_enabled').notNull().default(false),
-  newsEnabled: boolean('news_enabled').notNull().default(false),
-  reminderTime: time('reminder_time'),
-  timeZone: text('time_zone'),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const notificationPreferences = pgTable(
+  'notification_preferences',
+  {
+    userId: integer('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    pushEnabled: boolean('push_enabled').notNull().default(false),
+    generalEnabled: boolean('general_enabled').notNull().default(false),
+    workoutRemindersEnabled: boolean('workout_reminders_enabled')
+      .notNull()
+      .default(false),
+    measurementRemindersEnabled: boolean('measurement_reminders_enabled')
+      .notNull()
+      .default(false),
+    achievementsEnabled: boolean('achievements_enabled')
+      .notNull()
+      .default(false),
+    newsEnabled: boolean('news_enabled').notNull().default(false),
+    reminderTime: time('reminder_time'),
+    reminderDays: integer('reminder_days')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[1,2,3,4,5]::integer[]`),
+    workoutReminderFrequency: text('workout_reminder_frequency')
+      .$type<
+        | 'scheduled'
+        | 'daily'
+        | 'every_other_day'
+        | 'weekly'
+        | 'twice_weekly'
+        | 'hourly'
+      >()
+      .notNull()
+      .default('scheduled'),
+    workoutReminderTime: time('workout_reminder_time')
+      .notNull()
+      .default('18:00:00'),
+    workoutReminderDays: integer('workout_reminder_days')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[1]::integer[]`),
+    measurementReminderFrequency: text('measurement_reminder_frequency')
+      .$type<
+        'daily' | 'every_other_day' | 'weekly' | 'twice_weekly' | 'hourly'
+      >()
+      .notNull()
+      .default('weekly'),
+    measurementReminderTime: time('measurement_reminder_time')
+      .notNull()
+      .default('18:00:00'),
+    measurementReminderDays: integer('measurement_reminder_days')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[0]::integer[]`),
+    timeZone: text('time_zone'),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check(
+      'notification_preferences_reminder_days_check',
+      sql`cardinality(${table.reminderDays}) between 1 and 7 and ${table.reminderDays} <@ ARRAY[0,1,2,3,4,5,6]::integer[]`,
+    ),
+    check(
+      'notification_preferences_workout_frequency_check',
+      sql`${table.workoutReminderFrequency} in ('scheduled', 'daily', 'every_other_day', 'weekly', 'twice_weekly', 'hourly')`,
+    ),
+    check(
+      'notification_preferences_measurement_frequency_check',
+      sql`${table.measurementReminderFrequency} in ('daily', 'every_other_day', 'weekly', 'twice_weekly', 'hourly')`,
+    ),
+    check(
+      'notification_preferences_workout_days_check',
+      sql`cardinality(${table.workoutReminderDays}) between 1 and 7 and ${table.workoutReminderDays} <@ ARRAY[0,1,2,3,4,5,6]::integer[]`,
+    ),
+    check(
+      'notification_preferences_measurement_days_check',
+      sql`cardinality(${table.measurementReminderDays}) between 1 and 7 and ${table.measurementReminderDays} <@ ARRAY[0,1,2,3,4,5,6]::integer[]`,
+    ),
+    check(
+      'notification_preferences_workout_cadence_days_check',
+      sql`(${table.workoutReminderFrequency} <> 'weekly' or cardinality(${table.workoutReminderDays}) = 1) and (${table.workoutReminderFrequency} <> 'twice_weekly' or cardinality(${table.workoutReminderDays}) = 2)`,
+    ),
+    check(
+      'notification_preferences_measurement_cadence_days_check',
+      sql`(${table.measurementReminderFrequency} <> 'weekly' or cardinality(${table.measurementReminderDays}) = 1) and (${table.measurementReminderFrequency} <> 'twice_weekly' or cardinality(${table.measurementReminderDays}) = 2)`,
+    ),
+  ],
+);
 
 export const notifications = pgTable(
   'notifications',

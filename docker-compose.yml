@@ -298,6 +298,32 @@ services:
       - edge
       - observability
 
+  notification-worker:
+    image: hit-tracker-api:20260928
+    build: .
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      NOTIFICATION_POLL_INTERVAL_MS: ${NOTIFICATION_POLL_INTERVAL_MS:-5000}
+      OTEL_SERVICE_NAME: hit-notification-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
+    command: ['node', 'dist/src/notification-worker/main.js']
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+    networks:
+      - private
+      - notification-egress
+    restart: unless-stopped
+
   kafka:
     image: apache/kafka:3.9.1
     profiles: [events, search]
@@ -850,4 +876,6 @@ networks:
     driver: bridge
   # Local-only observability UI/API; not shared with the tunnel network.
   observability:
+    driver: bridge
+  notification-egress:
     driver: bridge

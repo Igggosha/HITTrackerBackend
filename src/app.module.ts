@@ -23,6 +23,7 @@ import { context, trace } from '@opentelemetry/api';
 import { AdminObservabilityModule } from './admin-observability/admin-observability.module';
 import { CatalogSearchModule } from './catalog-search/catalog-search.module';
 import { FirebaseModule } from './firebase/firebase.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   controllers: [AppController],
@@ -121,6 +122,7 @@ import { FirebaseModule } from './firebase/firebase.module';
     AdminObservabilityModule,
     CatalogSearchModule,
     FirebaseModule,
+    NotificationsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
