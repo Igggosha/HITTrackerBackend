@@ -218,9 +218,22 @@ export class CreateAdminNotificationDto {
   imageMediaId?: string;
 
   @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsUUID('4', { each: true })
+  imageMediaIds?: string[];
+
+  @IsOptional()
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(2048)
   videoUrl?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsUrl({ protocols: ['https'], require_protocol: true }, { each: true })
+  @MaxLength(2048, { each: true })
+  videoUrls?: string[];
 
   @IsOptional()
   @IsUrl({ protocols: ['https'], require_protocol: true })

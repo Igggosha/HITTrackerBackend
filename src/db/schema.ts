@@ -316,7 +316,9 @@ export const notificationCampaigns = pgTable(
     mediaId: uuid('media_id').references(() => notificationMedia.id, {
       onDelete: 'set null',
     }),
+    mediaIds: jsonb('media_ids').$type<string[]>().notNull().default([]),
     videoUrl: text('video_url'),
+    videoUrls: jsonb('video_urls').$type<string[]>().notNull().default([]),
     actionUrl: text('action_url'),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     scheduledLocalAt: text('scheduled_local_at'),
@@ -352,6 +354,8 @@ export const notifications = pgTable(
     mediaId: uuid('media_id').references(() => notificationMedia.id, {
       onDelete: 'set null',
     }),
+    mediaIds: jsonb('media_ids').$type<string[]>().notNull().default([]),
+    videoUrls: jsonb('video_urls').$type<string[]>().notNull().default([]),
     category: text('category')
       .$type<'general' | 'workout' | 'measurements' | 'achievements' | 'news'>()
       .notNull(),

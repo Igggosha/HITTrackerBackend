@@ -80,4 +80,17 @@ describe('notification DTOs', () => {
 
     expect(await validate(dto)).toHaveLength(0);
   });
+
+  it('limits attachment arrays and requires HTTPS video URLs', async () => {
+    const dto = Object.assign(new CreateAdminNotificationDto(), {
+      audience: 'all',
+      category: 'news',
+      imageMediaIds: Array(6).fill('399cc332-6c6c-4aa6-a165-af966d6b84f7'),
+      videoUrls: ['http://example.com/video.mp4'],
+    });
+    expect(await validate(dto)).not.toHaveLength(0);
+    dto.imageMediaIds = dto.imageMediaIds.slice(0, 5);
+    dto.videoUrls = ['https://example.com/video.mp4'];
+    expect(await validate(dto)).toHaveLength(0);
+  });
 });

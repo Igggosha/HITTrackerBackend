@@ -39,6 +39,8 @@ type ClaimedDelivery = {
   body: string;
   payload: Record<string, unknown>;
   mediaId: string | null;
+  mediaIds: string[];
+  videoUrls: string[];
 };
 
 type ProviderFailure = Error & { permanent?: boolean; code?: string };
@@ -187,6 +189,8 @@ export class NotificationDeliveryService {
           body: notifications.body,
           payload: notifications.payload,
           mediaId: notifications.mediaId,
+          mediaIds: notifications.mediaIds,
+          videoUrls: notifications.videoUrls,
         })
         .from(notificationDeliveries)
         .innerJoin(
@@ -247,11 +251,16 @@ export class NotificationDeliveryService {
   }
 
   private async send(delivery: ClaimedDelivery, token: string) {
-    const [media] = delivery.mediaId
+    const mediaIds = delivery.mediaIds?.length
+      ? delivery.mediaIds
+      : delivery.mediaId
+        ? [delivery.mediaId]
+        : [];
+    const [media] = mediaIds.length
       ? await primaryDb
           .select({ key: notificationMedia.objectKey })
           .from(notificationMedia)
-          .where(eq(notificationMedia.id, delivery.mediaId))
+          .where(eq(notificationMedia.id, mediaIds[0]))
           .limit(1)
       : [];
     const storedImageUrl = await this.storage.getUrl(media?.key);
@@ -259,13 +268,16 @@ export class NotificationDeliveryService {
       storedImageUrl ??
       (typeof delivery.payload.imageUrl === 'string'
         ? delivery.payload.imageUrl
-        : youtubeThumbnail(delivery.payload.videoUrl));
+        : youtubeThumbnail(
+            delivery.videoUrls?.[0] ?? delivery.payload.videoUrl,
+          ));
     const actionUrl =
       typeof delivery.payload.actionUrl === 'string'
         ? delivery.payload.actionUrl
-        : typeof delivery.payload.videoUrl === 'string'
-          ? delivery.payload.videoUrl
-          : undefined;
+        : (delivery.videoUrls?.[0] ??
+          (typeof delivery.payload.videoUrl === 'string'
+            ? delivery.payload.videoUrl
+            : undefined));
     const data = {
       notificationId: delivery.notificationId,
       category: delivery.category,

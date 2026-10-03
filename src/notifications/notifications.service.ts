@@ -57,6 +57,8 @@ type NotificationInput = {
   dedupeKey?: string;
   campaignId?: string;
   mediaId?: string;
+  mediaIds?: string[];
+  videoUrls?: string[];
 };
 
 @Injectable()
@@ -279,8 +281,16 @@ export class NotificationsService {
         .where(unreadFilter),
     ]);
     const mediaIds = [
-      ...new Set(items.map((item) => item.mediaId).filter(Boolean)),
-    ] as string[];
+      ...new Set(
+        items.flatMap((item) =>
+          item.mediaIds?.length
+            ? item.mediaIds
+            : item.mediaId
+              ? [item.mediaId]
+              : [],
+        ),
+      ),
+    ];
     const mediaRows = mediaIds.length
       ? await primaryDb
           .select({
@@ -297,15 +307,34 @@ export class NotificationsService {
       mediaRows.map((row, index) => [row.id, mediaUrls[index]]),
     );
     return {
-      items: items.map((item) => ({
-        ...item,
-        payload: {
-          ...item.payload,
-          ...(item.mediaId && urlByMediaId.get(item.mediaId)
-            ? { imageUrl: urlByMediaId.get(item.mediaId) }
-            : {}),
-        },
-      })),
+      items: items.map((item) => {
+        const itemMediaIds = item.mediaIds?.length
+          ? item.mediaIds
+          : item.mediaId
+            ? [item.mediaId]
+            : [];
+        const imageUrls = itemMediaIds
+          .map((id) => urlByMediaId.get(id))
+          .filter((url): url is string => Boolean(url));
+        const videoUrls = item.videoUrls?.length
+          ? item.videoUrls
+          : item.payload.videoUrls instanceof Array
+            ? item.payload.videoUrls.filter(
+                (url): url is string => typeof url === 'string',
+              )
+            : typeof item.payload.videoUrl === 'string'
+              ? [item.payload.videoUrl]
+              : [];
+        return {
+          ...item,
+          imageUrls,
+          videoUrls,
+          payload: {
+            ...item.payload,
+            ...(imageUrls.length ? { imageUrl: imageUrls[0], imageUrls } : {}),
+          },
+        };
+      }),
       page,
       limit,
       total,
@@ -450,8 +479,16 @@ export class NotificationsService {
       .orderBy(desc(notificationCampaigns.createdAt))
       .limit(50);
     const mediaIds = [
-      ...new Set(items.map((item) => item.mediaId).filter(Boolean)),
-    ] as string[];
+      ...new Set(
+        items.flatMap((item) =>
+          item.mediaIds?.length
+            ? item.mediaIds
+            : item.mediaId
+              ? [item.mediaId]
+              : [],
+        ),
+      ),
+    ];
     const media = mediaIds.length
       ? await primaryDb
           .select({
@@ -464,10 +501,28 @@ export class NotificationsService {
     const urls = await this.storage.getUrls(media.map((item) => item.key));
     const urlById = new Map(media.map((item, index) => [item.id, urls[index]]));
     return {
-      items: items.map((item) => ({
-        ...item,
-        imageUrl: item.mediaId ? (urlById.get(item.mediaId) ?? null) : null,
-      })),
+      items: items.map((item) => {
+        const itemMediaIds = item.mediaIds?.length
+          ? item.mediaIds
+          : item.mediaId
+            ? [item.mediaId]
+            : [];
+        const imageUrls = itemMediaIds
+          .map((id) => urlById.get(id))
+          .filter((url): url is string => Boolean(url));
+        const videoUrls = item.videoUrls?.length
+          ? item.videoUrls
+          : item.videoUrl
+            ? [item.videoUrl]
+            : [];
+        return {
+          ...item,
+          imageUrl: imageUrls[0] ?? null,
+          imageUrls,
+          videoUrl: videoUrls[0] ?? null,
+          videoUrls,
+        };
+      }),
     };
   }
 
@@ -484,10 +539,37 @@ export class NotificationsService {
     if (expiresAt && scheduledAt && expiresAt <= scheduledAt) {
       throw new BadRequestException({ code: 'INVALID_NOTIFICATION_EXPIRY' });
     }
+    const mediaIds = [
+      ...new Set([
+        ...(dto.imageMediaIds ?? []),
+        ...(dto.imageMediaId ? [dto.imageMediaId] : []),
+      ]),
+    ];
+    const videoUrls = [
+      ...new Set([
+        ...(dto.videoUrls ?? []),
+        ...(dto.videoUrl ? [dto.videoUrl] : []),
+      ]),
+    ];
+    if (mediaIds.length > 5 || videoUrls.length > 5) {
+      throw new BadRequestException({
+        code: 'NOTIFICATION_ATTACHMENT_LIMIT_EXCEEDED',
+      });
+    }
+    if (mediaIds.length) {
+      const found = await primaryDb
+        .select({ id: notificationMedia.id })
+        .from(notificationMedia)
+        .where(inArray(notificationMedia.id, mediaIds));
+      if (found.length !== mediaIds.length) {
+        throw new BadRequestException({ code: 'NOTIFICATION_MEDIA_NOT_FOUND' });
+      }
+    }
     const payload = {
       ...dto.payload,
       ...(dto.imageUrl ? { imageUrl: dto.imageUrl } : {}),
-      ...(dto.videoUrl ? { videoUrl: dto.videoUrl } : {}),
+      ...(videoUrls.length ? { videoUrl: videoUrls[0] } : {}),
+      ...(videoUrls.length ? { videoUrls } : {}),
       ...(dto.actionUrl ? { actionUrl: dto.actionUrl } : {}),
     };
     if (JSON.stringify(payload).length > 4096) {
@@ -496,16 +578,6 @@ export class NotificationsService {
     if (dto.audience === 'users' && !dto.userIds?.length) {
       throw new BadRequestException({ code: 'NOTIFICATION_USERS_REQUIRED' });
     }
-    if (dto.imageMediaId) {
-      const [media] = await primaryDb
-        .select({ id: notificationMedia.id })
-        .from(notificationMedia)
-        .where(eq(notificationMedia.id, dto.imageMediaId))
-        .limit(1);
-      if (!media)
-        throw new BadRequestException({ code: 'NOTIFICATION_MEDIA_NOT_FOUND' });
-    }
-
     const targetRows = await primaryDb
       .select({ id: users.id })
       .from(users)
@@ -521,14 +593,16 @@ export class NotificationsService {
       scheduledLocalAt: dto.scheduledLocalAt,
       expiresAt,
       dedupeKey: dto.dedupeKey,
-      mediaId: dto.imageMediaId,
+      mediaId: mediaIds[0],
+      mediaIds,
+      videoUrls,
     };
     if (
       !input.title &&
       !input.body &&
       !dto.imageUrl &&
-      !dto.imageMediaId &&
-      !dto.videoUrl &&
+      !mediaIds.length &&
+      !videoUrls.length &&
       !dto.actionUrl
     ) {
       throw new BadRequestException({ code: 'EMPTY_NOTIFICATION' });
@@ -545,7 +619,9 @@ export class NotificationsService {
           title: input.title,
           body: input.body,
           mediaId: input.mediaId,
-          videoUrl: dto.videoUrl,
+          mediaIds: input.mediaIds,
+          videoUrl: videoUrls[0],
+          videoUrls,
           actionUrl: dto.actionUrl,
           scheduledAt,
           scheduledLocalAt: dto.scheduledLocalAt,
@@ -638,6 +714,8 @@ export class NotificationsService {
         userId,
         campaignId: input.campaignId,
         mediaId: input.mediaId,
+        mediaIds: input.mediaIds,
+        videoUrls: input.videoUrls,
         category: input.category,
         title: input.title,
         body: input.body,
