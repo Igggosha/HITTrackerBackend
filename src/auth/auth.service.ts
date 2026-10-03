@@ -63,6 +63,7 @@ type AuthUser = {
   username: string | null;
   displayName: string;
   role: UserRole;
+  isSystemOwner: boolean;
 };
 
 @Injectable()
@@ -616,6 +617,7 @@ export class AuthService {
           username: users.username,
           displayName: users.displayName,
           role: users.role,
+          isSystemOwner: users.isSystemOwner,
         })
         .from(users)
         .where(eq(users.id, session.userId))
@@ -676,6 +678,7 @@ export class AuthService {
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      isSystemOwner: user.isSystemOwner,
     };
   }
 

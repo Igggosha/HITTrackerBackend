@@ -342,6 +342,7 @@ describe('UsersService profile identity', () => {
           username: null,
           displayName: 'John Doe',
           role: 'user',
+          isSystemOwner: true,
         },
       ])
       .mockResolvedValueOnce([]);
@@ -349,6 +350,7 @@ describe('UsersService profile identity', () => {
     await expect(service.getProfile(1, true)).resolves.toMatchObject({
       displayName: 'John Doe',
       username: null,
+      isSystemOwner: true,
     });
   });
 

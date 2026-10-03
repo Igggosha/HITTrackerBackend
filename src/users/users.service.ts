@@ -417,7 +417,11 @@ export class UsersService {
     targetUserId: number,
   ) {
     const rows = await tx
-      .select({ id: users.id, role: users.role })
+      .select({
+        id: users.id,
+        role: users.role,
+        isSystemOwner: users.isSystemOwner,
+      })
       .from(users)
       .where(inArray(users.id, [actorUserId, targetUserId]))
       .orderBy(asc(users.id))
@@ -443,17 +447,20 @@ export class UsersService {
       if (!actor)
         throw new ForbiddenException('Your account no longer has access');
       if (!target) throw new NotFoundException('User not found');
+      if (target.isSystemOwner) {
+        throw new ForbiddenException('You cannot change the system owner role');
+      }
       if (actorUserId === targetUserId) {
         throw new ForbiddenException('You cannot change your own role');
       }
 
-      const isSuperAdmin = actor.role === 'super_admin';
+      const isSystemOwner = actor.isSystemOwner;
       if (
-        !isSuperAdmin &&
+        !isSystemOwner &&
         (target.role === 'super_admin' || role === 'super_admin')
       ) {
         throw new ForbiddenException(
-          'Only a super admin can manage super admins',
+          'Only the system owner can manage super admins',
         );
       }
       if (!hasMinimumRole(actor.role, 'admin')) {
@@ -499,13 +506,16 @@ export class UsersService {
       if (!actor)
         throw new ForbiddenException('Your account no longer has access');
       if (!target) throw new NotFoundException('User not found');
+      if (target.isSystemOwner) {
+        throw new ForbiddenException('You cannot delete the system owner');
+      }
       if (actorUserId === targetUserId)
         throw new ForbiddenException('You cannot delete your own account');
       if (!hasMinimumRole(actor.role, 'admin'))
         throw new ForbiddenException('Insufficient permissions');
-      if (actor.role !== 'super_admin' && target.role === 'super_admin') {
+      if (!actor.isSystemOwner && target.role === 'super_admin') {
         throw new ForbiddenException(
-          'Only a super admin can manage super admins',
+          'Only the system owner can manage super admins',
         );
       }
 
@@ -562,6 +572,7 @@ export class UsersService {
         username: users.username,
         displayName: users.displayName,
         role: users.role,
+        isSystemOwner: users.isSystemOwner,
         age: users.age,
         gender: users.gender,
         height: users.height,

@@ -64,6 +64,44 @@ describe('UsersService transactions', () => {
     expect(fake.find('update')).toHaveLength(0);
   });
 
+  it('protects the system owner from role changes and deletion', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'admin', isSystemOwner: false },
+      { id: 5, role: 'super_admin', isSystemOwner: true },
+    ]);
+
+    await expect(service.updateUserRole(1, 5, 'user')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(service.deleteUser(1, 5)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(fake.find('update')).toHaveLength(0);
+    expect(fake.find('delete')).toHaveLength(0);
+  });
+
+  it('lets only the system owner manage super admins', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: false },
+      { id: 5, role: 'user', isSystemOwner: false },
+    ]);
+    await expect(
+      service.updateUserRole(1, 5, 'super_admin'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('lets the system owner appoint a super admin', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: true },
+      { id: 5, role: 'admin', isSystemOwner: false },
+    ]);
+    fake.returns('update', users, [{ id: 5, role: 'super_admin' }]);
+
+    await service.updateUserRole(1, 5, 'super_admin');
+
+    expect(fake.committed('update', users)).toHaveLength(1);
+  });
+
   it('writes the role change and its activity row atomically', async () => {
     fake.returns('select', users, [
       { id: 1, role: 'super_admin' },

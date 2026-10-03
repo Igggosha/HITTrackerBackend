@@ -40,6 +40,7 @@ export const users = pgTable(
     passwordHash: text('password_hash'),
     googleId: text('google_id').unique(),
     role: text('role').$type<UserRole>().notNull().default('user'),
+    isSystemOwner: boolean('is_system_owner').notNull().default(false),
 
     // Password Reset
     resetPasswordToken: text('reset_password_token'),
@@ -62,6 +63,13 @@ export const users = pgTable(
     uniqueIndex('users_username_lower_unique')
       .on(sql`lower(${table.username})`)
       .where(sql`${table.username} is not null`),
+    uniqueIndex('users_single_system_owner_unique')
+      .on(table.isSystemOwner)
+      .where(sql`${table.isSystemOwner} = true`),
+    check(
+      'users_system_owner_role_check',
+      sql`not ${table.isSystemOwner} or ${table.role} = 'super_admin'`,
+    ),
   ],
 );
 

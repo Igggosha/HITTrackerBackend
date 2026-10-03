@@ -467,12 +467,14 @@ describe('AuthService registration', () => {
         username: null,
         displayName: 'User',
         role: 'moderator',
+        isSystemOwner: true,
       },
     ]);
 
     const result = await service.refreshSession('r'.repeat(64));
 
     expect(result.user.role).toBe('moderator');
+    expect(result.user.isSystemOwner).toBe(true);
     expect(result.refreshToken).toHaveLength(64);
     expect(tx.update).toHaveBeenCalledTimes(2);
     expect(jwtService.sign).toHaveBeenCalledWith(
