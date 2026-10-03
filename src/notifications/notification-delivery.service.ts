@@ -293,7 +293,6 @@ export class NotificationDeliveryService {
           priority: 'high',
           notification: {
             channelId: 'default',
-            color: '#E32222',
             icon: 'notification_icon',
             sound: 'default',
             ...(imageUrl ? { imageUrl } : {}),
