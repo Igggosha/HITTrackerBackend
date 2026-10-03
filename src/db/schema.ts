@@ -195,18 +195,18 @@ export const notificationPreferences = pgTable(
     userId: integer('user_id')
       .primaryKey()
       .references(() => users.id, { onDelete: 'cascade' }),
-    pushEnabled: boolean('push_enabled').notNull().default(false),
-    generalEnabled: boolean('general_enabled').notNull().default(false),
+    pushEnabled: boolean('push_enabled').notNull().default(true),
+    generalEnabled: boolean('general_enabled').notNull().default(true),
     workoutRemindersEnabled: boolean('workout_reminders_enabled')
       .notNull()
-      .default(false),
+      .default(true),
     measurementRemindersEnabled: boolean('measurement_reminders_enabled')
       .notNull()
-      .default(false),
+      .default(true),
     achievementsEnabled: boolean('achievements_enabled')
       .notNull()
-      .default(false),
-    newsEnabled: boolean('news_enabled').notNull().default(false),
+      .default(true),
+    newsEnabled: boolean('news_enabled').notNull().default(true),
     reminderTime: time('reminder_time'),
     reminderDays: integer('reminder_days')
       .array()
