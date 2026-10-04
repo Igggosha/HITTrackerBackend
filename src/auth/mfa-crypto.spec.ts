@@ -3,6 +3,7 @@ import {
   decryptTotpSecret,
   encryptTotpSecret,
   hashRecoveryCode,
+  isTotpSecretEncryptedWithCurrentKey,
   parseTotpEncryptionKeys,
 } from './mfa-crypto';
 
@@ -17,6 +18,12 @@ describe('MFA secret protection', () => {
 
     expect(encrypted).not.toContain('BASE32SECRET');
     expect(decryptTotpSecret(encrypted, rotated)).toBe('BASE32SECRET');
+    expect(isTotpSecretEncryptedWithCurrentKey(encrypted, rotated)).toBe(false);
+
+    const reencrypted = encryptTotpSecret('BASE32SECRET', rotated);
+    expect(isTotpSecretEncryptedWithCurrentKey(reencrypted, rotated)).toBe(
+      true,
+    );
   });
 
   it('rejects malformed keys and ciphertext', () => {

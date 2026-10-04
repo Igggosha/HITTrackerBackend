@@ -24,6 +24,7 @@ import {
   encryptTotpSecret,
   hashMfaChallenge,
   hashRecoveryCode,
+  isTotpSecretEncryptedWithCurrentKey,
   parseTotpEncryptionKeys,
   type TotpEncryptionKey,
 } from './mfa-crypto';
@@ -110,6 +111,19 @@ export class MfaService {
           userId: user.id,
           secretCiphertext: encryptTotpSecret(secret, this.keys),
         });
+      } else if (
+        !isTotpSecretEncryptedWithCurrentKey(
+          existing.secretCiphertext,
+          this.keys,
+        )
+      ) {
+        await tx
+          .update(authTotpCredentials)
+          .set({
+            secretCiphertext: encryptTotpSecret(secret, this.keys),
+            updatedAt: new Date(),
+          })
+          .where(eq(authTotpCredentials.userId, user.id));
       }
       return {
         secret,
@@ -132,8 +146,9 @@ export class MfaService {
       if (credential.enabledAt) {
         throw new ConflictException({ code: 'TOTP_ALREADY_ENABLED' });
       }
+      const secret = decryptTotpSecret(credential.secretCiphertext, this.keys);
       const result = await verify({
-        secret: decryptTotpSecret(credential.secretCiphertext, this.keys),
+        secret,
         token: code,
         epochTolerance: 30,
       });
@@ -144,6 +159,7 @@ export class MfaService {
       await tx
         .update(authTotpCredentials)
         .set({
+          secretCiphertext: encryptTotpSecret(secret, this.keys),
           enabledAt: now,
           lastUsedTimeStep: this.timeStep(result),
           recoveryCodeHashes: recoveryCodes.map(hashRecoveryCode),
@@ -190,9 +206,22 @@ export class MfaService {
         if (remaining.length === credential.recoveryCodeHashes.length) {
           throw this.invalidFactor();
         }
+        const secretCiphertext = isTotpSecretEncryptedWithCurrentKey(
+          credential.secretCiphertext,
+          this.keys,
+        )
+          ? credential.secretCiphertext
+          : encryptTotpSecret(
+              decryptTotpSecret(credential.secretCiphertext, this.keys),
+              this.keys,
+            );
         await tx
           .update(authTotpCredentials)
-          .set({ recoveryCodeHashes: remaining, updatedAt: new Date() })
+          .set({
+            secretCiphertext,
+            recoveryCodeHashes: remaining,
+            updatedAt: new Date(),
+          })
           .where(eq(authTotpCredentials.userId, user.id));
         await recordUserActivity(
           {
@@ -367,8 +396,9 @@ export class MfaService {
     credential: typeof authTotpCredentials.$inferSelect,
     code: string,
   ) {
+    const secret = decryptTotpSecret(credential.secretCiphertext, this.keys);
     const result = await verify({
-      secret: decryptTotpSecret(credential.secretCiphertext, this.keys),
+      secret,
       token: code,
       epochTolerance: 30,
       ...(credential.lastUsedTimeStep === null
@@ -376,9 +406,19 @@ export class MfaService {
         : { afterTimeStep: credential.lastUsedTimeStep }),
     });
     if (!result.valid) throw this.invalidFactor();
+    const secretCiphertext = isTotpSecretEncryptedWithCurrentKey(
+      credential.secretCiphertext,
+      this.keys,
+    )
+      ? credential.secretCiphertext
+      : encryptTotpSecret(secret, this.keys);
     await tx
       .update(authTotpCredentials)
-      .set({ lastUsedTimeStep: this.timeStep(result), updatedAt: new Date() })
+      .set({
+        secretCiphertext,
+        lastUsedTimeStep: this.timeStep(result),
+        updatedAt: new Date(),
+      })
       .where(eq(authTotpCredentials.userId, credential.userId));
   }
 

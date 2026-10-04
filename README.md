@@ -31,8 +31,9 @@ For a clean setup, manual checks, and a 10-minute thesis demo, follow the [Ukrai
 
 Docker Compose starts the API, PostgreSQL primary, and a streaming replica. The containers use the
 internal `hit-tracker-network`; the API connects to PostgreSQL through the
-service name `postgres`, not through a host port. Only the API is published to
-the host on port `3000` by default.
+service name `postgres`, not through a host port. Only the hardened API gateway
+is published to the host on port `3000` by default; the API container remains
+private.
 
 1. Copy `.env.example` to `.env` and fill in the required secrets. Keep
    `DB_USERNAME`, `DB_PASSWORD`, and `DB_NAME` are used by both containers.
@@ -55,6 +56,10 @@ the host on port `3000` by default.
 
 3. Check the API at `http://localhost:3000/` and stop the stack with
    `docker compose down`.
+
+Security-sensitive deployment, MFA key rotation, gateway/tunnel routing,
+incident response, and rollback are documented in the bilingual
+[`docs/security-operations.md`](docs/security-operations.md) runbook.
 
 The primary and replica have separate persistent volumes. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
@@ -119,16 +124,17 @@ correlate a specific `X-Request-Id` across every service, are in the same
 file.
 
 Before your first `docker compose up`, replace every `change_me`-style value
-in `.env`. Three of them are enforced at boot and the API refuses to start
+in `.env`. Four of them are enforced at boot and the API refuses to start
 (crash-looping instead of serving traffic) until they are changed:
 `JWT_SECRET` and `OAUTH_SESSION_SECRET` (`src/config/environment.ts` requires
-24+ characters and rejects the `.env.example` placeholder text), and
+24+ characters and rejects the `.env.example` placeholder text),
+`TOTP_ENCRYPTION_KEYS` (at least one base64-encoded 32-byte AES key), and
 `S3_SECRET_ACCESS_KEY` (`src/storage/storage.config.ts` rejects
 `change_me_storage_secret`, `minioadmin`, and empty values whenever
 `S3_BUCKET` is set, which it is by default). Nothing else in the app code
 checks for a placeholder, but leaving these unchanged is still a real
 security/foot-gun risk and should be replaced too: `DB_PASSWORD`,
-`REPLICATION_PASSWORD`, `MINIO_ROOT_PASSWORD`, and, only for the
+`REPLICATION_PASSWORD`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`, and, only for the
 observability profile, `METRICS_DB_PASSWORD`, `METRICS_TOKEN` (24+
 characters), and `GRAFANA_ADMIN_PASSWORD`.
 

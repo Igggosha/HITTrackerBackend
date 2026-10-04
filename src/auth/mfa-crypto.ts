@@ -74,6 +74,15 @@ export function decryptTotpSecret(
   ]).toString('utf8');
 }
 
+export function isTotpSecretEncryptedWithCurrentKey(
+  encrypted: string,
+  keys: readonly TotpEncryptionKey[],
+): boolean {
+  const current = keys[0];
+  if (!current) throw new Error('A TOTP encryption key is required.');
+  return encrypted.split('.')[1] === current.id;
+}
+
 export function createRecoveryCodes(count = 10): string[] {
   return Array.from({ length: count }, () => {
     const raw = randomBytes(10).toString('hex').toUpperCase();
