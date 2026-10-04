@@ -114,9 +114,11 @@ import {
             url: redisUrl,
             socket: { connectTimeout: 5_000 },
           });
-          client.on('error', (error) =>
-            Logger.error(error.message, 'RateLimitRedis'),
-          );
+          client.on('error', (error) => {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            Logger.error(message, 'RateLimitRedis');
+          });
           await client.connect();
           storage = new RedisThrottlerStorage(client);
         }

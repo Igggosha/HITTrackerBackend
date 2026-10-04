@@ -27,7 +27,7 @@ describeWithDatabase('concurrent writes against PostgreSQL', () => {
     mailer,
     config,
     new OutboxService(),
-    { prepareLogin: async () => null } as any,
+    { prepareLogin: () => Promise.resolve(null) } as any,
   );
   let userId: number;
 
