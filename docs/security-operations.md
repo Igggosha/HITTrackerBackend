@@ -10,20 +10,6 @@ Generate independent values for Redis and TOTP. Do not reuse JWT, OAuth, databas
 
 Створіть незалежні значення для Redis і TOTP. Не використовуйте повторно облікові дані JWT, OAuth, бази даних або MinIO.
 
-PowerShell:
-
-```powershell
-[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
-[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-```
-
-Bash:
-
-```sh
-openssl rand -hex 32
-openssl rand -base64 32
-```
-
 Put the hexadecimal value in `REDIS_PASSWORD` and the base64 value in `TOTP_ENCRYPTION_KEYS`. The TOTP entry must decode to exactly 32 bytes. Compose constructs `REDIS_URL`; when Nest runs outside Compose, set an equivalent URL explicitly. Replace every other `change_me` or `your_*_here` placeholder before deployment.
 
 Запишіть шістнадцяткове значення в `REDIS_PASSWORD`, а base64-значення — у `TOTP_ENCRYPTION_KEYS`. Запис TOTP після декодування має містити рівно 32 байти. Compose формує `REDIS_URL`; якщо Nest працює поза Compose, задайте еквівалентну адресу явно. Перед розгортанням замініть усі інші шаблонні значення `change_me` та `your_*_here`.

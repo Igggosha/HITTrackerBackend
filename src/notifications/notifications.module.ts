@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { RolesGuard } from '../auth/roles.guard';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { StorageModule } from '../storage/storage.module';
@@ -10,7 +11,7 @@ import { NotificationsService } from './notifications.service';
 import { PushTokenCrypto } from './push-token.crypto';
 
 @Module({
-  imports: [FirebaseModule, StorageModule],
+  imports: [ConfigModule, FirebaseModule, StorageModule],
   controllers: [NotificationsController, AdminNotificationsController],
   providers: [
     NotificationsService,
