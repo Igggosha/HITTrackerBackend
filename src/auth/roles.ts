@@ -10,3 +10,5 @@ export const userRoleRank: Record<UserRole, number> = {
 
 export const hasMinimumRole = (role: UserRole, minimumRole: UserRole) =>
   userRoleRank[role] >= userRoleRank[minimumRole];
+
+export const requiresMfa = (role: UserRole) => hasMinimumRole(role, 'helper');

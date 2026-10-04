@@ -127,12 +127,56 @@ export const authRefreshSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull().unique(),
+    familyId: uuid('family_id').notNull().defaultRandom(),
+    parentSessionId: integer('parent_session_id'),
     expiresAt: timestamp('expires_at').notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    mfaVerifiedAt: timestamp('mfa_verified_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at'),
+    revocationReason: text('revocation_reason'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (table) => [index('auth_refresh_sessions_user_id_idx').on(table.userId)],
+  (table) => [
+    index('auth_refresh_sessions_user_id_idx').on(table.userId),
+    index('auth_refresh_sessions_family_id_idx').on(table.familyId),
+  ],
 );
+
+export const authMfaChallenges = pgTable(
+  'auth_mfa_challenges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index('auth_mfa_challenges_user_id_idx').on(table.userId)],
+);
+
+export const authTotpCredentials = pgTable('auth_totp_credentials', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  secretCiphertext: text('secret_ciphertext').notNull(),
+  enabledAt: timestamp('enabled_at', { withTimezone: true }),
+  lastUsedTimeStep: integer('last_used_time_step'),
+  recoveryCodeHashes: text('recovery_code_hashes')
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
+  recoveryCodesGeneratedAt: timestamp('recovery_codes_generated_at', {
+    withTimezone: true,
+  }),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 // A client-generated installation ID can recur across accounts on one device.
 // The push token is encrypted by the API; only its digest is used for lookup.
@@ -314,6 +358,7 @@ export const notificationCampaigns = pgTable(
     createdBy: integer('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    idempotencyKey: uuid('idempotency_key'),
     audience: text('audience').$type<'all' | 'users'>().notNull(),
     targetUserIds: jsonb('target_user_ids').$type<number[]>(),
     category: text('category')
@@ -338,6 +383,10 @@ export const notificationCampaigns = pgTable(
   },
   (table) => [
     index('notification_campaigns_created_idx').on(table.createdAt.desc()),
+    uniqueIndex('notification_campaigns_actor_idempotency_idx').on(
+      table.createdBy,
+      table.idempotencyKey,
+    ),
     check(
       'notification_campaigns_audience_check',
       sql`${table.audience} in ('all', 'users')`,

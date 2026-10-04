@@ -106,6 +106,7 @@ export class MetricsService {
   });
 
   private activeWorkoutsGauge: Gauge<string>;
+  private databasePoolGauge: Gauge<'state'>;
   private activeWorkouts = 0;
   private activeWorkoutsFetchedAt = 0;
 
@@ -143,6 +144,50 @@ export class MetricsService {
           }
         }
         this.activeWorkoutsGauge.set(this.activeWorkouts);
+      },
+    });
+    this.databasePoolGauge = new Gauge({
+      name: 'database_pool_connections',
+      help: 'PostgreSQL pool connections and queued waiters.',
+      labelNames: ['state'] as const,
+      registers: [this.registry],
+      collect: () => {
+        this.databasePoolGauge.set({ state: 'total' }, pool.totalCount);
+        this.databasePoolGauge.set({ state: 'idle' }, pool.idleCount);
+        this.databasePoolGauge.set({ state: 'waiting' }, pool.waitingCount);
+      },
+    });
+    new Gauge({
+      name: 'notification_delivery_queue',
+      help: 'Notification deliveries by bounded status.',
+      labelNames: ['status'] as const,
+      registers: [this.registry],
+      collect: async function () {
+        try {
+          const result = await pool.query<{ status: string; count: string }>(
+            'select status, count(*)::text as count from notification_deliveries group by status',
+          );
+          this.reset();
+          for (const row of result.rows)
+            this.set({ status: row.status }, Number(row.count));
+        } catch {
+          /* retain no labels during database outages */
+        }
+      },
+    });
+    new Gauge({
+      name: 'notification_campaign_max_recipients_10m',
+      help: 'Largest administrator notification campaign created in the last ten minutes.',
+      registers: [this.registry],
+      collect: async function () {
+        try {
+          const result = await pool.query<{ maximum: string }>(
+            "select coalesce(max(recipient_count), 0)::text as maximum from notification_campaigns where created_at >= now() - interval '10 minutes'",
+          );
+          this.set(Number(result.rows[0]?.maximum ?? 0));
+        } catch {
+          /* retain last value during database outages */
+        }
       },
     });
   }

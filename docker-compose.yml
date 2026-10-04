@@ -8,6 +8,23 @@
 name: hit-tracker-backend
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me}
+    entrypoint: ['sh', '/usr/local/bin/redis-entrypoint.sh']
+    volumes:
+      - redis_data:/data
+      - ./docker/redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks: [private]
+
   postgres:
     image: postgres:17
     restart: unless-stopped
@@ -243,9 +260,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-    ports:
-      # A tunnel/proxy joins the edge network later; never expose the API to the LAN.
-      - '127.0.0.1:${PORT:-3000}:3000'
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -253,6 +269,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
       DATABASE_REPLICA_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres-replica:5432/${DB_NAME:-nestdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change_me}@redis:6379
       # Inside Compose the API reaches MinIO by service name; presigned URLs
       # handed to clients are signed for S3_PUBLIC_ENDPOINT from .env instead.
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
@@ -295,8 +312,26 @@ services:
       start_period: 15s
     networks:
       - private
-      - edge
       - observability
+
+  api-gateway:
+    image: nginx:1.27-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${PORT:-3000}:8080'
+    volumes:
+      - ./docker/nginx/api.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:8080/']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - private
+      - edge
+    restart: unless-stopped
 
   notification-worker:
     image: hit-tracker-api:20260928
@@ -627,7 +662,7 @@ services:
     profiles: ['edge']
     image: cloudflare/cloudflared:latest
     depends_on:
-      api:
+      api-gateway:
         condition: service_healthy
       frontend:
         condition: service_started
@@ -756,6 +791,18 @@ services:
       - private
     restart: unless-stopped
 
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.77.0
+    profiles: [observability]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [private]
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:12.1.1
     profiles: [observability]
@@ -864,6 +911,7 @@ volumes:
   metrics_token:
   loki_data:
   elasticsearch_data:
+  redis_data:
 
 networks:
   # Database services cannot be reached from the host or an Internet-facing tunnel.

@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './google.strategy';
 import { GoogleAuthGuard } from './google-auth.guard';
 import { ACCESS_TOKEN_TTL } from './refresh-token';
+import { MfaService } from './mfa.service';
 
 @Module({
   imports: [
@@ -22,7 +23,13 @@ import { ACCESS_TOKEN_TTL } from './refresh-token';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, GoogleAuthGuard],
+  providers: [
+    AuthService,
+    MfaService,
+    JwtStrategy,
+    GoogleStrategy,
+    GoogleAuthGuard,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

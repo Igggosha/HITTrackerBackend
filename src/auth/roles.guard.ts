@@ -9,10 +9,10 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { eq } from 'drizzle-orm';
 import { primaryDb } from '../db/db';
-import { users } from '../db/schema';
+import { authTotpCredentials, users } from '../db/schema';
 import type { UserRole } from '../db/schema';
 import { MINIMUM_ROLE_KEY } from './minimum-role.decorator';
-import { hasMinimumRole } from './roles';
+import { hasMinimumRole, requiresMfa } from './roles';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -30,8 +30,12 @@ export class RolesGuard implements CanActivate {
     if (!userId) throw new UnauthorizedException();
 
     const [user] = await primaryDb
-      .select({ role: users.role })
+      .select({
+        role: users.role,
+        mfaEnabledAt: authTotpCredentials.enabledAt,
+      })
       .from(users)
+      .leftJoin(authTotpCredentials, eq(authTotpCredentials.userId, users.id))
       .where(eq(users.id, userId))
       .limit(1);
 
@@ -40,6 +44,18 @@ export class RolesGuard implements CanActivate {
 
     if (!hasMinimumRole(user.role, minimumRole)) {
       throw new ForbiddenException('Insufficient permissions');
+    }
+    if (requiresMfa(user.role) && !user.mfaEnabledAt) {
+      throw new ForbiddenException({
+        message: 'Two-factor authentication enrollment is required',
+        code: 'TOTP_ENROLLMENT_REQUIRED',
+      });
+    }
+    if (requiresMfa(user.role) && !request.user?.mfaVerified) {
+      throw new ForbiddenException({
+        message: 'Two-factor authentication is required',
+        code: 'TOTP_REQUIRED',
+      });
     }
 
     return true;

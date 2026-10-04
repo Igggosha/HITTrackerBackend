@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/auth.dto';
 import { OutboxService } from '../outbox/outbox.service';
 
+jest.mock('./mfa.service', () => ({ MfaService: class MfaService {} }));
+
 const mockLimit = jest.fn();
 const mockUpdateWhere = jest.fn();
 const mockInsertValues = jest.fn();
@@ -63,6 +65,7 @@ describe('AuthService registration', () => {
     mailerService as any,
     {} as any,
     new OutboxService(),
+    { prepareLogin: jest.fn().mockResolvedValue(null) } as any,
   );
 
   beforeEach(() => {
@@ -91,7 +94,7 @@ describe('AuthService registration', () => {
   it('accepts a legacy payload without fullName', async () => {
     const dto = Object.assign(new RegisterDto(), {
       email: 'legacy@example.com',
-      password: 'password123',
+      password: 'password1234',
     });
 
     await expect(validate(dto)).resolves.toHaveLength(0);
@@ -442,6 +445,7 @@ describe('AuthService registration', () => {
       accessToken: 'access-token',
       user: { email: 'user@example.com', username: null },
     });
+    if (!('refreshToken' in result)) throw new Error('Expected a session');
     expect(result.refreshToken).toHaveLength(64);
     expect(mockInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -453,38 +457,59 @@ describe('AuthService registration', () => {
       result.refreshToken,
     );
     expect(jwtService.sign).toHaveBeenCalledWith(
-      { sub: 1, email: 'user@example.com', role: 'user' },
+      {
+        sub: 1,
+        email: 'user@example.com',
+        role: 'user',
+        mfaVerified: false,
+      },
       { expiresIn: '5m' },
     );
   });
 
   it('rotates a refresh session and reloads the current database role', async () => {
-    mockTxUpdateReturning.mockResolvedValueOnce([{ id: 7, userId: 1 }]);
-    mockTxLimit.mockResolvedValueOnce([
-      {
-        id: 1,
-        email: 'user@example.com',
-        username: null,
-        displayName: 'User',
-        role: 'moderator',
-        isSystemOwner: true,
-      },
-    ]);
+    mockTxLimit
+      .mockResolvedValueOnce([
+        {
+          id: 7,
+          userId: 1,
+          familyId: '22222222-2222-4222-8222-222222222222',
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: null,
+          usedAt: null,
+          mfaVerifiedAt: new Date(),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          email: 'user@example.com',
+          username: null,
+          displayName: 'User',
+          role: 'moderator',
+          isSystemOwner: true,
+        },
+      ]);
 
     const result = await service.refreshSession('r'.repeat(64));
 
     expect(result.user.role).toBe('moderator');
     expect(result.user.isSystemOwner).toBe(true);
     expect(result.refreshToken).toHaveLength(64);
-    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(tx.update).toHaveBeenCalledTimes(1);
     expect(jwtService.sign).toHaveBeenCalledWith(
-      { sub: 1, email: 'user@example.com', role: 'moderator' },
+      {
+        sub: 1,
+        email: 'user@example.com',
+        role: 'moderator',
+        mfaVerified: true,
+      },
       { expiresIn: '5m' },
     );
   });
 
   it('rejects an expired or already consumed refresh session', async () => {
-    mockTxUpdateReturning.mockResolvedValueOnce([]);
+    mockTxLimit.mockResolvedValueOnce([]);
 
     await expect(service.refreshSession('r'.repeat(64))).rejects.toMatchObject({
       response: { code: 'SESSION_EXPIRED' },
@@ -492,14 +517,34 @@ describe('AuthService registration', () => {
     });
   });
 
-  it('AUTH-LOGIN-002 returns the stable unknown-user code', async () => {
+  it('revokes a refresh-token family when a rotated token is reused', async () => {
+    mockTxLimit.mockResolvedValueOnce([
+      {
+        id: 7,
+        userId: 1,
+        familyId: '22222222-2222-4222-8222-222222222222',
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: new Date(),
+        usedAt: new Date(),
+        mfaVerifiedAt: null,
+      },
+    ]);
+
+    await expect(service.refreshSession('r'.repeat(64))).rejects.toMatchObject({
+      response: { code: 'REFRESH_TOKEN_REUSED' },
+      status: 401,
+    });
+    expect(tx.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('AUTH-LOGIN-002 does not disclose whether an account exists', async () => {
     mockLimit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
     await expect(
       service.validateUser('missing@example.com', 'Password1'),
     ).rejects.toMatchObject({
-      response: { code: 'USER_NOT_FOUND' },
-      status: 404,
+      response: { code: 'INVALID_CREDENTIALS' },
+      status: 401,
     });
   });
 

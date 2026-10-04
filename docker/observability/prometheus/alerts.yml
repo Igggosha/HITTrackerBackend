@@ -22,6 +22,75 @@ groups:
           severity: warning
         annotations:
           summary: API p95 latency exceeds one second
+      - alert: ApiAuthenticationFailures
+        expr: sum(rate(http_requests_total{job="api",status="401"}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API authentication failures exceed 30 per minute
+      - alert: ApiAuthorizationFailures
+        expr: sum(rate(http_requests_total{job="api",status="403"}[5m])) > 0.25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API authorization failures exceed 15 per minute
+      - alert: ApiRateLimitSpike
+        expr: sum(rate(http_requests_total{job="api",status="429"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: API rate limiting is repeatedly rejecting traffic
+      - alert: ApiCpuHigh
+        expr: rate(process_cpu_seconds_total{job="api"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API process CPU use is sustained above 80% of one core
+      - alert: ApiMemoryHigh
+        expr: process_resident_memory_bytes{job="api"} > 536870912
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API process resident memory exceeds 512 MiB
+      - alert: ApiDatabasePoolWaiting
+        expr: database_pool_connections{job="api",state="waiting"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: API requests are waiting for PostgreSQL pool connections
+      - alert: RedisDown
+        expr: redis_up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Shared rate-limit storage is unavailable
+      - alert: NotificationDeliveryFailures
+        expr: notification_delivery_queue{job="api",status="failed"} > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Notification deliveries remain permanently failed
+      - alert: NotificationQueueBacklog
+        expr: notification_delivery_queue{job="api",status="pending"} > 500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Notification delivery queue exceeds 500 pending items
+      - alert: NotificationMassCampaign
+        expr: notification_campaign_max_recipients_10m{job="api"} > 1000
+        labels:
+          severity: warning
+        annotations:
+          summary: An administrator campaign targeted more than 1000 recipients
       - alert: PostgresDown
         expr: pg_up == 0
         for: 1m

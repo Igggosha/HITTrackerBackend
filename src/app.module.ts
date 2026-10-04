@@ -1,7 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  type ThrottlerStorage,
+  ThrottlerStorageService,
+} from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import type { Request, Response } from 'express';
@@ -24,6 +29,12 @@ import { AdminObservabilityModule } from './admin-observability/admin-observabil
 import { CatalogSearchModule } from './catalog-search/catalog-search.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { createClient } from 'redis';
+import { RedisThrottlerStorage } from './security/redis-throttler.storage';
+import {
+  ipRateLimitTracker,
+  principalRateLimitTracker,
+} from './security/rate-limit-tracker';
 
 @Module({
   controllers: [AppController],
@@ -70,6 +81,13 @@ import { NotificationsModule } from './notifications/notifications.module';
             'password',
             'token',
             'code',
+            'refreshToken',
+            'pushToken',
+            'challengeToken',
+            'recoveryCode',
+            'secret',
+            'otp',
+            'totp',
             '*.password',
             '*.token',
             '*.code',
@@ -85,12 +103,43 @@ import { NotificationsModule } from './notifications/notifications.module';
             : { target: 'pino-pretty', options: { colorize: true } },
       },
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 120,
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const redisUrl = config.get<string>('REDIS_URL');
+        let storage: ThrottlerStorage = new ThrottlerStorageService();
+        if (redisUrl) {
+          const client = createClient({
+            url: redisUrl,
+            socket: { connectTimeout: 5_000 },
+          });
+          client.on('error', (error) =>
+            Logger.error(error.message, 'RateLimitRedis'),
+          );
+          await client.connect();
+          storage = new RedisThrottlerStorage(client);
+        }
+        return {
+          storage,
+          throttlers: [
+            {
+              name: 'default',
+              ttl: 60_000,
+              limit: 120,
+              getTracker: (request) => ipRateLimitTracker(request as Request),
+            },
+            {
+              name: 'principal',
+              ttl: 60_000,
+              limit: 300,
+              getTracker: (request) =>
+                principalRateLimitTracker(request as Request),
+            },
+          ],
+        };
       },
-    ]),
+    }),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

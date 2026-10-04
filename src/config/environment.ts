@@ -1,5 +1,6 @@
 import { validateStorageEnvironment } from '../storage/storage.config';
 import { validateFirebaseEnvironment } from '../firebase/firebase.config';
+import { parseTotpEncryptionKeys } from '../auth/mfa-crypto';
 
 // 24 random URL-safe characters provide at least 144 bits of entropy.
 const SECRET_MINIMUM_LENGTH = 24;
@@ -46,6 +47,30 @@ export function validateEnvironment(
     !environment.CORS_ORIGINS?.trim()
   ) {
     throw new Error('CORS_ORIGINS is required in production.');
+  }
+
+  if (environment.TOTP_ENCRYPTION_KEYS) {
+    parseTotpEncryptionKeys(environment.TOTP_ENCRYPTION_KEYS);
+  } else if (environment.NODE_ENV === 'production') {
+    throw new Error('TOTP_ENCRYPTION_KEYS is required in production.');
+  }
+
+  if (environment.REDIS_URL) {
+    let redisUrl: URL | undefined;
+    try {
+      redisUrl = new URL(environment.REDIS_URL);
+    } catch {
+      redisUrl = undefined;
+    }
+    if (
+      !redisUrl ||
+      !['redis:', 'rediss:'].includes(redisUrl.protocol) ||
+      !redisUrl.hostname
+    ) {
+      throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL.');
+    }
+  } else if (environment.NODE_ENV === 'production') {
+    throw new Error('REDIS_URL is required in production.');
   }
 
   if (environment.DATABASE_REPLICA_URL) {

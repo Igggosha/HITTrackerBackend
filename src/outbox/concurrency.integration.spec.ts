@@ -6,6 +6,8 @@ import * as schema from '../db/schema';
 import { WorkoutsService } from '../workouts/workouts.service';
 import { OutboxService } from './outbox.service';
 
+jest.mock('../auth/mfa.service', () => ({ MfaService: class MfaService {} }));
+
 // Real races against a disposable database whose schema was created from
 // src/db/schema.ts (for example with `drizzle-kit push` on a throwaway
 // container; never on shared data):
@@ -20,7 +22,13 @@ describeWithDatabase('concurrent writes against PostgreSQL', () => {
     { sendMail: jest.fn() },
     { get: () => undefined },
   ] as unknown as ConstructorParameters<typeof AuthService>;
-  const authService = new AuthService(jwt, mailer, config, new OutboxService());
+  const authService = new AuthService(
+    jwt,
+    mailer,
+    config,
+    new OutboxService(),
+    { prepareLogin: async () => null } as any,
+  );
   let userId: number;
 
   const events = async (eventType: string, aggregateId: number) =>

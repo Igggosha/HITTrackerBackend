@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   and,
   count,
@@ -66,6 +67,7 @@ export class NotificationsService {
   constructor(
     private readonly tokenCrypto: PushTokenCrypto,
     private readonly storage: StorageService,
+    private readonly config?: ConfigService,
   ) {}
 
   async getPreferences(userId: number) {
@@ -478,6 +480,33 @@ export class NotificationsService {
       .from(notificationCampaigns)
       .orderBy(desc(notificationCampaigns.createdAt))
       .limit(50);
+    const deliveryStatuses = items.length
+      ? await primaryDb
+          .select({
+            campaignId: notifications.campaignId,
+            status: notificationDeliveries.status,
+            count: count(),
+          })
+          .from(notificationDeliveries)
+          .innerJoin(
+            notifications,
+            eq(notificationDeliveries.notificationId, notifications.id),
+          )
+          .where(
+            inArray(
+              notifications.campaignId,
+              items.map((item) => item.id),
+            ),
+          )
+          .groupBy(notifications.campaignId, notificationDeliveries.status)
+      : [];
+    const statusByCampaign = new Map<string, Record<string, number>>();
+    for (const row of deliveryStatuses) {
+      if (!row.campaignId) continue;
+      const statuses = statusByCampaign.get(row.campaignId) ?? {};
+      statuses[row.status] = Number(row.count);
+      statusByCampaign.set(row.campaignId, statuses);
+    }
     const mediaIds = [
       ...new Set(
         items.flatMap((item) =>
@@ -521,6 +550,7 @@ export class NotificationsService {
           imageUrls,
           videoUrl: videoUrls[0] ?? null,
           videoUrls,
+          deliveryStatuses: statusByCampaign.get(item.id) ?? {},
         };
       }),
     };
@@ -529,7 +559,24 @@ export class NotificationsService {
   async createAdminNotification(
     dto: CreateAdminNotificationDto,
     createdBy: number,
+    idempotencyKey: string,
   ) {
+    const [existing] = await primaryDb
+      .select({
+        campaignId: notificationCampaigns.id,
+        recipientCount: notificationCampaigns.recipientCount,
+        deliveryCount: notificationCampaigns.deliveryCount,
+      })
+      .from(notificationCampaigns)
+      .where(
+        and(
+          eq(notificationCampaigns.createdBy, createdBy),
+          eq(notificationCampaigns.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (existing) return { ...existing, replayed: true };
+
     const scheduledAt = dto.scheduledAt
       ? new Date(dto.scheduledAt)
       : dto.scheduledLocalAt
@@ -551,6 +598,9 @@ export class NotificationsService {
         ...(dto.videoUrl ? [dto.videoUrl] : []),
       ]),
     ];
+    [dto.imageUrl, dto.actionUrl, ...videoUrls]
+      .filter((url): url is string => Boolean(url))
+      .forEach((url) => this.assertAllowedNotificationUrl(url));
     if (mediaIds.length > 5 || videoUrls.length > 5) {
       throw new BadRequestException({
         code: 'NOTIFICATION_ATTACHMENT_LIMIT_EXCEEDED',
@@ -613,6 +663,7 @@ export class NotificationsService {
         .insert(notificationCampaigns)
         .values({
           createdBy,
+          idempotencyKey,
           audience: dto.audience,
           targetUserIds: dto.audience === 'users' ? dto.userIds : null,
           category: input.category,
@@ -626,7 +677,31 @@ export class NotificationsService {
           scheduledAt,
           scheduledLocalAt: dto.scheduledLocalAt,
         })
+        .onConflictDoNothing({
+          target: [
+            notificationCampaigns.createdBy,
+            notificationCampaigns.idempotencyKey,
+          ],
+        })
         .returning({ id: notificationCampaigns.id });
+      if (!campaign) {
+        const [replayed] = await tx
+          .select({
+            campaignId: notificationCampaigns.id,
+            recipientCount: notificationCampaigns.recipientCount,
+            deliveryCount: notificationCampaigns.deliveryCount,
+          })
+          .from(notificationCampaigns)
+          .where(
+            and(
+              eq(notificationCampaigns.createdBy, createdBy),
+              eq(notificationCampaigns.idempotencyKey, idempotencyKey),
+            ),
+          )
+          .limit(1);
+        if (!replayed) throw new Error('Idempotent campaign lookup failed');
+        return { ...replayed, replayed: true };
+      }
       input.campaignId = campaign.id;
       let recipientCount = 0;
       let deliveryCount = 0;
@@ -639,8 +714,54 @@ export class NotificationsService {
         .update(notificationCampaigns)
         .set({ recipientCount, deliveryCount })
         .where(eq(notificationCampaigns.id, campaign.id));
-      return { campaignId: campaign.id, recipientCount, deliveryCount };
+      return {
+        campaignId: campaign.id,
+        recipientCount,
+        deliveryCount,
+        replayed: false,
+      };
     });
+  }
+
+  private assertAllowedNotificationUrl(raw: string) {
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      throw new BadRequestException({ code: 'NOTIFICATION_URL_NOT_ALLOWED' });
+    }
+    const configured = [
+      this.config?.get<string>('FRONTEND_URL'),
+      this.config?.get<string>('S3_PUBLIC_ENDPOINT'),
+      ...(this.config?.get<string>('NOTIFICATION_LINK_HOSTS')?.split(',') ??
+        []),
+    ];
+    const allowedHosts = new Set(
+      configured.flatMap((value) => {
+        if (!value?.trim()) return [];
+        try {
+          return [
+            new URL(
+              value.trim().includes('://')
+                ? value.trim()
+                : `https://${value.trim()}`,
+            ).hostname.toLowerCase(),
+          ];
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const host = url.hostname.toLowerCase();
+    const youtube =
+      host === 'youtu.be' ||
+      host === 'youtube.com' ||
+      host.endsWith('.youtube.com') ||
+      host === 'youtube-nocookie.com' ||
+      host.endsWith('.youtube-nocookie.com');
+    if (url.protocol !== 'https:' || (!youtube && !allowedHosts.has(host))) {
+      throw new BadRequestException({ code: 'NOTIFICATION_URL_NOT_ALLOWED' });
+    }
   }
 
   private async createForUser(

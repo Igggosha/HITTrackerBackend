@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Headers,
   Post,
   Req,
   UploadedFile,
@@ -26,12 +28,35 @@ export class AdminNotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
 
   @Post()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  create(@Req() request: Request, @Body() dto: CreateAdminNotificationDto) {
-    return this.notifications.createAdminNotification(dto, request.user!.id!);
+  @Throttle({
+    default: { limit: 10, ttl: 60_000 },
+    principal: { limit: 10, ttl: 60_000 },
+  })
+  create(
+    @Req() request: Request,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Body() dto: CreateAdminNotificationDto,
+  ) {
+    if (
+      !idempotencyKey ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        idempotencyKey,
+      )
+    ) {
+      throw new BadRequestException({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    }
+    return this.notifications.createAdminNotification(
+      dto,
+      request.user!.id!,
+      idempotencyKey,
+    );
   }
 
   @Post('media')
+  @Throttle({
+    default: { limit: 10, ttl: 60_000 },
+    principal: { limit: 10, ttl: 60_000 },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES, files: 1, fields: 0 },

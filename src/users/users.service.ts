@@ -17,12 +17,14 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   lte,
   or,
   sql,
 } from 'drizzle-orm';
 import { db, primaryDb } from '../db/db';
 import {
+  authRefreshSessions,
   notificationPreferences,
   pushDevices,
   sets,
@@ -480,6 +482,18 @@ export class UsersService {
         });
 
       if (target.role !== role) {
+        await tx
+          .update(authRefreshSessions)
+          .set({
+            revokedAt: new Date(),
+            revocationReason: 'role_changed',
+          })
+          .where(
+            and(
+              eq(authRefreshSessions.userId, targetUserId),
+              isNull(authRefreshSessions.revokedAt),
+            ),
+          );
         await recordUserActivity(
           {
             userId: targetUserId,

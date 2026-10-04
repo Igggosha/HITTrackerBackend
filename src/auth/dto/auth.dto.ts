@@ -28,7 +28,8 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MinLength(12, { message: 'Password must be at least 12 characters long' })
+  @MaxLength(128)
   password!: string;
 }
 
@@ -66,7 +67,8 @@ export class ResetPasswordDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MinLength(12, { message: 'Password must be at least 12 characters long' })
+  @MaxLength(128)
   newPassword!: string;
 }
 
@@ -89,4 +91,34 @@ export class ExchangeOAuthCodeDto {
   @IsNotEmpty()
   @MinLength(43)
   codeVerifier!: string;
+}
+
+export class MfaChallengeDto {
+  @IsString()
+  @MinLength(32)
+  @MaxLength(256)
+  challengeToken!: string;
+}
+
+export class MfaVerifyDto extends MfaChallengeDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/)
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  @MaxLength(32)
+  recoveryCode?: string;
+
+  @IsOptional()
+  @IsIn(['web', 'native'])
+  client?: 'web' | 'native';
+}
+
+export class MfaCodeDto {
+  @IsString()
+  @Matches(/^\d{6}$/)
+  code!: string;
 }

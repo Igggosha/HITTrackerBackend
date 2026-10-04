@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -14,6 +15,9 @@ import {
   ExchangeOAuthCodeDto,
   ForgotPasswordDto,
   LoginDto,
+  MfaChallengeDto,
+  MfaCodeDto,
+  MfaVerifyDto,
   RefreshSessionDto,
   RegisterDto,
   ResetPasswordDto,
@@ -21,6 +25,7 @@ import {
 } from './dto/auth.dto';
 import { GoogleAuthGuard } from './google-auth.guard';
 import { REFRESH_TOKEN_TTL_MS } from './refresh-token';
+import { JwtGuard } from './jwt.guard';
 
 const REFRESH_COOKIE = 'hit_tracker_refresh';
 
@@ -29,26 +34,37 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({
+    default: { limit: 5, ttl: 60_000 },
+    principal: { limit: 5, ttl: 60_000 },
+  })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('register/verify')
-  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 } })
+  @Throttle({
+    default: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 },
+    principal: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 },
+  })
   async verifyRegistration(@Body() dto: VerifyRegistrationDto) {
     return this.authService.verifyRegistration(dto);
   }
 
   @Post('login')
   // Five tries per IP, then a 30-minute block. The guard supplies Retry-After.
-  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 } })
+  @Throttle({
+    default: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 },
+    principal: { limit: 5, ttl: 60_000, blockDuration: 30 * 60_000 },
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.login(dto);
-    return this.deliverSession(response, result, dto.client === 'web');
+    return 'refreshToken' in result
+      ? this.deliverSession(response, result, dto.client === 'web')
+      : result;
   }
 
   @Post('refresh')
@@ -87,13 +103,19 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Throttle({
+    default: { limit: 3, ttl: 60_000 },
+    principal: { limit: 3, ttl: 60_000 },
+  })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Post('reset-password')
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({
+    default: { limit: 5, ttl: 60_000 },
+    principal: { limit: 5, ttl: 60_000 },
+  })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
@@ -102,6 +124,84 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async exchangeOAuthCode(@Body() dto: ExchangeOAuthCodeDto) {
     return this.authService.exchangeMobileOAuthCode(dto);
+  }
+
+  @Post('mfa/enroll/start')
+  @Throttle({
+    default: { limit: 5, ttl: 60_000 },
+    principal: { limit: 5, ttl: 60_000 },
+  })
+  beginMfaEnrollment(@Body() dto: MfaChallengeDto) {
+    return this.authService.beginMfaEnrollment(dto.challengeToken);
+  }
+
+  @Post('mfa/enroll/confirm')
+  @Throttle({
+    default: { limit: 5, ttl: 60_000, blockDuration: 300_000 },
+    principal: { limit: 5, ttl: 60_000, blockDuration: 300_000 },
+  })
+  async confirmMfaEnrollment(
+    @Body() dto: MfaVerifyDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    if (!dto.code) {
+      throw new BadRequestException({ code: 'MFA_TOTP_CODE_REQUIRED' });
+    }
+    const result = await this.authService.confirmMfaEnrollment(
+      dto.challengeToken,
+      dto.code,
+    );
+    return this.deliverSession(response, result, dto.client === 'web');
+  }
+
+  @Post('mfa/verify')
+  @Throttle({
+    default: { limit: 5, ttl: 60_000, blockDuration: 300_000 },
+    principal: { limit: 5, ttl: 60_000, blockDuration: 300_000 },
+  })
+  async verifyMfa(
+    @Body() dto: MfaVerifyDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.verifyMfaChallenge(
+      dto.challengeToken,
+      { code: dto.code, recoveryCode: dto.recoveryCode },
+    );
+    return this.deliverSession(response, result, dto.client === 'web');
+  }
+
+  @Get('mfa/status')
+  @UseGuards(JwtGuard)
+  mfaStatus(@Req() request: Request) {
+    return this.authService.getMfaStatus(request.user!.id!);
+  }
+
+  @Post('mfa/recovery/regenerate')
+  @UseGuards(JwtGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  regenerateMfaRecoveryCodes(@Req() request: Request, @Body() dto: MfaCodeDto) {
+    return this.authService.regenerateMfaRecoveryCodes(
+      request.user!.id!,
+      dto.code,
+    );
+  }
+
+  @Post('mfa/disable')
+  @UseGuards(JwtGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  disableMfa(@Req() request: Request, @Body() dto: MfaCodeDto) {
+    return this.authService.disableMfa(request.user!.id!, dto.code);
+  }
+
+  @Post('logout-all')
+  @UseGuards(JwtGuard)
+  async logoutAll(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.revokeAllSessions(request.user!.id!);
+    response.clearCookie(REFRESH_COOKIE, this.refreshCookieOptions());
+    return result;
   }
 
   @Get('google')
@@ -121,23 +221,34 @@ export class AuthController {
     );
 
     if (!redirectUrl) {
-      const result = await this.authService.createSession(
+      const result = await this.authService.completePrimaryLogin(
         login.message,
         login.user,
       );
-      return response.json(this.deliverSession(response, result, true));
+      return response.json(
+        'refreshToken' in result
+          ? this.deliverSession(response, result, true)
+          : result,
+      );
     }
 
     const url = new URL(redirectUrl);
     if (url.protocol === 'http:' || url.protocol === 'https:') {
-      const result = await this.authService.createSession(
+      const result = await this.authService.completePrimaryLogin(
         login.message,
         login.user,
       );
-      this.setRefreshCookie(response, result.refreshToken);
-      url.hash = new URLSearchParams({
-        accessToken: result.accessToken,
-      }).toString();
+      if ('refreshToken' in result) {
+        this.setRefreshCookie(response, result.refreshToken);
+        url.hash = new URLSearchParams({
+          accessToken: result.accessToken,
+        }).toString();
+      } else {
+        url.hash = new URLSearchParams({
+          mfaChallenge: result.challengeToken,
+          mfaEnrollmentRequired: String(result.enrollmentRequired),
+        }).toString();
+      }
     } else {
       if (!codeChallenge)
         return response.status(400).json({ error: 'missing_pkce_challenge' });

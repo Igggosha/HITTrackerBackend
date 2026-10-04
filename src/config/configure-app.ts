@@ -33,7 +33,7 @@ export function configureApp(app: INestApplication): void {
   app.use(requestIdMiddleware);
   app.use(createMetricsMiddleware(app.get(MetricsService)));
 
-  // Cloudflare Tunnel is the only public hop; secure OAuth cookies need its HTTPS signal.
+  // The API gateway is the only trusted hop; it overwrites forwarding headers.
   configureTrustProxy(
     app.getHttpAdapter().getInstance() as Express,
     process.env.NODE_ENV === 'production',
@@ -73,7 +73,7 @@ export function configureApp(app: INestApplication): void {
     ) => callback(null, isCorsOriginAllowed(origin)),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Accept, Authorization, X-Requested-With, X-Profile-Contract, X-Request-Id, ngrok-skip-browser-warning',
+      'Content-Type, Accept, Authorization, X-Profile-Contract, X-Request-Id, Idempotency-Key',
     exposeHeaders: 'Retry-After, X-Request-Id, X-Trace-Id',
     credentials: true,
   });

@@ -43,6 +43,8 @@ import {
 import { recordUserActivity } from '../users/user-activity';
 import { OutboxService } from '../outbox/outbox.service';
 import type { DbTransaction } from '../outbox/transaction';
+import { MfaService } from './mfa.service';
+import { requiresMfa } from './roles';
 
 export type GoogleUser = {
   email: string;
@@ -73,6 +75,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
     private readonly outbox: OutboxService,
+    private readonly mfa: MfaService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -334,9 +337,9 @@ export class AuthService {
           code: 'EMAIL_NOT_VERIFIED',
         });
       }
-      throw new NotFoundException({
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
+      throw new UnauthorizedException({
+        message: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
       });
     }
 
@@ -361,8 +364,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto.email, dto.password);
-
-    return this.createSession('Login successful', user);
+    return this.completePrimaryLogin('Login successful', user);
   }
 
   async loginWithGoogle(googleUser: GoogleUser) {
@@ -555,7 +557,10 @@ export class AuthService {
 
       await tx
         .update(authRefreshSessions)
-        .set({ revokedAt: new Date() })
+        .set({
+          revokedAt: new Date(),
+          revocationReason: 'password_changed',
+        })
         .where(
           and(
             eq(authRefreshSessions.userId, user.id),
@@ -579,36 +584,49 @@ export class AuthService {
     return { message: 'Password successfully updated.' };
   }
 
-  async createSession(message: string, user: AuthUser) {
+  async completePrimaryLogin(message: string, user: AuthUser) {
+    return (
+      (await this.mfa.prepareLogin(user)) ?? this.createSession(message, user)
+    );
+  }
+
+  async createSession(message: string, user: AuthUser, mfaVerifiedAt?: Date) {
     const refreshToken = createRefreshToken();
     await db.insert(authRefreshSessions).values({
       userId: user.id,
       tokenHash: hashRefreshToken(refreshToken),
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+      mfaVerifiedAt,
     });
-    return this.createAuthResponse(message, user, refreshToken);
+    return this.createAuthResponse(
+      message,
+      user,
+      refreshToken,
+      Boolean(mfaVerifiedAt),
+    );
   }
 
   async refreshSession(refreshToken: string | undefined) {
     if (!refreshToken) throw this.sessionExpired();
     const now = new Date();
-
-    return db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx) => {
       const [session] = await tx
-        .update(authRefreshSessions)
-        .set({ revokedAt: now })
+        .select()
+        .from(authRefreshSessions)
         .where(
-          and(
-            eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
-            isNull(authRefreshSessions.revokedAt),
-            gt(authRefreshSessions.expiresAt, now),
-          ),
+          eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
         )
-        .returning({
-          id: authRefreshSessions.id,
-          userId: authRefreshSessions.userId,
-        });
-      if (!session) throw this.sessionExpired();
+        .for('update')
+        .limit(1);
+      if (!session || session.expiresAt <= now)
+        return { kind: 'expired' } as const;
+      if (session.revokedAt || session.usedAt) {
+        await tx
+          .update(authRefreshSessions)
+          .set({ revokedAt: now, revocationReason: 'reuse_detected' })
+          .where(eq(authRefreshSessions.familyId, session.familyId));
+        return { kind: 'reused' } as const;
+      }
 
       const [user] = await tx
         .select({
@@ -622,31 +640,58 @@ export class AuthService {
         .from(users)
         .where(eq(users.id, session.userId))
         .limit(1);
-      if (!user) throw this.sessionExpired();
+      if (!user) return { kind: 'expired' } as const;
+      if (requiresMfa(user.role) && !session.mfaVerifiedAt) {
+        await tx
+          .update(authRefreshSessions)
+          .set({ revokedAt: now, revocationReason: 'mfa_required' })
+          .where(eq(authRefreshSessions.familyId, session.familyId));
+        return { kind: 'expired' } as const;
+      }
 
       const nextRefreshToken = createRefreshToken();
       await tx
         .update(authRefreshSessions)
         .set({
-          tokenHash: hashRefreshToken(nextRefreshToken),
-          expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-          revokedAt: null,
+          usedAt: now,
+          revokedAt: now,
+          revocationReason: 'rotated',
         })
         .where(eq(authRefreshSessions.id, session.id));
+      await tx.insert(authRefreshSessions).values({
+        userId: user.id,
+        tokenHash: hashRefreshToken(nextRefreshToken),
+        familyId: session.familyId,
+        parentSessionId: session.id,
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        mfaVerifiedAt: session.mfaVerifiedAt,
+      });
 
-      return this.createAuthResponse(
-        'Session refreshed',
-        user,
-        nextRefreshToken,
-      );
+      return {
+        kind: 'refreshed' as const,
+        response: this.createAuthResponse(
+          'Session refreshed',
+          user,
+          nextRefreshToken,
+          Boolean(session.mfaVerifiedAt),
+        ),
+      };
     });
+    if (outcome.kind === 'reused') {
+      throw new UnauthorizedException({
+        message: 'Session reuse detected',
+        code: 'REFRESH_TOKEN_REUSED',
+      });
+    }
+    if (outcome.kind === 'expired') throw this.sessionExpired();
+    return outcome.response;
   }
 
   async revokeRefreshSession(refreshToken: string | undefined) {
     if (!refreshToken) return;
     await db
       .update(authRefreshSessions)
-      .set({ revokedAt: new Date() })
+      .set({ revokedAt: new Date(), revocationReason: 'logout' })
       .where(
         and(
           eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
@@ -659,16 +704,68 @@ export class AuthService {
     message: string,
     user: AuthUser,
     refreshToken: string,
+    mfaVerified: boolean,
   ) {
     return {
       message,
       accessToken: this.jwtService.sign(
-        { sub: user.id, email: user.email, role: user.role },
+        { sub: user.id, email: user.email, role: user.role, mfaVerified },
         { expiresIn: ACCESS_TOKEN_TTL },
       ),
       refreshToken,
       user: this.toPublicUser(user),
     };
+  }
+
+  beginMfaEnrollment(challengeToken: string) {
+    return this.mfa.beginEnrollment(challengeToken);
+  }
+
+  async confirmMfaEnrollment(challengeToken: string, code: string) {
+    const result = await this.mfa.confirmEnrollment(challengeToken, code);
+    const session = await this.createSession(
+      'Two-factor authentication enabled',
+      result.user,
+      result.mfaVerifiedAt,
+    );
+    return { ...session, recoveryCodes: result.recoveryCodes };
+  }
+
+  async verifyMfaChallenge(
+    challengeToken: string,
+    factor: { code?: string; recoveryCode?: string },
+  ) {
+    const result = await this.mfa.verifyChallenge(challengeToken, factor);
+    return this.createSession(
+      'Login successful',
+      result.user,
+      result.mfaVerifiedAt,
+    );
+  }
+
+  getMfaStatus(userId: number) {
+    return this.mfa.status(userId);
+  }
+
+  regenerateMfaRecoveryCodes(userId: number, code: string) {
+    return this.mfa.regenerateRecoveryCodes(userId, code);
+  }
+
+  disableMfa(userId: number, code: string) {
+    return this.mfa.disable(userId, code);
+  }
+
+  async revokeAllSessions(userId: number) {
+    await db
+      .update(authRefreshSessions)
+      .set({ revokedAt: new Date(), revocationReason: 'logout_all' })
+      .where(
+        and(
+          eq(authRefreshSessions.userId, userId),
+          isNull(authRefreshSessions.revokedAt),
+        ),
+      );
+    return { message: 'All sessions revoked' };
   }
 
   private toPublicUser(user: AuthUser): AuthUser {
@@ -726,6 +823,6 @@ export class AuthService {
       .where(eq(users.id, loginCode.userId))
       .limit(1);
     if (!user) throw new UnauthorizedException('OAuth user no longer exists.');
-    return this.createSession('Google login successful', user);
+    return this.completePrimaryLogin('Google login successful', user);
   }
 }

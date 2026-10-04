@@ -3,6 +3,8 @@ import { validateEnvironment, validateRelayEnvironment } from './environment';
 const secureEnvironment = {
   JWT_SECRET: 'a'.repeat(24),
   OAUTH_SESSION_SECRET: 'b'.repeat(24),
+  TOTP_ENCRYPTION_KEYS: Buffer.alloc(32, 7).toString('base64'),
+  REDIS_URL: 'redis://:password@redis:6379',
 };
 
 describe('environment validation', () => {
@@ -29,6 +31,25 @@ describe('environment validation', () => {
         CORS_ORIGINS: 'https://app.example.com',
       }),
     ).not.toThrow();
+  });
+
+  it('requires distributed throttling and TOTP encryption in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        NODE_ENV: 'production',
+        CORS_ORIGINS: 'https://app.example.com',
+        REDIS_URL: '',
+      }),
+    ).toThrow('REDIS_URL');
+    expect(() =>
+      validateEnvironment({
+        ...secureEnvironment,
+        NODE_ENV: 'production',
+        CORS_ORIGINS: 'https://app.example.com',
+        TOTP_ENCRYPTION_KEYS: 'invalid',
+      }),
+    ).toThrow('TOTP_ENCRYPTION_KEYS');
   });
 
   it('validates the private username reservation duration', () => {

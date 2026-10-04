@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+jest.mock('./mfa.service', () => ({ MfaService: class MfaService {} }));
+
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 

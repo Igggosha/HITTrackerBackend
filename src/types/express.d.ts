@@ -8,6 +8,7 @@ declare global {
       email: string;
       googleId?: string;
       role?: UserRole;
+      mfaVerified?: boolean;
     }
   }
 }
