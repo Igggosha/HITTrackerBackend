@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   Post,
   Req,
   Res,
@@ -216,9 +217,27 @@ export class AuthController {
     }
 
     const { redirectUrl, codeChallenge } = this.consumeOAuthRequest(request);
-    const login = await this.authService.loginWithGoogle(
-      request.user as GoogleUser,
-    );
+    let login: Awaited<ReturnType<AuthService['loginWithGoogle']>>;
+    try {
+      login = await this.authService.loginWithGoogle(
+        request.user as GoogleUser,
+      );
+    } catch (error) {
+      const suspension = this.accountSuspensionFrom(error);
+      if (!redirectUrl || !suspension) throw error;
+      const url = new URL(redirectUrl);
+      const parameters = new URLSearchParams({
+        error: 'account_banned',
+        expiresAt: suspension.expiresAt,
+        reason: suspension.reason ?? '',
+      });
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        url.hash = parameters.toString();
+      } else {
+        parameters.forEach((value, key) => url.searchParams.set(key, value));
+      }
+      return response.redirect(url.toString());
+    }
 
     if (!redirectUrl) {
       const result = await this.authService.completePrimaryLogin(
@@ -272,6 +291,22 @@ export class AuthController {
     const url = new URL(redirectUrl);
     url.searchParams.set('error', error);
     return response.redirect(url.toString());
+  }
+
+  private accountSuspensionFrom(error: unknown) {
+    if (!(error instanceof HttpException)) return null;
+    const response = error.getResponse();
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const fields = response as Record<string, unknown>;
+    return fields.code === 'ACCOUNT_BANNED' &&
+      typeof fields.expiresAt === 'string'
+      ? {
+          expiresAt: fields.expiresAt,
+          reason: typeof fields.reason === 'string' ? fields.reason : null,
+        }
+      : null;
   }
 
   private consumeOAuthRequest(request: Request) {

@@ -179,6 +179,10 @@ describe('UsersService transactions', () => {
     await expect(service.revokeTargetSessions(1, 5)).resolves.toMatchObject({
       revokedCount: 2,
     });
+    const [accountUpdate] = fake.committed('update', users);
+    expect(calledWith(accountUpdate, 'set')[0].args[0]).toMatchObject({
+      sessionsInvalidBefore: expect.any(Date),
+    });
     expect(inserted(userActivityEvents)[0]).toMatchObject({
       type: 'account.sessions_revoked',
       metadata: { sessionCount: 2 },

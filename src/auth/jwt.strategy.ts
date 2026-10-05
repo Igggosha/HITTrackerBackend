@@ -19,8 +19,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     email: string;
     role: UserRole;
     mfaVerified?: boolean;
+    sessionIssuedAt?: number;
+    iat?: number;
   }) {
-    await assertAccountMayAuthenticate(payload.sub);
+    await assertAccountMayAuthenticate(
+      payload.sub,
+      payload.sessionIssuedAt ?? (payload.iat ? payload.iat * 1000 : undefined),
+    );
     return {
       id: payload.sub,
       email: payload.email,

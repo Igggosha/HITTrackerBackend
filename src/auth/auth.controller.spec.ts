@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 jest.mock('./mfa.service', () => ({ MfaService: class MfaService {} }));
 
 import { AuthController } from './auth.controller';
@@ -16,6 +17,7 @@ describe('AuthController', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
@@ -80,6 +82,32 @@ describe('AuthController', () => {
     );
     expect(response.redirect).toHaveBeenCalledWith(
       expect.stringContaining('code=one-time-code'),
+    );
+  });
+
+  it('redirects a suspended Google user with structured ban details', async () => {
+    process.env.OAUTH_MOBILE_REDIRECT_URL =
+      'hit-tracker-mobile://auth/google/callback';
+    authService.loginWithGoogle.mockRejectedValue(
+      new ForbiddenException({
+        message: 'Account suspended',
+        code: 'ACCOUNT_BANNED',
+        expiresAt: '2026-10-06T12:00:00.000Z',
+        reason: 'Compromised account',
+      }),
+    );
+    const request = {
+      session: { oauthPlatform: 'mobile' },
+      user: { email: 'user@example.com', googleId: 'google-id' },
+    } as any;
+    const response = { redirect: jest.fn() } as any;
+
+    await controller.googleAuthCallback(request, response);
+
+    expect(response.redirect).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /error=account_banned.*expiresAt=2026-10-06T12%3A00%3A00\.000Z.*reason=Compromised\+account/,
+      ),
     );
   });
 });

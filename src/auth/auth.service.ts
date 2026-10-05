@@ -549,6 +549,7 @@ export class AuthService {
           passwordHash,
           resetPasswordToken: null,
           resetPasswordExpires: null,
+          sessionsInvalidBefore: new Date(),
         })
         .where(
           and(
@@ -597,7 +598,7 @@ export class AuthService {
 
   async createSession(message: string, user: AuthUser, mfaVerifiedAt?: Date) {
     const refreshToken = createRefreshToken();
-    await db.transaction(async (tx) => {
+    const sessionIssuedAt = await db.transaction(async (tx) => {
       const [account] = await tx
         .select({
           suspendedUntil: users.suspendedUntil,
@@ -615,12 +616,14 @@ export class AuthService {
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
         mfaVerifiedAt,
       });
+      return Date.now();
     });
     return this.createAuthResponse(
       message,
       user,
       refreshToken,
       Boolean(mfaVerifiedAt),
+      sessionIssuedAt,
     );
   }
 
@@ -695,6 +698,7 @@ export class AuthService {
           user,
           nextRefreshToken,
           Boolean(session.mfaVerifiedAt),
+          Date.now(),
         ),
       };
     });
@@ -726,11 +730,18 @@ export class AuthService {
     user: AuthUser,
     refreshToken: string,
     mfaVerified: boolean,
+    sessionIssuedAt: number,
   ) {
     return {
       message,
       accessToken: this.jwtService.sign(
-        { sub: user.id, email: user.email, role: user.role, mfaVerified },
+        {
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+          mfaVerified,
+          sessionIssuedAt,
+        },
         { expiresIn: ACCESS_TOKEN_TTL },
       ),
       refreshToken,
@@ -777,15 +788,22 @@ export class AuthService {
   }
 
   async revokeAllSessions(userId: number) {
-    await db
-      .update(authRefreshSessions)
-      .set({ revokedAt: new Date(), revocationReason: 'logout_all' })
-      .where(
-        and(
-          eq(authRefreshSessions.userId, userId),
-          isNull(authRefreshSessions.revokedAt),
-        ),
-      );
+    await db.transaction(async (tx) => {
+      const revokedAt = new Date();
+      await tx
+        .update(users)
+        .set({ sessionsInvalidBefore: revokedAt })
+        .where(eq(users.id, userId));
+      await tx
+        .update(authRefreshSessions)
+        .set({ revokedAt, revocationReason: 'logout_all' })
+        .where(
+          and(
+            eq(authRefreshSessions.userId, userId),
+            isNull(authRefreshSessions.revokedAt),
+          ),
+        );
+    });
     return { message: 'All sessions revoked' };
   }
 

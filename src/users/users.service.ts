@@ -89,6 +89,10 @@ export class UsersService {
     return db.transaction(async (tx) => {
       await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
       const revokedAt = new Date();
+      await tx
+        .update(users)
+        .set({ sessionsInvalidBefore: revokedAt })
+        .where(eq(users.id, targetUserId));
       const revoked = await tx
         .update(authRefreshSessions)
         .set({ revokedAt, revocationReason: 'admin_revoked' })
@@ -129,7 +133,11 @@ export class UsersService {
       await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
       const [updated] = await tx
         .update(users)
-        .set({ suspendedUntil: until, suspensionReason: reason })
+        .set({
+          suspendedUntil: until,
+          suspensionReason: reason,
+          sessionsInvalidBefore: new Date(),
+        })
         .where(eq(users.id, targetUserId))
         .returning({
           id: users.id,

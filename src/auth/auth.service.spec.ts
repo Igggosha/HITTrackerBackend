@@ -465,6 +465,7 @@ describe('AuthService registration', () => {
         email: 'user@example.com',
         role: 'user',
         mfaVerified: false,
+        sessionIssuedAt: expect.any(Number),
       },
       { expiresIn: '5m' },
     );
@@ -506,6 +507,7 @@ describe('AuthService registration', () => {
         email: 'user@example.com',
         role: 'moderator',
         mfaVerified: true,
+        sessionIssuedAt: expect.any(Number),
       },
       { expiresIn: '5m' },
     );

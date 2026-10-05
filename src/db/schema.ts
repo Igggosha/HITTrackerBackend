@@ -43,6 +43,9 @@ export const users = pgTable(
     isSystemOwner: boolean('is_system_owner').notNull().default(false),
     suspendedUntil: timestamp('suspended_until', { withTimezone: true }),
     suspensionReason: text('suspension_reason'),
+    sessionsInvalidBefore: timestamp('sessions_invalid_before', {
+      withTimezone: true,
+    }),
 
     // Password Reset
     resetPasswordToken: text('reset_password_token'),
