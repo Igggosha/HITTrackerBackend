@@ -6,31 +6,33 @@ This runbook covers the security-sensitive release steps introduced for the API 
 
 ## 1. Required secrets / Обов'язкові секрети
 
-Generate independent values for Redis and TOTP. Do not reuse JWT, OAuth, database, or MinIO credentials.
+Generate independent values for Redis, TOTP, and the application database role. Do not reuse JWT, OAuth, administrative database, or MinIO credentials.
 
-Створіть незалежні значення для Redis і TOTP. Не використовуйте повторно облікові дані JWT, OAuth, бази даних або MinIO.
+Створіть незалежні значення для Redis, TOTP і прикладної ролі бази даних. Не використовуйте повторно облікові дані JWT, OAuth, адміністративної ролі бази даних або MinIO.
 
-Put the hexadecimal value in `REDIS_PASSWORD` and the base64 value in `TOTP_ENCRYPTION_KEYS`. The TOTP entry must decode to exactly 32 bytes. Compose constructs `REDIS_URL`; when Nest runs outside Compose, set an equivalent URL explicitly. Replace every other `change_me` or `your_*_here` placeholder before deployment.
+Put the hexadecimal value in `REDIS_PASSWORD`, the base64 value in `TOTP_ENCRYPTION_KEYS`, and a separate high-entropy value in `APP_DB_PASSWORD`. The TOTP entry must decode to exactly 32 bytes. Compose constructs `REDIS_URL`; when Nest runs outside Compose, set an equivalent URL explicitly. `DB_USERNAME`/`DB_PASSWORD` are administrative credentials used only by migrations, backup, seed, and maintenance jobs; API and background application services use `APP_DB_USERNAME`/`APP_DB_PASSWORD`. Replace every other `change_me` or `your_*_here` placeholder before deployment.
 
-Запишіть шістнадцяткове значення в `REDIS_PASSWORD`, а base64-значення — у `TOTP_ENCRYPTION_KEYS`. Запис TOTP після декодування має містити рівно 32 байти. Compose формує `REDIS_URL`; якщо Nest працює поза Compose, задайте еквівалентну адресу явно. Перед розгортанням замініть усі інші шаблонні значення `change_me` та `your_*_here`.
+Запишіть шістнадцяткове значення в `REDIS_PASSWORD`, base64-значення — у `TOTP_ENCRYPTION_KEYS`, а окреме високоентропійне значення — у `APP_DB_PASSWORD`. Запис TOTP після декодування має містити рівно 32 байти. Compose формує `REDIS_URL`; якщо Nest працює поза Compose, задайте еквівалентну адресу явно. `DB_USERNAME`/`DB_PASSWORD` — адміністративні облікові дані лише для міграцій, резервування, seed і технічних робіт; API та фонові прикладні сервіси використовують `APP_DB_USERNAME`/`APP_DB_PASSWORD`. Перед розгортанням замініть усі інші шаблонні значення `change_me` та `your_*_here`.
 
 ## 2. Release order and checks / Порядок релізу та перевірки
 
 1. Make and verify a backup before the release. Follow [`docs/diploma/backups.md`](diploma/backups.md) and run both `run-now` and `verify-restore`.
 2. Install locked dependencies, build, and run the migration before routing traffic to the new API.
-3. Start Redis, API, and API gateway. The API intentionally refuses production startup without `TOTP_ENCRYPTION_KEYS`; Redis-backed throttling is required by Compose.
-4. Confirm `docker compose ps` reports `postgres`, `postgres-replica`, `minio`, `redis`, `api`, and `api-gateway` healthy, while `migrate`, `bootstrap`, `seed`, and `minio-init` have exited successfully.
-5. Confirm `GET http://127.0.0.1:${PORT:-3000}/` succeeds through the gateway. The API container itself has no host port.
-6. Test password and Google login for one ordinary user and one privileged user. A role of `helper`, `moderator`, `admin`, or `super_admin` must require TOTP enrollment or verification before a session is issued.
-7. Save the one-time recovery codes outside the application host. Verify one recovery-code login in a controlled account and confirm the code cannot be reused.
+3. Run `app-role-init` after migrations and before application services. It is idempotent and grants only connect, schema usage, table DML, and sequence usage; it does not grant DDL or role administration.
+4. Start Redis, API, and API gateway. The API intentionally refuses production startup without `TOTP_ENCRYPTION_KEYS`; Redis-backed throttling is required by Compose.
+5. Confirm `docker compose ps` reports `postgres`, `postgres-replica`, `minio`, `redis`, `api`, and `api-gateway` healthy, while `migrate`, `app-role-init`, `bootstrap`, `seed`, and `minio-init` have exited successfully.
+6. Confirm `GET http://127.0.0.1:${PORT:-3000}/` succeeds through the gateway. The API container itself has no host port.
+7. Test password and Google login for one ordinary user and one privileged user. A role of `helper`, `moderator`, `admin`, or `super_admin` must require TOTP enrollment or verification before a session is issued.
+8. Save the one-time recovery codes outside the application host. Verify one recovery-code login in a controlled account and confirm the code cannot be reused.
 
 1. Створіть і перевірте резервну копію до релізу. Виконайте `run-now` і `verify-restore` за інструкцією [`docs/diploma/backups.md`](diploma/backups.md).
 2. Встановіть зафіксовані залежності, зберіть застосунок і виконайте міграцію до спрямування трафіку на новий API.
-3. Запустіть Redis, API та API-шлюз. API навмисно не запускається у production без `TOTP_ENCRYPTION_KEYS`; у Compose обмеження запитів залежить від Redis.
-4. Переконайтеся, що `docker compose ps` показує здоровий стан `postgres`, `postgres-replica`, `minio`, `redis`, `api` та `api-gateway`, а `migrate`, `bootstrap`, `seed` і `minio-init` успішно завершили роботу.
-5. Перевірте `GET http://127.0.0.1:${PORT:-3000}/` через шлюз. Контейнер API не публікує порт на хості.
-6. Перевірте вхід паролем і через Google для звичайного та привілейованого користувача. Ролі `helper`, `moderator`, `admin` і `super_admin` мають вимагати реєстрацію або перевірку TOTP до видачі сесії.
-7. Збережіть одноразові коди відновлення поза хостом застосунку. Перевірте вхід одним кодом на контрольному обліковому записі та переконайтеся, що повторне використання неможливе.
+3. Запустіть `app-role-init` після міграцій і до прикладних сервісів. Він повторюваний і надає лише підключення, доступ до схеми, DML таблиць та використання послідовностей; DDL і керування ролями не надаються.
+4. Запустіть Redis, API та API-шлюз. API навмисно не запускається у production без `TOTP_ENCRYPTION_KEYS`; у Compose обмеження запитів залежить від Redis.
+5. Переконайтеся, що `docker compose ps` показує здоровий стан `postgres`, `postgres-replica`, `minio`, `redis`, `api` та `api-gateway`, а `migrate`, `app-role-init`, `bootstrap`, `seed` і `minio-init` успішно завершили роботу.
+6. Перевірте `GET http://127.0.0.1:${PORT:-3000}/` через шлюз. Контейнер API не публікує порт на хості.
+7. Перевірте вхід паролем і через Google для звичайного та привілейованого користувача. Ролі `helper`, `moderator`, `admin` і `super_admin` мають вимагати реєстрацію або перевірку TOTP до видачі сесії.
+8. Збережіть одноразові коди відновлення поза хостом застосунку. Перевірте вхід одним кодом на контрольному обліковому записі та переконайтеся, що повторне використання неможливе.
 
 For a manual non-Compose deployment, the minimum gate is:
 
@@ -52,6 +54,10 @@ npm run start:prod
 Point the public API hostname in Cloudflare Tunnel to `http://api-gateway:8080`, not directly to `api:3000`. Keep the web and object-storage hostnames on their existing services. The gateway overwrites the client-supplied forwarding chain, enforces body, request-rate, connection, and timeout limits, and passes a valid original `X-Forwarded-Proto` value for secure OAuth cookies.
 
 Спрямуйте публічне API-ім'я в Cloudflare Tunnel на `http://api-gateway:8080`, а не безпосередньо на `api:3000`. Залиште web- і object-storage-імена на їхніх поточних сервісах. Шлюз перезаписує переданий клієнтом ланцюжок проксі, застосовує обмеження розміру тіла, частоти запитів, кількості з'єднань і тайм-аути та передає коректний початковий `X-Forwarded-Proto` для захищених OAuth-cookie.
+
+The Compose gateway also listens on the compatibility route `api:3000`, so an older remotely managed tunnel route still terminates at the gateway rather than bypassing it. Treat this as a recovery path, not the preferred Cloudflare configuration. If Cloudflare shows `502 Host Error`, first verify that `api-gateway` is healthy, then inspect recent `cloudflared` logs. `lookup api ... no such host` or `connect ... refused` means the tunnel-to-gateway route is broken; do not reconnect the application container to the public `edge` network.
+
+Compose-шлюз також слухає сумісний маршрут `api:3000`, тому старий віддалено керований маршрут тунелю все одно завершується на шлюзі й не обходить його. Вважайте це аварійним шляхом, а не бажаною конфігурацією Cloudflare. Якщо Cloudflare показує `502 Host Error`, спочатку перевірте здоров'я `api-gateway`, потім перегляньте свіжі логи `cloudflared`. Повідомлення `lookup api ... no such host` або `connect ... refused` означає розрив маршруту від тунелю до шлюзу; не повертайте контейнер застосунку в публічну мережу `edge`.
 
 Only add exact HTTPS hosts to `NOTIFICATION_LINK_HOSTS`. The configured frontend host, S3 public endpoint, and YouTube hosts are already covered. Restart the API after changing this allowlist.
 

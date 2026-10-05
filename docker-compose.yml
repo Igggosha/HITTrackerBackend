@@ -116,6 +116,24 @@ services:
     networks:
       - private
 
+  app-role-init:
+    image: postgres:17
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-nestdb}
+      APP_DB_USERNAME: ${APP_DB_USERNAME:-hit_tracker_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-change_me_app_database_password}
+    volumes:
+      - ./docker/app-role-init.sh:/app-role-init.sh:ro
+    entrypoint: ['sh', '/app-role-init.sh']
+    restart: 'no'
+    networks: [private]
+
   bootstrap:
     image: postgres:17
     depends_on:
@@ -254,6 +272,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      app-role-init:
+        condition: service_completed_successfully
       seed:
         condition: service_completed_successfully
       minio:
@@ -267,8 +287,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
-      DATABASE_REPLICA_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres-replica:5432/${DB_NAME:-nestdb}
+      DATABASE_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_REPLICA_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres-replica:5432/${DB_NAME:-nestdb}
       REDIS_URL: redis://:${REDIS_PASSWORD:-change_me}@redis:6379
       # Explicit interpolation lets a deployment secret store override the
       # ignored .env value without baking the key into an image or file.
@@ -348,6 +368,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      app-role-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:
@@ -358,7 +380,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres:5432/${DB_NAME:-nestdb}
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://minio:9000}
       FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
@@ -427,13 +449,14 @@ services:
     profiles: [events, search]
     depends_on:
       migrate: { condition: service_completed_successfully }
+      app-role-init: { condition: service_completed_successfully }
       kafka-init: { condition: service_completed_successfully }
     # No `env_file: .env` here: the relay only ever touches PostgreSQL and
     # Kafka, never SMTP/OAuth/S3/JWT secrets, so it gets an explicit, minimal
     # environment instead of every app secret the API needs.
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres:5432/${DB_NAME:-nestdb}
       KAFKA_BROKERS: kafka:9092
       OTEL_SERVICE_NAME: hit-relay
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
@@ -595,10 +618,11 @@ services:
     profiles: [search]
     depends_on:
       migrate: { condition: service_completed_successfully }
+      app-role-init: { condition: service_completed_successfully }
       seed: { condition: service_completed_successfully }
       search-init: { condition: service_completed_successfully }
     environment:
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres:5432/${DB_NAME:-nestdb}
       SEARCH_URL: http://elasticsearch:9200
       SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}
       SEARCH_WRITER_PASSWORD: ${SEARCH_WRITER_PASSWORD:-change_me}
@@ -614,7 +638,7 @@ services:
       search-rebuild: { condition: service_completed_successfully }
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-nestdb}
+      DATABASE_URL: postgresql://${APP_DB_USERNAME:-hit_tracker_app}:${APP_DB_PASSWORD:-change_me_app_database_password}@postgres:5432/${DB_NAME:-nestdb}
       KAFKA_BROKERS: kafka:9092
       SEARCH_URL: http://elasticsearch:9200
       SEARCH_WRITER_USERNAME: ${SEARCH_WRITER_USERNAME:-hit_search_writer}

@@ -35,8 +35,11 @@ service name `postgres`, not through a host port. Only the hardened API gateway
 is published to the host on port `3000` by default; the API container remains
 private.
 
-1. Copy `.env.example` to `.env` and fill in the required secrets. Keep
-   `DB_USERNAME`, `DB_PASSWORD`, and `DB_NAME` are used by both containers.
+1. Copy `.env.example` to `.env` and fill in the required secrets.
+   `DB_USERNAME`, `DB_PASSWORD`, and `DB_NAME` are reserved for PostgreSQL
+   administration and release jobs. Runtime application services use the
+   restricted `APP_DB_USERNAME` and `APP_DB_PASSWORD` role provisioned after
+   migrations.
    `PORT` controls the API port exposed on your computer (default: `3000`).
    Docker Compose builds the API's internal connection URL with the hostname
    `postgres`; it overrides the localhost `DATABASE_URL` only inside the API
