@@ -314,8 +314,10 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - private
-      - observability
+      private:
+        aliases:
+          - api-internal
+      observability:
 
   api-gateway:
     image: nginx:1.27-alpine
@@ -332,8 +334,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - private
-      - edge
+      private:
+      edge:
+        aliases:
+          # Keep the current Cloudflare route (`http://api:3000`) terminating
+          # at the gateway; the application container remains private.
+          - api
     restart: unless-stopped
 
   notification-worker:
