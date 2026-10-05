@@ -89,7 +89,54 @@ If all keys capable of decrypting a credential are lost, recovery codes still pe
 
 Якщо втрачено всі ключі, здатні розшифрувати конкретні облікові дані, код відновлення все ще дозволяє вхід, але не відновлює seed TOTP. Після незалежної перевірки власника облікового запису в контрольованій сесії бази даних відкличте refresh-сесії лише цього користувача та видаліть лише його рядок `auth_totp_credentials`; наступний привілейований вхід вимагатиме нової реєстрації. Зафіксуйте інцидент і зміну бази даних поза застосунком. Ніколи не виконуйте масове видалення.
 
-## 5. Monitoring and incident response / Моніторинг та реагування
+## 5. Compromised account controls / Дії при компрометації акаунта
+
+Open **Admin → Users → user profile → Account security**. The available actions are enforced by the API as well as hidden in the client:
+
+Відкрийте **Admin → Users → профіль користувача → Account security**. Доступність дій перевіряє не лише клієнт, а й API:
+
+| Operator / Оператор | May manage / Може керувати |
+| --- | --- |
+| `super_admin` | `user`, `helper`, `moderator`, `admin` |
+| system owner / системний власник | all roles including `super_admin`, except the owner's own account / усі ролі, включно із `super_admin`, крім власного акаунта |
+
+No administrator can suspend or remotely terminate the system owner's sessions. A non-owner `super_admin` cannot perform these actions on another `super_admin`. Administrative self-service uses the ordinary Settings logout controls instead.
+
+Жоден адміністратор не може заблокувати системного власника або віддалено завершити його сесії. `super_admin`, який не є власником, не може виконувати ці дії щодо іншого `super_admin`. Для власного акаунта слід використовувати звичайні кнопки виходу в Settings.
+
+### End all sessions / Завершити всі сесії
+
+1. Select **End all sessions** and confirm the warning.
+2. The API revokes every refresh-token family and advances the user's `sessions_invalid_before` boundary in one transaction.
+3. Existing access tokens are rejected on the next protected API request, even if their normal expiry time has not arrived. The user must authenticate again on every device.
+
+1. Натисніть **End all sessions** і підтвердьте попередження.
+2. API в одній транзакції відкликає всі сімейства refresh-токенів і пересуває межу `sessions_invalid_before` користувача.
+3. Наявні access-токени відхиляються під час наступного захищеного API-запиту, навіть якщо їхній звичайний строк дії ще не завершився. Користувач має повторно ввійти на всіх пристроях.
+
+### Suspend and restore an account / Блокування та відновлення акаунта
+
+1. Select **Suspend account**.
+2. Enter a future local date/time in `YYYY-MM-DD HH:mm` format and a reason of 3–500 characters. The client converts the local time to an absolute timestamp; the API validates it again.
+3. Confirm the action. The API stores the suspension, revokes refresh families, invalidates access sessions, records an activity, and creates a system notification in the same database transaction.
+4. The user is rejected on the next protected request and sees the expiry and reason. Password login, Google login, token refresh, and mobile OAuth exchange all enforce the same suspension.
+5. Use **Remove suspension** to restore access early. Otherwise access resumes automatically after the recorded expiry; the historical fields remain available to operators until a later update.
+
+1. Натисніть **Suspend account**.
+2. Укажіть майбутню локальну дату й час у форматі `YYYY-MM-DD HH:mm` та причину довжиною 3–500 символів. Клієнт перетворює локальний час на абсолютну часову мітку, а API повторно її перевіряє.
+3. Підтвердьте дію. API в одній транзакції зберігає блокування, відкликає refresh-сімейства, анулює access-сесії, записує подію та створює системне сповіщення.
+4. Наступний захищений запит користувача відхиляється, а застосунок показує строк і причину. Вхід паролем, вхід через Google, оновлення токена та mobile OAuth exchange однаково перевіряють блокування.
+5. Для дострокового відновлення натисніть **Remove suspension**. Інакше доступ відновиться автоматично після зазначеного строку; історичні поля залишаться доступними операторам до наступної зміни.
+
+The account row is retained, so the same normalized email or linked Google identity cannot be registered as a new account to bypass a suspension. The system deliberately does **not** ban by public IP or Wi-Fi because unrelated users may share a café, gym, office, carrier NAT, or VPN address. Rate limits may still use IP as one short-lived signal, but account suspension is identity-based. A person using a completely unrelated new identity cannot be reliably linked without a stronger verified factor such as a phone number, identity verification, or platform attestation; that is not claimed by this release.
+
+Рядок акаунта не видаляється, тому ту саму нормалізовану email-адресу або прив'язану Google-ідентичність не можна повторно зареєструвати для обходу блокування. Система навмисно **не** блокує за публічною IP-адресою або Wi-Fi, адже різні користувачі можуть спільно використовувати адресу кафе, спортзалу, офісу, carrier NAT або VPN. Rate limit може короткочасно враховувати IP як один із сигналів, але блокування акаунта прив'язане до ідентичності. Неможливо надійно пов'язати людину з цілком новою сторонньою ідентичністю без сильнішого підтвердженого фактора, наприклад номера телефону, перевірки особи або platform attestation; цей реліз не заявляє такої можливості.
+
+After deployment, test the matrix with controlled accounts: ordinary target by `super_admin`, `super_admin` target by the system owner, forbidden owner target, forbidden peer-`super_admin` target, immediate protected-request rejection, refresh rejection, expiry, and early removal. Do not use a production owner's account for destructive drills.
+
+Після розгортання перевірте матрицю на контрольних акаунтах: звичайна ціль від `super_admin`, ціль-`super_admin` від системного власника, заборонена ціль-власник, заборонена ціль-рівний `super_admin`, негайне відхилення захищеного запиту, відхилення refresh, завершення строку й дострокове зняття блокування. Не використовуйте production-акаунт власника для руйнівних навчань.
+
+## 6. Monitoring and incident response / Моніторинг та реагування
 
 Run the `observability` profile and keep its UI ports bound to localhost. Review alerts for sustained 401/403/429 responses, elevated 5xx or latency, API CPU/RAM pressure, PostgreSQL pool waiters, Redis availability/memory, notification queue age/failures, and unusually large campaigns. Correlate an alert with structured logs by request ID; sensitive headers, tokens, passwords, MFA factors, and notification bodies are redacted.
 
@@ -99,11 +146,11 @@ For suspected credential or refresh-token compromise: disable external traffic a
 
 Якщо підозрюється компрометація облікових даних або refresh-токена: вимкніть зовнішній трафік на шлюзі/тунелі, збережіть логи, змініть уражений секрет, відкличте активні refresh-сесії, перевірте стан MFA привілейованих користувачів і лише потім відновіть трафік. Ротація `JWT_SECRET` негайно робить усі access-токени недійсними; відкликання refresh-сесій блокує їх поновлення. Після відновлення перевірте новий вхід.
 
-## 6. Rollback / Відкат
+## 7. Rollback / Відкат
 
-Application rollback is safe only while the new migration remains in place: it is additive, and older application builds ignore the new tables and campaign idempotency column. Do not reverse the migration during an ordinary rollback. Restore the prior application images, keep Redis available, and verify ordinary login and core read/write flows. A database rollback requires a separately approved maintenance window and a verified backup because dropping the security tables destroys MFA/session history.
+Application rollback is safe only while the new migrations remain in place: they are additive, and older application builds ignore the security tables, campaign idempotency column, and account-suspension columns. Do not reverse migrations during an ordinary rollback. Restore the prior application images, keep Redis available, and verify ordinary login and core read/write flows. A database rollback requires a separately approved maintenance window and a verified backup because dropping security tables or columns destroys MFA/session and suspension history.
 
-Відкат застосунку безпечний лише зі збереженням нової міграції: вона адитивна, а старі збірки ігнорують нові таблиці та колонку ідемпотентності кампаній. Не скасовуйте міграцію під час звичайного відкату. Поверніть попередні образи застосунку, залиште Redis доступним і перевірте звичайний вхід та основні операції читання/запису. Відкат бази даних потребує окремо погодженого вікна обслуговування та перевіреної резервної копії, оскільки видалення безпекових таблиць знищує історію MFA/сесій.
+Відкат застосунку безпечний лише зі збереженням нових міграцій: вони адитивні, а старі збірки ігнорують безпекові таблиці, колонку ідемпотентності кампаній та поля блокування акаунта. Не скасовуйте міграції під час звичайного відкату. Поверніть попередні образи застосунку, залиште Redis доступним і перевірте звичайний вхід та основні операції читання/запису. Відкат бази даних потребує окремо погодженого вікна обслуговування та перевіреної резервної копії, оскільки видалення безпекових таблиць або полів знищує історію MFA/сесій і блокувань.
 
 After either a release or rollback, record the deployed commit, migration result, container health, backup set, restore-drill result, and the operator/time. Do not record secret values.
 
