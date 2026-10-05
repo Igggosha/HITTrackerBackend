@@ -62,6 +62,7 @@ import {
   type AdminUserActivityItem,
 } from './user-activity';
 import { OutboxService } from '../outbox/outbox.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { DbTransaction } from '../outbox/transaction';
 
 type AvatarProfile = Awaited<ReturnType<UsersService['getProfile']>>;
@@ -81,7 +82,115 @@ export class UsersService {
     private readonly configService: ConfigService,
     private readonly storageService: StorageService,
     private readonly outbox: OutboxService,
+    private readonly notifications: NotificationsService,
   ) {}
+
+  async revokeTargetSessions(actorUserId: number, targetUserId: number) {
+    return db.transaction(async (tx) => {
+      await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
+      const revokedAt = new Date();
+      const revoked = await tx
+        .update(authRefreshSessions)
+        .set({ revokedAt, revocationReason: 'admin_revoked' })
+        .where(
+          and(
+            eq(authRefreshSessions.userId, targetUserId),
+            isNull(authRefreshSessions.revokedAt),
+          ),
+        )
+        .returning({ id: authRefreshSessions.id });
+      await recordUserActivity(
+        {
+          userId: targetUserId,
+          actorUserId,
+          type: 'account.sessions_revoked',
+          metadata: { sessionCount: revoked.length },
+        },
+        tx,
+      );
+      return { message: 'All sessions revoked', revokedCount: revoked.length };
+    });
+  }
+
+  async suspendUser(
+    actorUserId: number,
+    targetUserId: number,
+    dto: { suspendedUntil: string; reason: string },
+  ) {
+    const until = new Date(dto.suspendedUntil);
+    const reason = dto.reason.trim();
+    if (!Number.isFinite(until.getTime()) || until <= new Date()) {
+      throw new BadRequestException({
+        message: 'Suspension expiry must be in the future',
+        code: 'INVALID_SUSPENSION_EXPIRY',
+      });
+    }
+    return db.transaction(async (tx) => {
+      await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
+      const [updated] = await tx
+        .update(users)
+        .set({ suspendedUntil: until, suspensionReason: reason })
+        .where(eq(users.id, targetUserId))
+        .returning({
+          id: users.id,
+          suspendedUntil: users.suspendedUntil,
+          suspensionReason: users.suspensionReason,
+        });
+      await tx
+        .update(authRefreshSessions)
+        .set({ revokedAt: new Date(), revocationReason: 'account_suspended' })
+        .where(
+          and(
+            eq(authRefreshSessions.userId, targetUserId),
+            isNull(authRefreshSessions.revokedAt),
+          ),
+        );
+      await recordUserActivity(
+        {
+          userId: targetUserId,
+          actorUserId,
+          type: 'account.suspended',
+          metadata: { expiresAt: until.toISOString(), reason },
+        },
+        tx,
+      );
+      await this.notifications.createSystemNotification(
+        targetUserId,
+        'Account suspended / Обліковий запис заблоковано',
+        `Until / До: ${until.toISOString()}. Reason / Причина: ${reason}`,
+        { code: 'ACCOUNT_BANNED', expiresAt: until.toISOString(), reason },
+        tx,
+      );
+      return updated;
+    });
+  }
+
+  async unsuspendUser(actorUserId: number, targetUserId: number) {
+    return db.transaction(async (tx) => {
+      await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
+      const [updated] = await tx
+        .update(users)
+        .set({ suspendedUntil: null, suspensionReason: null })
+        .where(eq(users.id, targetUserId))
+        .returning({ id: users.id });
+      await recordUserActivity(
+        { userId: targetUserId, actorUserId, type: 'account.unsuspended' },
+        tx,
+      );
+      await this.notifications.createSystemNotification(
+        targetUserId,
+        'Account restored / Обліковий запис відновлено',
+        'You can sign in again. / Ви знову можете увійти.',
+        { code: 'ACCOUNT_UNBANNED' },
+        tx,
+      );
+      return {
+        id: updated.id,
+        suspendedUntil: null,
+        suspensionReason: null,
+      };
+    });
+  }
 
   async listUsers({ search, page, limit, online }: ListUsersDto) {
     const searchFilter = search?.trim()
@@ -101,6 +210,9 @@ export class UsersService {
       username: users.username,
       displayName: users.displayName,
       role: users.role,
+      isSystemOwner: users.isSystemOwner,
+      suspendedUntil: users.suspendedUntil,
+      suspensionReason: users.suspensionReason,
       online: gte(users.lastSeenAt, new Date(Date.now() - 90_000)),
       createdAt: users.createdAt,
     };
@@ -211,6 +323,14 @@ export class UsersService {
         username: target.username,
         displayName: target.displayName,
         role: target.role,
+        isSystemOwner: target.isSystemOwner,
+        suspension:
+          target.suspendedUntil && target.suspendedUntil > new Date()
+            ? {
+                expiresAt: target.suspendedUntil,
+                reason: target.suspensionReason,
+              }
+            : null,
         age: target.age,
         gender: target.gender,
         height: target.height,
@@ -432,6 +552,36 @@ export class UsersService {
       actor: rows.find((row) => row.id === actorUserId),
       target: rows.find((row) => row.id === targetUserId),
     };
+  }
+
+  private async assertSecurityActionAllowed(
+    tx: DbTransaction,
+    actorUserId: number,
+    targetUserId: number,
+  ) {
+    const { actor, target } = await this.lockActorAndTarget(
+      tx,
+      actorUserId,
+      targetUserId,
+    );
+    if (!actor)
+      throw new ForbiddenException('Your account no longer has access');
+    if (!target) throw new NotFoundException('User not found');
+    if (actor.role !== 'super_admin') {
+      throw new ForbiddenException('Super admin access is required');
+    }
+    if (actorUserId === targetUserId) {
+      throw new ForbiddenException('Use your own session settings');
+    }
+    if (target.isSystemOwner) {
+      throw new ForbiddenException('The system owner cannot be managed');
+    }
+    if (target.role === 'super_admin' && !actor.isSystemOwner) {
+      throw new ForbiddenException(
+        'Only the system owner can manage super admins',
+      );
+    }
+    return { actor, target };
   }
 
   async updateUserRole(

@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Query,
   Req,
   UseGuards,
@@ -17,6 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { ListUserActivityDto, ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UsersService } from './users.service';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 
 @UseGuards(JwtGuard, RolesGuard)
 @MinimumRole('admin')
@@ -72,5 +74,30 @@ export class AdminUsersController {
     @Param('id', ParseIntPipe) targetUserId: number,
   ) {
     return this.usersService.deleteUser(request.user!.id!, targetUserId);
+  }
+
+  @Post(':id/revoke-sessions')
+  @MinimumRole('super_admin')
+  revokeSessions(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.usersService.revokeTargetSessions(request.user!.id!, id);
+  }
+
+  @Post(':id/suspend')
+  @MinimumRole('super_admin')
+  suspend(
+    @Req() request: Request,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SuspendUserDto,
+  ) {
+    return this.usersService.suspendUser(request.user!.id!, id, dto);
+  }
+
+  @Post(':id/unsuspend')
+  @MinimumRole('super_admin')
+  unsuspend(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
+    return this.usersService.unsuspendUser(request.user!.id!, id);
   }
 }

@@ -44,6 +44,7 @@ import { OutboxService } from '../outbox/outbox.service';
 import type { DbTransaction } from '../outbox/transaction';
 import { MfaService } from './mfa.service';
 import { requiresMfa } from './roles';
+import { assertNotSuspended } from './account-suspension';
 
 export type GoogleUser = {
   email: string;
@@ -348,7 +349,6 @@ export class AuthService {
         code: 'GOOGLE_SIGN_IN_REQUIRED',
       });
     }
-
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
@@ -357,6 +357,8 @@ export class AuthService {
         code: 'INVALID_CREDENTIALS',
       });
     }
+
+    assertNotSuspended(user);
 
     return user;
   }
@@ -374,6 +376,7 @@ export class AuthService {
       .limit(1);
 
     if (userByGoogleId) {
+      assertNotSuspended(userByGoogleId);
       return {
         message: 'Google login successful',
         user: this.toPublicUser(userByGoogleId),
@@ -387,6 +390,7 @@ export class AuthService {
       .limit(1);
 
     if (userByEmail) {
+      assertNotSuspended(userByEmail);
       return this.linkGoogleAccount(userByEmail, googleUser.googleId);
     }
 
@@ -425,6 +429,7 @@ export class AuthService {
         .where(eq(users.googleId, googleUser.googleId))
         .limit(1);
       if (raced) {
+        assertNotSuspended(raced);
         return {
           message: 'Google login successful',
           user: this.toPublicUser(raced),
@@ -441,6 +446,7 @@ export class AuthService {
         .where(eq(users.email, googleUser.email))
         .limit(1);
       if (!existing) throw error;
+      assertNotSuspended(existing);
       return this.linkGoogleAccount(existing, googleUser.googleId);
     }
   }
@@ -591,11 +597,24 @@ export class AuthService {
 
   async createSession(message: string, user: AuthUser, mfaVerifiedAt?: Date) {
     const refreshToken = createRefreshToken();
-    await db.insert(authRefreshSessions).values({
-      userId: user.id,
-      tokenHash: hashRefreshToken(refreshToken),
-      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-      mfaVerifiedAt,
+    await db.transaction(async (tx) => {
+      const [account] = await tx
+        .select({
+          suspendedUntil: users.suspendedUntil,
+          suspensionReason: users.suspensionReason,
+        })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .for('update')
+        .limit(1);
+      if (!account) throw new UnauthorizedException('Account no longer exists');
+      assertNotSuspended(account);
+      await tx.insert(authRefreshSessions).values({
+        userId: user.id,
+        tokenHash: hashRefreshToken(refreshToken),
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        mfaVerifiedAt,
+      });
     });
     return this.createAuthResponse(
       message,
@@ -635,11 +654,14 @@ export class AuthService {
           displayName: users.displayName,
           role: users.role,
           isSystemOwner: users.isSystemOwner,
+          suspendedUntil: users.suspendedUntil,
+          suspensionReason: users.suspensionReason,
         })
         .from(users)
         .where(eq(users.id, session.userId))
         .limit(1);
       if (!user) return { kind: 'expired' } as const;
+      assertNotSuspended(user);
       if (requiresMfa(user.role) && !session.mfaVerifiedAt) {
         await tx
           .update(authRefreshSessions)
@@ -822,6 +844,7 @@ export class AuthService {
       .where(eq(users.id, loginCode.userId))
       .limit(1);
     if (!user) throw new UnauthorizedException('OAuth user no longer exists.');
+    assertNotSuspended(user);
     return this.completePrimaryLogin('Google login successful', user);
   }
 }

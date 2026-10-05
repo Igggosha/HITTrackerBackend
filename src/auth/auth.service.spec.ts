@@ -434,6 +434,9 @@ describe('AuthService registration', () => {
         role: 'user',
       },
     ]);
+    mockTxLimit.mockResolvedValueOnce([
+      { suspendedUntil: null, suspensionReason: null },
+    ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
     const result = await service.login({
@@ -447,13 +450,13 @@ describe('AuthService registration', () => {
     });
     if (!('refreshToken' in result)) throw new Error('Expected a session');
     expect(result.refreshToken).toHaveLength(64);
-    expect(mockInsertValues).toHaveBeenCalledWith(
+    expect(mockTxInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 1,
         tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );
-    expect(mockInsertValues.mock.calls[0][0].tokenHash).not.toBe(
+    expect(mockTxInsertValues.mock.calls[0][0].tokenHash).not.toBe(
       result.refreshToken,
     );
     expect(jwtService.sign).toHaveBeenCalledWith(

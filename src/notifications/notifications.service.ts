@@ -70,6 +70,23 @@ export class NotificationsService {
     private readonly config?: ConfigService,
   ) {}
 
+  async createSystemNotification(
+    userId: number,
+    title: string,
+    body: string,
+    payload: Record<string, unknown> = {},
+    transaction?: DbTransaction,
+  ) {
+    const create = (tx: DbTransaction) =>
+      this.createForUser(
+        tx,
+        userId,
+        { category: 'general', title, body, payload },
+        true,
+      );
+    return transaction ? create(transaction) : primaryDb.transaction(create);
+  }
+
   async getPreferences(userId: number) {
     await primaryDb
       .insert(notificationPreferences)

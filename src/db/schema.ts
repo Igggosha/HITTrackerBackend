@@ -41,6 +41,8 @@ export const users = pgTable(
     googleId: text('google_id').unique(),
     role: text('role').$type<UserRole>().notNull().default('user'),
     isSystemOwner: boolean('is_system_owner').notNull().default(false),
+    suspendedUntil: timestamp('suspended_until', { withTimezone: true }),
+    suspensionReason: text('suspension_reason'),
 
     // Password Reset
     resetPasswordToken: text('reset_password_token'),
@@ -69,6 +71,10 @@ export const users = pgTable(
     check(
       'users_system_owner_role_check',
       sql`not ${table.isSystemOwner} or ${table.role} = 'super_admin'`,
+    ),
+    check(
+      'users_suspension_fields_check',
+      sql`(${table.suspendedUntil} is null and ${table.suspensionReason} is null) or (${table.suspendedUntil} is not null and ${table.suspensionReason} is not null and char_length(${table.suspensionReason}) between 3 and 500)`,
     ),
   ],
 );

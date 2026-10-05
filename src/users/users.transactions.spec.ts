@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { db } from '../db/db';
 import {
+  authRefreshSessions,
   outboxEvents,
   userActivityEvents,
   userBodyMetrics,
@@ -32,17 +33,20 @@ const storage = {
 } as unknown as StorageService;
 
 const inserted = (table: unknown) => insertedValues(fake, table);
+const createSystemNotification = jest.fn();
 
 describe('UsersService transactions', () => {
   const service = new UsersService(
     { get: jest.fn(() => 25) } as unknown as ConfigService,
     storage,
     new OutboxService(),
+    { createSystemNotification } as any,
   );
 
   beforeEach(() => {
     fake.reset();
     remove.mockReset();
+    createSystemNotification.mockReset();
   });
 
   it('decides a role change on locked rows, in id order', async () => {
@@ -118,6 +122,79 @@ describe('UsersService transactions', () => {
       type: 'role.changed',
       metadata: { from: 'user', to: 'moderator' },
     });
+  });
+
+  it('lets the owner suspend a super admin and revokes sessions atomically', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: true },
+      { id: 5, role: 'super_admin', isSystemOwner: false },
+    ]);
+    fake.returns('update', users, [{ id: 5 }]);
+    const suspendedUntil = new Date(Date.now() + 60_000).toISOString();
+
+    await service.suspendUser(1, 5, {
+      suspendedUntil,
+      reason: 'Compromised account',
+    });
+
+    const [accountUpdate] = fake.committed('update', users);
+    const [sessionUpdate] = fake.committed('update', authRefreshSessions);
+    const [activity] = fake.committed('insert', userActivityEvents);
+    expect(sessionUpdate.transactionId).toBe(accountUpdate.transactionId);
+    expect(activity.transactionId).toBe(accountUpdate.transactionId);
+    expect(createSystemNotification).toHaveBeenCalledWith(
+      5,
+      expect.any(String),
+      expect.stringContaining('Compromised account'),
+      expect.objectContaining({ code: 'ACCOUNT_BANNED' }),
+      expect.anything(),
+    );
+  });
+
+  it('does not let a super admin manage another super admin or the owner', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: false },
+      { id: 5, role: 'super_admin', isSystemOwner: false },
+    ]);
+    await expect(service.revokeTargetSessions(1, 5)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: false },
+      { id: 5, role: 'super_admin', isSystemOwner: true },
+    ]);
+    await expect(service.unsuspendUser(1, 5)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('lets a super admin revoke a lower-role user session family', async () => {
+    fake.returns('select', users, [
+      { id: 1, role: 'super_admin', isSystemOwner: false },
+      { id: 5, role: 'admin', isSystemOwner: false },
+    ]);
+    fake.returns('update', authRefreshSessions, [{ id: 10 }, { id: 11 }]);
+
+    await expect(service.revokeTargetSessions(1, 5)).resolves.toMatchObject({
+      revokedCount: 2,
+    });
+    expect(inserted(userActivityEvents)[0]).toMatchObject({
+      type: 'account.sessions_revoked',
+      metadata: { sessionCount: 2 },
+    });
+  });
+
+  it('rejects a suspension expiry that is not in the future', async () => {
+    await expect(
+      service.suspendUser(1, 5, {
+        suspendedUntil: '2020-01-01T00:00:00.000Z',
+        reason: 'Expired request',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'INVALID_SUSPENSION_EXPIRY' },
+    });
+    expect(fake.find('select')).toHaveLength(0);
   });
 
   it('emits user.deleted inside the delete and removes the avatar after commit', async () => {

@@ -13,6 +13,7 @@ import { authTotpCredentials, users } from '../db/schema';
 import type { UserRole } from '../db/schema';
 import { MINIMUM_ROLE_KEY } from './minimum-role.decorator';
 import { hasMinimumRole, requiresMfa } from './roles';
+import { assertNotSuspended } from './account-suspension';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -33,6 +34,8 @@ export class RolesGuard implements CanActivate {
       .select({
         role: users.role,
         mfaEnabledAt: authTotpCredentials.enabledAt,
+        suspendedUntil: users.suspendedUntil,
+        suspensionReason: users.suspensionReason,
       })
       .from(users)
       .leftJoin(authTotpCredentials, eq(authTotpCredentials.userId, users.id))
@@ -40,6 +43,7 @@ export class RolesGuard implements CanActivate {
       .limit(1);
 
     if (!user) throw new UnauthorizedException();
+    assertNotSuspended(user);
     request.user!.role = user.role;
 
     if (!hasMinimumRole(user.role, minimumRole)) {

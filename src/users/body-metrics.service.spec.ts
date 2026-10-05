@@ -11,6 +11,7 @@ describe('UsersService body metrics validation', () => {
     new ConfigService(),
     {} as StorageService,
     new OutboxService(),
+    { createSystemNotification: jest.fn() } as any,
   );
 
   it('returns the required code when no metric is provided', async () => {

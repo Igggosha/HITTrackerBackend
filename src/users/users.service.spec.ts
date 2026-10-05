@@ -85,6 +85,7 @@ describe('UsersService profile identity', () => {
     { get: jest.fn(() => 25) } as any,
     storage,
     new OutboxService(),
+    { createSystemNotification: jest.fn() } as any,
   );
 
   beforeEach(() => {
