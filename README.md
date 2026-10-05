@@ -63,6 +63,8 @@ private.
 Security-sensitive deployment, MFA key rotation, gateway/tunnel routing,
 incident response, and rollback are documented in the bilingual
 [`docs/security-operations.md`](docs/security-operations.md) runbook.
+The verified release evidence and remaining risks are recorded in
+[`docs/security-hardening-report-2026-10-05.md`](docs/security-hardening-report-2026-10-05.md).
 
 The primary and replica have separate persistent volumes. The initial UTF-16 SQL dump is
 converted to UTF-8 and loaded only when Docker creates that volume for the
