@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+// This smoke test never exercises MFA. Mock the service so Jest does not load
+// otplib's ESM-only transitive dependency in the CommonJS e2e runner.
+jest.mock('./../src/auth/mfa.service', () => ({
+  MfaService: class MfaService {},
+}));
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/config/configure-app';
 
