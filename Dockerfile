@@ -1,4 +1,4 @@
-FROM node:24 AS dependencies
+FROM node:26 AS dependencies
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ FROM dependencies AS search-tools
 COPY . .
 CMD ["npm", "run", "search:rebuild"]
 
-FROM node:24 AS production
+FROM node:26 AS production
 
 WORKDIR /app
 ENV NODE_ENV=production
