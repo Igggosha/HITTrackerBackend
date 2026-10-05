@@ -90,5 +90,6 @@ Suspension revokes all refresh families, invalidates already issued access token
 - Backend repository: `Igggosha/HITTrackerBackend`, `master`.
 - Mobile repository: `smmlt/hit-tracker-mobile`, `master`.
 - Android release: `android-v1.3.4-build21`.
-- Stable latest asset: `https://github.com/smmlt/hit-tracker-mobile/releases/latest/download/HitTracker-Android-universal.apk`.
+- Canonical release repository: `https://github.com/smmlt/HitTracker/releases`.
+- Stable latest asset: `https://github.com/smmlt/HitTracker/releases/latest/download/HitTracker-Android-universal.apk`.
 - Keep `.env`, signing keys, Firebase service credentials, Cloudflare tokens, recovery codes, and generated APK files outside Git.
