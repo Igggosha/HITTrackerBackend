@@ -61,6 +61,7 @@ Suspension revokes all refresh families, invalidates already issued access token
 - APK SHA-256: `915784931257F12CDC68592CE5CAF5D80A8511D44C95EE916580143481316C1B`.
 - Pre-release backup set `20261005T090928Z` completed; isolated restore verification queried users, workouts, exercises, and migration history, then dropped its scratch database.
 - Deployed API, gateway, PostgreSQL primary/replica, Redis, MinIO, notification worker, frontend, and Cloudflare connector are running; health-checked release services are healthy.
+- The complete working Compose stack was rebuilt/reconciled across `backup`, `events`, `search`, `edge`, `tools`, and `observability`; all one-shot initialization/migration/rebuild jobs exited `0`, and persistent services remained running.
 - Public smoke after deployment: API root `200`, unauthenticated protected endpoint `401`, web application `200`, latest APK download `200` with `94,092,305` bytes.
 - A post-deployment `502` caused by Nginx retaining the old API container address was reproduced and fixed with request-time Docker DNS resolution. The fix survives future API container replacement without exposing Nest to the edge network.
 
