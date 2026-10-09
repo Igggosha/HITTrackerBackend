@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "catalog.program.changed v1",
+  "title": "program.unscheduled v1",
   "type": "object",
   "properties": {
     "id": {
@@ -8,7 +8,7 @@
       "format": "uuid"
     },
     "type": {
-      "const": "catalog.program.changed"
+      "const": "program.unscheduled"
     },
     "version": {
       "const": 1
@@ -26,27 +26,19 @@
     "payload": {
       "type": "object",
       "properties": {
-        "programId": {
+        "userId": {
           "type": "integer"
         },
-        "ownerId": {
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "change": {
-          "enum": [
-            "upsert",
-            "retire",
-            "delete"
-          ]
+        "scheduleIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         }
       },
       "required": [
-        "programId",
-        "ownerId",
-        "change"
+        "userId",
+        "scheduleIds"
       ],
       "additionalProperties": false
     }

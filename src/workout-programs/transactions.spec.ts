@@ -106,6 +106,22 @@ describe('WorkoutProgramsService transactions', () => {
     });
   });
 
+  it('stores an unschedule event in the same transaction as the removal', async () => {
+    fake.returns('select', userProgramSchedule, [{ seriesId: null }]);
+
+    await service.removeScheduledProgram(1, 21);
+
+    const [removal] = fake.committed('delete', userProgramSchedule);
+    const [event] = fake.committed('insert', outboxEvents);
+    expect(event.transactionId).toBe(removal.transactionId);
+    expect(events()[0]).toMatchObject({
+      eventType: 'program.unscheduled',
+      aggregateType: 'user',
+      aggregateId: '1',
+      payload: { userId: 1, scheduleIds: [21] },
+    });
+  });
+
   it('refuses a second concurrent revision of the same official program', async () => {
     const program = {
       id: 3,

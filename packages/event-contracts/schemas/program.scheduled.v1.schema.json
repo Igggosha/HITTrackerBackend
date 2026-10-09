@@ -58,6 +58,25 @@
           "items": {
             "type": "integer"
           }
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scheduleId": {
+                "type": "integer"
+              },
+              "scheduledFor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "scheduleId",
+              "scheduledFor"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [

@@ -11,6 +11,7 @@ const workout = {
   userId: 7,
   programId: null,
   scheduleId: 3,
+  scheduledFor: '2026-09-01',
   startedAt: '2026-09-01T10:00:00.000Z',
   finishedAt: '2026-09-01T11:00:00.000Z',
   durationSeconds: 3000,
@@ -44,6 +45,9 @@ describe('analytics backfill', () => {
     );
     expect(backfillEventId('workout.finished', 43)).not.toBe(id);
     expect(backfillEventId('body_metric.recorded', 42)).not.toBe(id);
+    expect(workoutFinishedRow(workout).id).toBe(
+      backfillEventId('workout.finished.analytics-v2', 42),
+    );
     expect(workoutFinishedRow(workout)).toEqual(workoutFinishedRow(workout));
   });
 

@@ -28,6 +28,7 @@ const fields = {
     setCount: integer,
     exerciseIds: ints,
     totalVolume: number,
+    scheduledFor: { type: ['string', 'null'] },
     sets: {
       type: 'array',
       items: {
@@ -41,6 +42,8 @@ const fields = {
           isFailure: { type: 'boolean' },
           isDropSet: { type: 'boolean' },
           volume: number,
+          exerciseName: string,
+          muscleGroups: { type: 'array', items: { type: 'object', properties: { id: integer, commonName: string }, required: ['id', 'commonName'], additionalProperties: false } },
         },
         required: [
           'setId',
@@ -70,6 +73,11 @@ const fields = {
     repeat: { enum: ['none', 'weekly'] },
     repeatUntil: { type: ['string', 'null'] },
     seriesId: nullableInt,
+    scheduleIds: ints,
+    assignments: { type: 'array', items: { type: 'object', properties: { scheduleId: integer, scheduledFor: string }, required: ['scheduleId', 'scheduledFor'], additionalProperties: false } },
+  },
+  'program.unscheduled': {
+    userId: integer,
     scheduleIds: ints,
   },
   'body_metric.recorded': {
@@ -102,6 +110,10 @@ const fields = {
     change: { enum: ['upsert', 'delete'] },
   },
 };
+const optionalFields = {
+  'workout.finished': ['scheduledFor'],
+  'program.scheduled': ['assignments'],
+};
 const directory = path.join(__dirname, 'schemas');
 fs.mkdirSync(directory, { recursive: true });
 for (const [type, properties] of Object.entries(fields)) {
@@ -119,7 +131,9 @@ for (const [type, properties] of Object.entries(fields)) {
       payload: {
         type: 'object',
         properties,
-        required: Object.keys(properties),
+        required: Object.keys(properties).filter(
+          (field) => !(optionalFields[type] ?? []).includes(field),
+        ),
         additionalProperties: false,
       },
     },

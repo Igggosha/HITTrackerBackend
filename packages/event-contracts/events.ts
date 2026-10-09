@@ -28,6 +28,8 @@ export type PerformedSetV1 = {
   isDropSet: boolean;
   /** weight * reps */
   volume: number;
+  exerciseName?: string;
+  muscleGroups?: { id: number; commonName: string }[];
 };
 
 export type WorkoutFinishedV1 = {
@@ -45,6 +47,7 @@ export type WorkoutFinishedV1 = {
   /** Sum of weight * reps over all performed sets. */
   totalVolume: number;
   sets: PerformedSetV1[];
+  scheduledFor?: string | null;
 };
 
 export type WorkoutCancelledV1 = {
@@ -63,6 +66,12 @@ export type ProgramScheduledV1 = {
   repeatUntil: string | null;
   seriesId: number | null;
   /** Empty when the assignment already existed for that date. */
+  scheduleIds: number[];
+  assignments?: { scheduleId: number; scheduledFor: string }[];
+};
+
+export type ProgramUnscheduledV1 = {
+  userId: number;
   scheduleIds: number[];
 };
 
@@ -105,6 +114,7 @@ export type OutboxEventPayloads = {
   'workout.finished': WorkoutFinishedV1;
   'workout.cancelled': WorkoutCancelledV1;
   'program.scheduled': ProgramScheduledV1;
+  'program.unscheduled': ProgramUnscheduledV1;
   'body_metric.recorded': BodyMetricRecordedV1;
   'user.registered': UserRegisteredV1;
   'user.deleted': UserDeletedV1;
@@ -124,6 +134,7 @@ export const outboxEventDefinitions: {
   'workout.finished': { aggregateType: 'workout', version: 1 },
   'workout.cancelled': { aggregateType: 'workout', version: 1 },
   'program.scheduled': { aggregateType: 'user', version: 1 },
+  'program.unscheduled': { aggregateType: 'user', version: 1 },
   'body_metric.recorded': { aggregateType: 'user', version: 1 },
   'user.registered': { aggregateType: 'user', version: 1 },
   'user.deleted': { aggregateType: 'user', version: 1 },
@@ -162,6 +173,7 @@ export function topicFor(type: OutboxEventType): string {
     case 'workout.cancelled':
       return 'hit.workout.v1';
     case 'program.scheduled':
+    case 'program.unscheduled':
     case 'body_metric.recorded':
     case 'user.registered':
     case 'user.deleted':
@@ -212,6 +224,8 @@ export function performedSetsPayload(
     rpe: number | null;
     isFailure: boolean;
     isDropSet: boolean;
+    exerciseName?: string | null;
+    muscleGroups?: { id: number; commonName: string }[];
   }[],
 ) {
   const sets: PerformedSetV1[] = rows.map((row) => ({
@@ -223,6 +237,8 @@ export function performedSetsPayload(
     isFailure: row.isFailure,
     isDropSet: row.isDropSet,
     volume: row.weight * row.reps,
+    ...(row.exerciseName ? { exerciseName: row.exerciseName } : {}),
+    ...(row.muscleGroups ? { muscleGroups: row.muscleGroups } : {}),
   }));
   return {
     sets,
