@@ -36,22 +36,13 @@
           "type": "string"
         },
         "repeat": {
-          "enum": [
-            "none",
-            "weekly"
-          ]
+          "enum": ["none", "weekly"]
         },
         "repeatUntil": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "seriesId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "scheduleIds": {
           "type": "array",
@@ -71,10 +62,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "scheduleId",
-              "scheduledFor"
-            ],
+            "required": ["scheduleId", "scheduledFor"],
             "additionalProperties": false
           }
         }

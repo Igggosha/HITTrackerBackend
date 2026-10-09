@@ -103,13 +103,30 @@ export function workoutFinishedRow(workout: HistoricalWorkout): OutboxRow {
   };
 }
 
-export function programScheduledRow(row: { userId: number; programId: number; scheduleId: number; scheduledFor: string }): OutboxRow {
+export function programScheduledRow(row: {
+  userId: number;
+  programId: number;
+  scheduleId: number;
+  scheduledFor: string;
+}): OutboxRow {
   return {
     id: backfillEventId('program.scheduled', row.scheduleId),
     aggregateType: outboxEventDefinitions['program.scheduled'].aggregateType,
-    aggregateId: String(row.userId), eventType: 'program.scheduled',
+    aggregateId: String(row.userId),
+    eventType: 'program.scheduled',
     eventVersion: outboxEventDefinitions['program.scheduled'].version,
-    payload: { userId: row.userId, programId: row.programId, scheduledFor: row.scheduledFor, repeat: 'none', repeatUntil: null, seriesId: null, scheduleIds: [row.scheduleId], assignments: [{ scheduleId: row.scheduleId, scheduledFor: row.scheduledFor }] },
+    payload: {
+      userId: row.userId,
+      programId: row.programId,
+      scheduledFor: row.scheduledFor,
+      repeat: 'none',
+      repeatUntil: null,
+      seriesId: null,
+      scheduleIds: [row.scheduleId],
+      assignments: [
+        { scheduleId: row.scheduleId, scheduledFor: row.scheduledFor },
+      ],
+    },
     occurredAt: `${row.scheduledFor}T00:00:00.000Z`,
   };
 }

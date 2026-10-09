@@ -109,18 +109,28 @@ async function backfillWorkouts(client: Client, dryRun: boolean) {
         startedAt: w.started_at,
         finishedAt: w.finished_at,
         durationSeconds: w.duration_seconds,
-        sets: [...new Map(sets.rows.filter((s) => s.workout_id === w.id).map((s) => [s.id, s])).values()]
-          .map((s) => ({
-            id: s.id,
-            exerciseId: s.exercise_id,
-            weight: s.weight,
-            reps: s.reps,
-            rpe: s.rpe,
-            isFailure: s.is_failure,
-            isDropSet: s.is_drop_set,
-            exerciseName: s.exercise_name,
-            muscleGroups: sets.rows.filter((m) => m.id === s.id && m.muscle_id !== null).map((m) => ({ id: m.muscle_id!, commonName: m.muscle_common_name! })),
-          })) satisfies HistoricalWorkout['sets'],
+        sets: [
+          ...new Map(
+            sets.rows
+              .filter((s) => s.workout_id === w.id)
+              .map((s) => [s.id, s]),
+          ).values(),
+        ].map((s) => ({
+          id: s.id,
+          exerciseId: s.exercise_id,
+          weight: s.weight,
+          reps: s.reps,
+          rpe: s.rpe,
+          isFailure: s.is_failure,
+          isDropSet: s.is_drop_set,
+          exerciseName: s.exercise_name,
+          muscleGroups: sets.rows
+            .filter((m) => m.id === s.id && m.muscle_id !== null)
+            .map((m) => ({
+              id: m.muscle_id!,
+              commonName: m.muscle_common_name!,
+            })),
+        })) satisfies HistoricalWorkout['sets'],
       }),
     );
     candidates += rows.length;
@@ -131,11 +141,29 @@ async function backfillWorkouts(client: Client, dryRun: boolean) {
 }
 
 async function backfillSchedules(client: Client, dryRun: boolean) {
-  const result = await client.query<{ user_id: number; program_id: number; id: number; scheduled_for: string }>(`select s.user_id, s.program_id, s.id, s.scheduled_for from user_program_schedule s order by s.id`);
+  const result = await client.query<{
+    user_id: number;
+    program_id: number;
+    id: number;
+    scheduled_for: string;
+  }>(
+    `select s.user_id, s.program_id, s.id, s.scheduled_for from user_program_schedule s order by s.id`,
+  );
   // The deterministic id is checked per row to keep this query portable across existing schemas.
   let inserted = 0;
   for (const row of result.rows) {
-    inserted += await insertRows(client, [programScheduledRow({ userId: row.user_id, programId: row.program_id, scheduleId: row.id, scheduledFor: row.scheduled_for })], dryRun);
+    inserted += await insertRows(
+      client,
+      [
+        programScheduledRow({
+          userId: row.user_id,
+          programId: row.program_id,
+          scheduleId: row.id,
+          scheduledFor: row.scheduled_for,
+        }),
+      ],
+      dryRun,
+    );
   }
   return { candidates: result.rows.length, inserted };
 }

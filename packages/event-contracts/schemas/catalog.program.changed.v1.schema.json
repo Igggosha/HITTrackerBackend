@@ -30,24 +30,13 @@
           "type": "integer"
         },
         "ownerId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "change": {
-          "enum": [
-            "upsert",
-            "retire",
-            "delete"
-          ]
+          "enum": ["upsert", "retire", "delete"]
         }
       },
-      "required": [
-        "programId",
-        "ownerId",
-        "change"
-      ],
+      "required": ["programId", "ownerId", "change"],
       "additionalProperties": false
     }
   },

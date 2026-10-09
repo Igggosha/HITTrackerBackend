@@ -102,7 +102,10 @@ class MemoryTx implements ReadModelTx {
   insertFinishedWorkout(fact: FinishedWorkoutFact) {
     const { sets, ...workout } = fact;
     const existing = this.s.workouts.get(fact.workoutId);
-    if (existing && JSON.stringify(existing.payload) === JSON.stringify(workout.payload))
+    if (
+      existing &&
+      JSON.stringify(existing.payload) === JSON.stringify(workout.payload)
+    )
       return Promise.resolve(false);
     this.s.workouts.set(fact.workoutId, workout);
     for (const set of sets)

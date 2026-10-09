@@ -163,9 +163,15 @@ export class Projector {
     payload: ProgramScheduledV1,
   ): Promise<ApplyResult> {
     if (await tx.isErased(payload.userId)) return 'erased_user';
-    const assignments = payload.assignments ??
+    const assignments =
+      payload.assignments ??
       (payload.scheduleIds.length === 1
-        ? [{ scheduleId: payload.scheduleIds[0], scheduledFor: payload.scheduledFor }]
+        ? [
+            {
+              scheduleId: payload.scheduleIds[0],
+              scheduledFor: payload.scheduledFor,
+            },
+          ]
         : []);
     if (!assignments.length) return 'ignored';
     const inserted = await tx.insertScheduledAssignments(

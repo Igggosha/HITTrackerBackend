@@ -43,7 +43,15 @@ const fields = {
           isDropSet: { type: 'boolean' },
           volume: number,
           exerciseName: string,
-          muscleGroups: { type: 'array', items: { type: 'object', properties: { id: integer, commonName: string }, required: ['id', 'commonName'], additionalProperties: false } },
+          muscleGroups: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { id: integer, commonName: string },
+              required: ['id', 'commonName'],
+              additionalProperties: false,
+            },
+          },
         },
         required: [
           'setId',
@@ -74,7 +82,15 @@ const fields = {
     repeatUntil: { type: ['string', 'null'] },
     seriesId: nullableInt,
     scheduleIds: ints,
-    assignments: { type: 'array', items: { type: 'object', properties: { scheduleId: integer, scheduledFor: string }, required: ['scheduleId', 'scheduledFor'], additionalProperties: false } },
+    assignments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { scheduleId: integer, scheduledFor: string },
+        required: ['scheduleId', 'scheduledFor'],
+        additionalProperties: false,
+      },
+    },
   },
   'program.unscheduled': {
     userId: integer,

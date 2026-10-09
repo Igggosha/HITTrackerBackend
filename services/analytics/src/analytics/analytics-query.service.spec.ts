@@ -1,6 +1,9 @@
 import { PgDialect } from 'drizzle-orm/pg-core';
 import type { AnalyticsDb } from '../db/database';
-import { AnalyticsQueryService, scheduleStats } from './analytics-query.service';
+import {
+  AnalyticsQueryService,
+  scheduleStats,
+} from './analytics-query.service';
 
 type QueryBuilder = Promise<Record<string, unknown>[]> & {
   from: jest.Mock<QueryBuilder, [unknown]>;
@@ -12,15 +15,25 @@ function queryBuilder(rows: Record<string, unknown>[]) {
   const builder = Promise.resolve(rows) as QueryBuilder;
   builder.from = jest.fn<QueryBuilder, [unknown]>().mockReturnValue(builder);
   builder.where = jest.fn<QueryBuilder, [unknown]>().mockReturnValue(builder);
-  builder.orderBy = jest.fn<Promise<Record<string, unknown>[]>, [unknown]>().mockResolvedValue(rows);
+  builder.orderBy = jest
+    .fn<Promise<Record<string, unknown>[]>, [unknown]>()
+    .mockResolvedValue(rows);
   return builder;
 }
 
-function setup(rows: Record<string, unknown>[] = [], following: Record<string, unknown>[][] = []) {
+function setup(
+  rows: Record<string, unknown>[] = [],
+  following: Record<string, unknown>[][] = [],
+) {
   const builders = [queryBuilder(rows), ...following.map(queryBuilder)];
-  const select = jest.fn<QueryBuilder, []>().mockImplementation(() => builders.shift() ?? queryBuilder([]));
+  const select = jest
+    .fn<QueryBuilder, []>()
+    .mockImplementation(() => builders.shift() ?? queryBuilder([]));
   const db = { select } as unknown as AnalyticsDb;
-  return { service: new AnalyticsQueryService(db), builder: builders[0] ?? queryBuilder([]) };
+  return {
+    service: new AnalyticsQueryService(db),
+    builder: builders[0] ?? queryBuilder([]),
+  };
 }
 
 function workout(
@@ -57,15 +70,18 @@ function sqlAndParams(condition: unknown) {
 
 describe('AnalyticsQueryService new read models', () => {
   it('aggregates overview facts and leaves unavailable measurements null/empty', async () => {
-    const { service } = setup([
-      workout(
-        11,
-        '2026-08-21T10:00:00.000Z',
-        [set(3, 100, 5, 6, false), set(4, 80, 5, null, true)],
-        { durationSeconds: 900 },
-      ),
-      workout(12, '2026-08-22T10:00:00.000Z', [set(3, 100, 5, 8, false)]),
-    ], [[], [], []]);
+    const { service } = setup(
+      [
+        workout(
+          11,
+          '2026-08-21T10:00:00.000Z',
+          [set(3, 100, 5, 6, false), set(4, 80, 5, null, true)],
+          { durationSeconds: 900 },
+        ),
+        workout(12, '2026-08-22T10:00:00.000Z', [set(3, 100, 5, 8, false)]),
+      ],
+      [[], [], []],
+    );
 
     const result = await service.overview(7, {
       from: '2026-08-21T00:00:00Z',
@@ -79,7 +95,11 @@ describe('AnalyticsQueryService new read models', () => {
       volumeKg: 1400,
       averageRpe: 7,
     });
-    expect(result.plan).toMatchObject({ completedAssignments: 0, scheduledAssignments: 0, adherencePercent: null });
+    expect(result.plan).toMatchObject({
+      completedAssignments: 0,
+      scheduledAssignments: 0,
+      adherencePercent: null,
+    });
     expect(result.activity).toEqual([
       {
         date: '2026-08-21',
@@ -102,9 +122,10 @@ describe('AnalyticsQueryService new read models', () => {
   });
 
   it('returns stable overview empty values and null RPE for unrated sets', async () => {
-    const { service } = setup([
-      workout(1, '2026-08-21T10:00:00Z', [set(3, 20, 5, null, false)]),
-    ], [[], [], []]);
+    const { service } = setup(
+      [workout(1, '2026-08-21T10:00:00Z', [set(3, 20, 5, null, false)])],
+      [[], [], []],
+    );
 
     const result = await service.overview(7, {
       from: '2026-08-21T00:00:00Z',
@@ -266,7 +287,9 @@ describe('AnalyticsQueryService new read models', () => {
       [4, new Date('2026-08-23T10:00:00Z')],
     ]);
 
-    expect(scheduleStats(assignments, completions, '2026-08-24', 'UTC')).toEqual({
+    expect(
+      scheduleStats(assignments, completions, '2026-08-24', 'UTC'),
+    ).toEqual({
       completedAssignments: 4,
       scheduledAssignments: 4,
       adherencePercent: 100,

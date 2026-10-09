@@ -30,20 +30,13 @@
           "type": "integer"
         },
         "method": {
-          "enum": [
-            "email",
-            "google"
-          ]
+          "enum": ["email", "google"]
         },
         "registeredAt": {
           "type": "string"
         }
       },
-      "required": [
-        "userId",
-        "method",
-        "registeredAt"
-      ],
+      "required": ["userId", "method", "registeredAt"],
       "additionalProperties": false
     }
   },

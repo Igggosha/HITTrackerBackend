@@ -33,37 +33,22 @@
           "type": "integer"
         },
         "weight": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "bodyFatPercentage": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "muscleMass": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "waistCircumference": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "recordedAt": {
           "type": "string"
         },
         "source": {
-          "enum": [
-            "body_metrics",
-            "profile"
-          ]
+          "enum": ["body_metrics", "profile"]
         }
       },
       "required": [

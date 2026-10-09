@@ -1,5 +1,15 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, isNotNull, lt, lte } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  lt,
+  lte,
+} from 'drizzle-orm';
 import { ANALYTICS_DB, type AnalyticsDb } from '../db/database';
 import {
   bodyMetricsTimeline,
@@ -78,11 +88,15 @@ function localDate(instant: Date, timeZone: string) {
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(instant);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function selectedDateKeys(range: { from: Date; toExclusive: Date }, timeZone: string) {
+function selectedDateKeys(
+  range: { from: Date; toExclusive: Date },
+  timeZone: string,
+) {
   return {
     from: localDate(range.from, timeZone),
     to: localDate(new Date(range.toExclusive.getTime() - 1), timeZone),
@@ -106,16 +120,22 @@ export function scheduleStats(
   timeZone: string,
 ) {
   const ended = assignments.filter((item) => item.scheduledFor < today);
-  const completedAssignments = ended.filter((item) => completions.has(item.scheduleId)).length;
+  const completedAssignments = ended.filter((item) =>
+    completions.has(item.scheduleId),
+  ).length;
   const byDate = new Map<string, typeof assignments>();
-  for (const assignment of assignments.filter((item) => item.scheduledFor <= today)) {
+  for (const assignment of assignments.filter(
+    (item) => item.scheduledFor <= today,
+  )) {
     const day = byDate.get(assignment.scheduledFor) ?? [];
     day.push(assignment);
     byDate.set(assignment.scheduledFor, day);
   }
   let currentStreakDays = 0;
   let longestStreakDays = 0;
-  for (const [date, day] of [...byDate].sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [date, day] of [...byDate].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
     const successful = day.every((assignment) => {
       const finishedAt = completions.get(assignment.scheduleId);
       return finishedAt && localDate(finishedAt, timeZone) === date;
@@ -314,7 +334,10 @@ export class AnalyticsQueryService {
     };
   }
 
-  private async periodWorkouts(userId: number, query: { from: string; to: string }) {
+  private async periodWorkouts(
+    userId: number,
+    query: { from: string; to: string },
+  ) {
     const range = rangeQuery(query);
     const rows = (await this.db
       .select({
@@ -332,7 +355,10 @@ export class AnalyticsQueryService {
   }
 
   private muscleTotals(workouts: ReturnType<typeof asWorkoutFact>[]) {
-    const groups = new Map<number, { muscleId: number; name: string; workingSets: number }>();
+    const groups = new Map<
+      number,
+      { muscleId: number; name: string; workingSets: number }
+    >();
     for (const set of workouts.flatMap((workout) => workout.sets)) {
       for (const muscle of set.muscleGroups ?? []) {
         if (!Number.isInteger(muscle.id) || !muscle.commonName) continue;
@@ -345,8 +371,10 @@ export class AnalyticsQueryService {
         groups.set(muscle.id, current);
       }
     }
-    return [...groups.values()].sort((left, right) =>
-      right.workingSets - left.workingSets || left.name.localeCompare(right.name),
+    return [...groups.values()].sort(
+      (left, right) =>
+        right.workingSets - left.workingSets ||
+        left.name.localeCompare(right.name),
     );
   }
 
@@ -394,7 +422,12 @@ export class AnalyticsQueryService {
         completions.set(row.scheduleId, row.finishedAt);
     }
     const today = localDate(new Date(), timeZone);
-    const periodPlan = scheduleStats(selectedAssignments, completions, today, timeZone);
+    const periodPlan = scheduleStats(
+      selectedAssignments,
+      completions,
+      today,
+      timeZone,
+    );
     const streak = scheduleStats(allAssignments, completions, today, timeZone);
     const rpes = workouts.flatMap((workout) =>
       workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])),
@@ -404,7 +437,11 @@ export class AnalyticsQueryService {
       { volumeKg: number; completedWorkouts: number; plannedWorkouts: number }
     >();
     for (const date of dateKeys(keys.from, keys.to))
-      activityByDate.set(date, { volumeKg: 0, completedWorkouts: 0, plannedWorkouts: 0 });
+      activityByDate.set(date, {
+        volumeKg: 0,
+        completedWorkouts: 0,
+        plannedWorkouts: 0,
+      });
     for (const assignment of selectedAssignments) {
       const day = activityByDate.get(assignment.scheduledFor);
       if (day) day.plannedWorkouts += 1;
@@ -418,7 +455,9 @@ export class AnalyticsQueryService {
         day.completedWorkouts += 1;
       }
       const values = intensityByDate.get(date) ?? [];
-      values.push(...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])));
+      values.push(
+        ...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])),
+      );
       intensityByDate.set(date, values);
     }
     const muscleGroups = this.muscleTotals(workouts);
@@ -426,10 +465,18 @@ export class AnalyticsQueryService {
       summary: {
         workouts: workouts.length,
         activeMinutes: round2(
-          workouts.reduce((total, workout) => total + workout.durationSeconds, 0) / 60,
+          workouts.reduce(
+            (total, workout) => total + workout.durationSeconds,
+            0,
+          ) / 60,
         ),
-        workingSets: workouts.reduce((total, workout) => total + workout.setCount, 0),
-        volumeKg: round2(workouts.reduce((total, workout) => total + workout.volumeKg, 0)),
+        workingSets: workouts.reduce(
+          (total, workout) => total + workout.setCount,
+          0,
+        ),
+        volumeKg: round2(
+          workouts.reduce((total, workout) => total + workout.volumeKg, 0),
+        ),
         averageRpe: rpes.length
           ? round2(rpes.reduce((total, rpe) => total + rpe, 0) / rpes.length)
           : null,
@@ -449,7 +496,10 @@ export class AnalyticsQueryService {
         return {
           date,
           averageRpe: values.length
-            ? round2(values.reduce((total, value) => total + value, 0) / values.length)
+            ? round2(
+                values.reduce((total, value) => total + value, 0) /
+                  values.length,
+              )
             : null,
         };
       }),
@@ -465,13 +515,21 @@ export class AnalyticsQueryService {
     const { workouts } = await this.periodWorkouts(userId, query);
     const sets = workouts.flatMap((workout) => workout.sets);
     const rpes = sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe]));
-    const totalVolume = workouts.reduce((total, workout) => total + workout.volumeKg, 0);
-    const activeSeconds = workouts.reduce((total, workout) => total + workout.durationSeconds, 0);
+    const totalVolume = workouts.reduce(
+      (total, workout) => total + workout.volumeKg,
+      0,
+    );
+    const activeSeconds = workouts.reduce(
+      (total, workout) => total + workout.durationSeconds,
+      0,
+    );
     const trend = new Map<string, { rpes: number[]; volumeKg: number }>();
     for (const workout of workouts) {
       const date = localDate(workout.finishedAt, timeZone);
       const day = trend.get(date) ?? { rpes: [], volumeKg: 0 };
-      day.rpes.push(...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])));
+      day.rpes.push(
+        ...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])),
+      );
       day.volumeKg += workout.volumeKg;
       trend.set(date, day);
     }
@@ -485,7 +543,8 @@ export class AnalyticsQueryService {
       averageRpe: rpes.length
         ? round2(rpes.reduce((total, rpe) => total + rpe, 0) / rpes.length)
         : null,
-      volumePerMinute: activeSeconds > 0 ? round2(totalVolume / (activeSeconds / 60)) : null,
+      volumePerMinute:
+        activeSeconds > 0 ? round2(totalVolume / (activeSeconds / 60)) : null,
       totalVolumeKg: round2(totalVolume),
       setsToFailure,
       totalSets: sets.length,
@@ -495,13 +554,20 @@ export class AnalyticsQueryService {
         .map(([date, day]) => ({
           date,
           averageRpe: day.rpes.length
-            ? round2(day.rpes.reduce((total, value) => total + value, 0) / day.rpes.length)
+            ? round2(
+                day.rpes.reduce((total, value) => total + value, 0) /
+                  day.rpes.length,
+              )
             : null,
           volumeKg: round2(day.volumeKg),
         })),
       rpeDistribution: ranges.map(({ range: label, min, max }) => {
         const count = rpes.filter((rpe) => rpe >= min && rpe <= max).length;
-        return { range: label, sets: count, percentage: percentage(count, rpes.length) ?? 0 };
+        return {
+          range: label,
+          sets: count,
+          percentage: percentage(count, rpes.length) ?? 0,
+        };
       }),
     };
   }
@@ -516,7 +582,14 @@ export class AnalyticsQueryService {
 
   async strength(userId: number, query: { from: string; to: string }) {
     const { workouts } = await this.periodWorkouts(userId, query);
-    const grouped = new Map<number, { exerciseId: number; name: string | null; sets: (WorkoutSet & { finishedAt: Date; workoutId: number })[] }>();
+    const grouped = new Map<
+      number,
+      {
+        exerciseId: number;
+        name: string | null;
+        sets: (WorkoutSet & { finishedAt: Date; workoutId: number })[];
+      }
+    >();
     for (const workout of workouts) {
       for (const set of workout.sets) {
         const exercise = grouped.get(set.exerciseId) ?? {
@@ -525,29 +598,45 @@ export class AnalyticsQueryService {
           sets: [],
         };
         exercise.name ??= set.exerciseName ?? null;
-        exercise.sets.push({ ...set, finishedAt: workout.finishedAt, workoutId: workout.workoutId });
+        exercise.sets.push({
+          ...set,
+          finishedAt: workout.finishedAt,
+          workoutId: workout.workoutId,
+        });
         grouped.set(set.exerciseId, exercise);
       }
     }
     return {
-      exercises: [...grouped.values()].map((exercise) => {
-        const ordered = [...exercise.sets].sort((left, right) => left.finishedAt.getTime() - right.finishedAt.getTime());
-        const latest = ordered.at(-1)!;
-        const best = ordered.reduce((winner, set) =>
-          set.weight > winner.weight || (set.weight === winner.weight && set.reps > winner.reps) ? set : winner,
-        );
-        const bestE1rmKg = Math.max(...ordered.map((set) => set.weight * (1 + set.reps / 30)));
-        return {
-          exerciseId: exercise.exerciseId,
-          name: exercise.name,
-          lastSetWeightKg: round2(latest.weight),
-          lastSetReps: latest.reps,
-          bestWeightKg: round2(best.weight),
-          bestRepsAtWeight: best.reps,
-          bestE1rmKg: round2(bestE1rmKg),
-          changeKg: round2(latest.weight - ordered[0].weight),
-        };
-      }).sort((left, right) => (left.name ?? '').localeCompare(right.name ?? '')),
+      exercises: [...grouped.values()]
+        .map((exercise) => {
+          const ordered = [...exercise.sets].sort(
+            (left, right) =>
+              left.finishedAt.getTime() - right.finishedAt.getTime(),
+          );
+          const latest = ordered.at(-1)!;
+          const best = ordered.reduce((winner, set) =>
+            set.weight > winner.weight ||
+            (set.weight === winner.weight && set.reps > winner.reps)
+              ? set
+              : winner,
+          );
+          const bestE1rmKg = Math.max(
+            ...ordered.map((set) => set.weight * (1 + set.reps / 30)),
+          );
+          return {
+            exerciseId: exercise.exerciseId,
+            name: exercise.name,
+            lastSetWeightKg: round2(latest.weight),
+            lastSetReps: latest.reps,
+            bestWeightKg: round2(best.weight),
+            bestRepsAtWeight: best.reps,
+            bestE1rmKg: round2(bestE1rmKg),
+            changeKg: round2(latest.weight - ordered[0].weight),
+          };
+        })
+        .sort((left, right) =>
+          (left.name ?? '').localeCompare(right.name ?? ''),
+        ),
     };
   }
 

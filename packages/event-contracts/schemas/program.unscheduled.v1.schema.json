@@ -36,10 +36,7 @@
           }
         }
       },
-      "required": [
-        "userId",
-        "scheduleIds"
-      ],
+      "required": ["userId", "scheduleIds"],
       "additionalProperties": false
     }
   },

@@ -225,7 +225,9 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
 
   it('rejects unauthenticated requests to the new endpoints', async () => {
     await request(app.getHttpServer())
-      .get('/analytics/me/intensity?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z')
+      .get(
+        '/analytics/me/intensity?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
+      )
       .expect(401);
     expect(queries.intensity).not.toHaveBeenCalled();
   });

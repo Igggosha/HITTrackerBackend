@@ -232,9 +232,18 @@ export class WorkoutProgramsService {
         .onConflictDoNothing()
         .returning();
       const operationAssignments = await tx
-        .select({ id: userProgramSchedule.id, scheduledFor: userProgramSchedule.scheduledFor })
+        .select({
+          id: userProgramSchedule.id,
+          scheduledFor: userProgramSchedule.scheduledFor,
+        })
         .from(userProgramSchedule)
-        .where(and(eq(userProgramSchedule.userId, userId), eq(userProgramSchedule.programId, dto.programId), eq(userProgramSchedule.scheduledFor, dto.scheduledFor)));
+        .where(
+          and(
+            eq(userProgramSchedule.userId, userId),
+            eq(userProgramSchedule.programId, dto.programId),
+            eq(userProgramSchedule.scheduledFor, dto.scheduledFor),
+          ),
+        );
 
       if (series || assignments.length) {
         await this.outbox.enqueue(tx, {
@@ -250,7 +259,10 @@ export class WorkoutProgramsService {
             scheduleIds: assignments.map(
               (assignment: { id: number }) => assignment.id,
             ),
-            assignments: operationAssignments.map((assignment) => ({ scheduleId: assignment.id, scheduledFor: assignment.scheduledFor })),
+            assignments: operationAssignments.map((assignment) => ({
+              scheduleId: assignment.id,
+              scheduledFor: assignment.scheduledFor,
+            })),
           },
         });
       }

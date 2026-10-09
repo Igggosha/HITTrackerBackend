@@ -127,7 +127,10 @@ class PgReadModelTx implements ReadModelTx {
     return rows.length;
   }
 
-  async deleteScheduledAssignments(userId: number, scheduleIds: readonly number[]) {
+  async deleteScheduledAssignments(
+    userId: number,
+    scheduleIds: readonly number[],
+  ) {
     if (!scheduleIds.length) return 0;
     const rows = await this.tx
       .delete(scheduledAssignments)

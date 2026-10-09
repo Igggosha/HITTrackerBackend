@@ -36,16 +36,10 @@
           "type": "string"
         },
         "programId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "scheduleId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "plannedExerciseIds": {
           "type": "array",

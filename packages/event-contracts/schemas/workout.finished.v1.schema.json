@@ -33,16 +33,10 @@
           "type": "integer"
         },
         "programId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "scheduleId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "startedAt": {
           "type": "string"
@@ -69,10 +63,7 @@
           "type": "number"
         },
         "scheduledFor": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "sets": {
           "type": "array",
@@ -92,10 +83,7 @@
                 "type": "number"
               },
               "rpe": {
-                "type": [
-                  "number",
-                  "null"
-                ]
+                "type": ["number", "null"]
               },
               "isFailure": {
                 "type": "boolean"
@@ -121,10 +109,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "id",
-                    "commonName"
-                  ],
+                  "required": ["id", "commonName"],
                   "additionalProperties": false
                 }
               }
