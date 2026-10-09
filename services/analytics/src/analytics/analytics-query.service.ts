@@ -30,7 +30,6 @@ import {
 import type { DateRangeQueryDto } from './analytics.dto';
 
 const MAX_POINTS = 1000;
-const DAY_MS = 86_400_000;
 
 type WorkoutSet = {
   setId?: number;
