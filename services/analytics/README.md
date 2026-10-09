@@ -16,13 +16,13 @@ drizzle/           versioned migrations of this database only
 
 ## Commands (from this directory)
 
-| Command | What |
-| --- | --- |
-| `npm ci` | install (own `package-lock.json`) |
-| `npm test` | unit + HTTP tests (no database/Kafka needed) |
-| `npm run typecheck` / `npm run build` | `tsc --noEmit` / `nest build` -> `dist/services/analytics/src/main.js` |
-| `npm run db:generate` / `npm run db:migrate` | drizzle-kit on `ANALYTICS_DATABASE_URL` |
-| lint (from the repo root) | `npx eslint -c services/analytics/eslint.config.mjs "services/analytics/{src,test}/**/*.ts"` |
+| Command                                      | What                                                                                         |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `npm ci`                                     | install (own `package-lock.json`)                                                            |
+| `npm test`                                   | unit + HTTP tests (no database/Kafka needed)                                                 |
+| `npm run typecheck` / `npm run build`        | `tsc --noEmit` / `nest build` -> `dist/services/analytics/src/main.js`                       |
+| `npm run db:generate` / `npm run db:migrate` | drizzle-kit on `ANALYTICS_DATABASE_URL`                                                      |
+| lint (from the repo root)                    | `npx eslint -c services/analytics/eslint.config.mjs "services/analytics/{src,test}/**/*.ts"` |
 
 Environment: `ANALYTICS_DATABASE_URL` (required), `JWT_SECRET` (the main
 API's, required), `KAFKA_BROKERS` (unset = read API only), `METRICS_TOKEN`,
@@ -49,12 +49,36 @@ consistent: a finished workout normally appears within about a second.
 {
   "userId": 7,
   "generatedAt": "2026-09-28T10:15:00.000Z",
-  "thisWeek": { "isoWeekStart": "2026-09-28", "workouts": 2, "sets": 9, "reps": 61, "volumeKg": 4720, "durationSeconds": 5400 },
-  "lastWeek": { "isoWeekStart": "2026-09-21", "workouts": 3, "sets": 14, "reps": 98, "volumeKg": 6100.5, "durationSeconds": 8100 },
+  "thisWeek": {
+    "isoWeekStart": "2026-09-28",
+    "workouts": 2,
+    "sets": 9,
+    "reps": 61,
+    "volumeKg": 4720,
+    "durationSeconds": 5400
+  },
+  "lastWeek": {
+    "isoWeekStart": "2026-09-21",
+    "workouts": 3,
+    "sets": 14,
+    "reps": 98,
+    "volumeKg": 6100.5,
+    "durationSeconds": 8100
+  },
   "volumeChangePercent": -22.62,
-  "streak": { "currentDays": 2, "longestDays": 5, "lastWorkoutDate": "2026-09-28" },
+  "streak": {
+    "currentDays": 2,
+    "longestDays": 5,
+    "lastWorkoutDate": "2026-09-28"
+  },
   "personalRecordCount": 6,
-  "lastWorkout": { "workoutId": 812, "finishedAt": "2026-09-28T09:58:12.000Z", "durationSeconds": 2700, "setCount": 5, "volumeKg": 2600 }
+  "lastWorkout": {
+    "workoutId": 812,
+    "finishedAt": "2026-09-28T09:58:12.000Z",
+    "durationSeconds": 2700,
+    "setCount": 5,
+    "volumeKg": 2600
+  }
 }
 ```
 
@@ -102,17 +126,26 @@ sets.
 
 `GET /analytics/me/weekly-volume?weeks=12` (`weeks` 1..104, default 12):
 `{ "weeks": [ { "isoWeekStart": "2026-07-13", "workouts": 0, "sets": 0, "reps": 0, "volumeKg": 0, "durationSeconds": 0 }, ... ] }`
+
 - exactly `weeks` entries, oldest first, ending with the current ISO week (Monday, UTC); empty weeks are zeros.
 
 `GET /analytics/me/personal-records`
 
 ```json
-{ "records": [ {
-  "exerciseId": 3,
-  "bestWeightKg": 105, "bestRepsAtWeight": 3,
-  "achievedAt": "2026-09-28T09:58:12.000Z", "workoutId": 812,
-  "bestE1rmKg": 116.67, "bestE1rmAchievedAt": "2026-09-22T18:00:00.000Z", "bestE1rmWorkoutId": 790
-} ] }
+{
+  "records": [
+    {
+      "exerciseId": 3,
+      "bestWeightKg": 105,
+      "bestRepsAtWeight": 3,
+      "achievedAt": "2026-09-28T09:58:12.000Z",
+      "workoutId": 812,
+      "bestE1rmKg": 116.67,
+      "bestE1rmAchievedAt": "2026-09-22T18:00:00.000Z",
+      "bestE1rmWorkoutId": 790
+    }
+  ]
+}
 ```
 
 The heaviest set (weight, then reps) and the best Epley e1RM

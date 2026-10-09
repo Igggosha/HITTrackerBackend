@@ -8,10 +8,10 @@ personal records, exercise progress, and body metrics. The mobile app reads them
 main API (`GET /analytics/*` is a thin proxy), so it keeps one base URL. The
 endpoint contract is in `services/analytics/README.md`.
 
-**Why (CQRS).** The main API is the *write model*: normalized tables, rules and
+**Why (CQRS).** The main API is the _write model_: normalized tables, rules and
 transactions (`workouts`, `sets`). Charts want different shapes (sums per ISO
 week, best set per exercise) and recomputing them on every screen open would
-scan a user's whole history. The *read model* is precomputed once per event,
+scan a user's whole history. The _read model_ is precomputed once per event,
 in a store shaped for the query. The price is **eventual consistency**: a
 finished workout reaches the read side after outbox -> relay -> Kafka ->
 consumer, measured at ~15 ms end to end (plus up to one 500 ms relay poll).
@@ -24,7 +24,7 @@ charts are stale or `503 ANALYTICS_UNAVAILABLE`; training itself is untouched.
 `analytics_app` (NOSUPERUSER, owns only that database; `PUBLIC` may not
 connect). It never reads the API's tables: ids come from events and there are
 no cross-database foreign keys. `analytics-db-init` (idempotent, runs every
-start, fresh or existing volume) creates both on the *existing* PostgreSQL
+start, fresh or existing volume) creates both on the _existing_ PostgreSQL
 server: a second PostgreSQL container would cost RAM on a 16 GB dev machine and
 another backup target. The trade-off: they share CPU/IO and a failure domain.
 Splitting later is a `pg_dump analytics` plus a URL change.
@@ -36,7 +36,7 @@ then `Projector.apply` runs ONE transaction: `insert into processed_events
 insert happened. The consumer runs with `autoCommit: false` and commits the
 Kafka offset only after the transaction has committed. If it crashes between
 the two, the event is redelivered and dropped as a duplicate. Projections never
-increment: they insert a *fact* (`finished_workouts`, `finished_sets`), then
+increment: they insert a _fact_ (`finished_workouts`, `finished_sets`), then
 recompute the affected week, streak, PRs and day from the facts in the same
 transaction. Late, out-of-order or backfilled copies (another event id, same
 workout id) cannot corrupt aggregates. A per-user advisory lock serialises one
@@ -50,7 +50,7 @@ order across topics and a late `workout.finished` must not bring the data back.
 v2 first). A breaking change is a new version with a new schema. An invalid
 message is retried `ANALYTICS_MAX_ATTEMPTS` (5) times, then sent to
 `hit.events.dlq` with `dlq-reason/error/attempts/source-topic/partition/offset`
-headers. Database/network errors are *transient*: they are retried forever
+headers. Database/network errors are _transient_: they are retried forever
 with capped backoff and heartbeats, so an outage never dead-letters good events.
 
 **Rules.** Stored instants are UTC; period grouping receives a validated IANA
