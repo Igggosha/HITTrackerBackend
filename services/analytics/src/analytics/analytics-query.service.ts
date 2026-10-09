@@ -1,11 +1,12 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, lt, lte } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, isNotNull, lt, lte } from 'drizzle-orm';
 import { ANALYTICS_DB, type AnalyticsDb } from '../db/database';
 import {
   bodyMetricsTimeline,
   exerciseProgress,
   finishedWorkouts,
   personalRecords,
+  scheduledAssignments,
   trainingStreaks,
   weeklyVolume,
 } from '../db/schema';
@@ -22,7 +23,10 @@ const MAX_POINTS = 1000;
 const DAY_MS = 86_400_000;
 
 type WorkoutSet = {
+  setId?: number;
   exerciseId: number;
+  exerciseName?: string;
+  muscleGroups?: { id: number; commonName: string }[];
   weight: number;
   reps: number;
   rpe: number | null;
@@ -52,6 +56,81 @@ function setsFromPayload(payload: Record<string, unknown>): WorkoutSet[] {
         typeof (set as WorkoutSet).rpe === 'number') &&
       typeof (set as WorkoutSet).isFailure === 'boolean',
   );
+}
+
+function timeZoneOf(value?: string) {
+  const timeZone = value || 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+    return timeZone;
+  } catch {
+    throw new BadRequestException({
+      message: '`timeZone` must be a valid IANA time zone',
+      code: 'INVALID_TIME_ZONE',
+    });
+  }
+}
+
+function localDate(instant: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function selectedDateKeys(range: { from: Date; toExclusive: Date }, timeZone: string) {
+  return {
+    from: localDate(range.from, timeZone),
+    to: localDate(new Date(range.toExclusive.getTime() - 1), timeZone),
+  };
+}
+
+function dateKeys(from: string, to: string) {
+  const keys: string[] = [];
+  for (let key = from; key <= to; key = addDays(key, 1)) keys.push(key);
+  return keys;
+}
+
+function percentage(part: number, whole: number) {
+  return whole ? round2((part / whole) * 100) : null;
+}
+
+export function scheduleStats(
+  assignments: { scheduleId: number; scheduledFor: string }[],
+  completions: Map<number, Date>,
+  today: string,
+  timeZone: string,
+) {
+  const ended = assignments.filter((item) => item.scheduledFor < today);
+  const completedAssignments = ended.filter((item) => completions.has(item.scheduleId)).length;
+  const byDate = new Map<string, typeof assignments>();
+  for (const assignment of assignments.filter((item) => item.scheduledFor <= today)) {
+    const day = byDate.get(assignment.scheduledFor) ?? [];
+    day.push(assignment);
+    byDate.set(assignment.scheduledFor, day);
+  }
+  let currentStreakDays = 0;
+  let longestStreakDays = 0;
+  for (const [date, day] of [...byDate].sort(([left], [right]) => left.localeCompare(right))) {
+    const successful = day.every((assignment) => {
+      const finishedAt = completions.get(assignment.scheduleId);
+      return finishedAt && localDate(finishedAt, timeZone) === date;
+    });
+    if (date === today && !successful) continue;
+    currentStreakDays = successful ? currentStreakDays + 1 : 0;
+    longestStreakDays = Math.max(longestStreakDays, currentStreakDays);
+  }
+  return {
+    completedAssignments,
+    scheduledAssignments: ended.length,
+    adherencePercent: percentage(completedAssignments, ended.length),
+    currentStreakDays,
+    longestStreakDays,
+  };
 }
 
 function rangeQuery(query: { from: string; to: string }) {
@@ -235,14 +314,8 @@ export class AnalyticsQueryService {
     };
   }
 
-  async overview(userId: number, query: { from: string; to: string }) {
+  private async periodWorkouts(userId: number, query: { from: string; to: string }) {
     const range = rangeQuery(query);
-    if (range.from > new Date(range.toExclusive.getTime() - 1))
-      throw new BadRequestException({
-        message: '`from` must not be after `to`',
-        code: 'INVALID_DATE_RANGE',
-      });
-
     const rows = (await this.db
       .select({
         workoutId: finishedWorkouts.workoutId,
@@ -255,158 +328,227 @@ export class AnalyticsQueryService {
       .from(finishedWorkouts)
       .where(workoutConditions(userId, range.from, range.toExclusive))
       .orderBy(asc(finishedWorkouts.finishedAt))) as WorkoutFact[];
-    const workouts = rows.map(asWorkoutFact);
+    return { range, workouts: rows.map(asWorkoutFact) };
+  }
+
+  private muscleTotals(workouts: ReturnType<typeof asWorkoutFact>[]) {
+    const groups = new Map<number, { muscleId: number; name: string; workingSets: number }>();
+    for (const set of workouts.flatMap((workout) => workout.sets)) {
+      for (const muscle of set.muscleGroups ?? []) {
+        if (!Number.isInteger(muscle.id) || !muscle.commonName) continue;
+        const current = groups.get(muscle.id) ?? {
+          muscleId: muscle.id,
+          name: muscle.commonName,
+          workingSets: 0,
+        };
+        current.workingSets += 1;
+        groups.set(muscle.id, current);
+      }
+    }
+    return [...groups.values()].sort((left, right) =>
+      right.workingSets - left.workingSets || left.name.localeCompare(right.name),
+    );
+  }
+
+  async overview(
+    userId: number,
+    query: { from: string; to: string; timeZone?: string },
+  ) {
+    const timeZone = timeZoneOf(query.timeZone);
+    const { range, workouts } = await this.periodWorkouts(userId, query);
+    const keys = selectedDateKeys(range, timeZone);
+    const [selectedAssignments, allAssignments, completedScheduled] =
+      await Promise.all([
+        this.db
+          .select()
+          .from(scheduledAssignments)
+          .where(
+            and(
+              eq(scheduledAssignments.userId, userId),
+              gte(scheduledAssignments.scheduledFor, keys.from),
+              lte(scheduledAssignments.scheduledFor, keys.to),
+            ),
+          ),
+        this.db
+          .select()
+          .from(scheduledAssignments)
+          .where(eq(scheduledAssignments.userId, userId)),
+        this.db
+          .select({
+            scheduleId: finishedWorkouts.scheduleId,
+            finishedAt: finishedWorkouts.finishedAt,
+          })
+          .from(finishedWorkouts)
+          .where(
+            and(
+              eq(finishedWorkouts.userId, userId),
+              isNotNull(finishedWorkouts.scheduleId),
+            ),
+          ),
+      ]);
+    const completions = new Map<number, Date>();
+    for (const row of completedScheduled) {
+      if (row.scheduleId == null) continue;
+      const existing = completions.get(row.scheduleId);
+      if (!existing || row.finishedAt < existing)
+        completions.set(row.scheduleId, row.finishedAt);
+    }
+    const today = localDate(new Date(), timeZone);
+    const periodPlan = scheduleStats(selectedAssignments, completions, today, timeZone);
+    const streak = scheduleStats(allAssignments, completions, today, timeZone);
     const rpes = workouts.flatMap((workout) =>
       workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])),
     );
     const activityByDate = new Map<
       string,
-      { volumeKg: number; completedWorkouts: number }
+      { volumeKg: number; completedWorkouts: number; plannedWorkouts: number }
     >();
-    for (const workout of workouts) {
-      const date = utcDate(workout.finishedAt);
-      const day = activityByDate.get(date) ?? {
-        volumeKg: 0,
-        completedWorkouts: 0,
-      };
-      day.volumeKg += workout.volumeKg;
-      day.completedWorkouts += 1;
-      activityByDate.set(date, day);
+    for (const date of dateKeys(keys.from, keys.to))
+      activityByDate.set(date, { volumeKg: 0, completedWorkouts: 0, plannedWorkouts: 0 });
+    for (const assignment of selectedAssignments) {
+      const day = activityByDate.get(assignment.scheduledFor);
+      if (day) day.plannedWorkouts += 1;
     }
-
-    const activity = [];
-    for (
-      let time = Date.UTC(
-        range.from.getUTCFullYear(),
-        range.from.getUTCMonth(),
-        range.from.getUTCDate(),
-      );
-      time < range.toExclusive.getTime();
-      time += DAY_MS
-    ) {
-      const date = new Date(time).toISOString().slice(0, 10);
-      const day = activityByDate.get(date);
-      activity.push({
-        date,
-        volumeKg: round2(day?.volumeKg ?? 0),
-        plannedWorkouts: null,
-        completedWorkouts: day?.completedWorkouts ?? 0,
-      });
-    }
-
     const intensityByDate = new Map<string, number[]>();
     for (const workout of workouts) {
-      const date = utcDate(workout.finishedAt);
-      const dailyRpes = intensityByDate.get(date) ?? [];
-      dailyRpes.push(
-        ...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])),
-      );
-      intensityByDate.set(date, dailyRpes);
+      const date = localDate(workout.finishedAt, timeZone);
+      const day = activityByDate.get(date);
+      if (day) {
+        day.volumeKg += workout.volumeKg;
+        day.completedWorkouts += 1;
+      }
+      const values = intensityByDate.get(date) ?? [];
+      values.push(...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])));
+      intensityByDate.set(date, values);
     }
-
+    const muscleGroups = this.muscleTotals(workouts);
     return {
       summary: {
         workouts: workouts.length,
-        plannedWorkouts: null,
-        completedWorkouts: workouts.length,
         activeMinutes: round2(
-          workouts.reduce(
-            (total, workout) => total + workout.durationSeconds,
-            0,
-          ) / 60,
+          workouts.reduce((total, workout) => total + workout.durationSeconds, 0) / 60,
         ),
-        workingSets: workouts.reduce(
-          (total, workout) => total + workout.setCount,
-          0,
-        ),
-        volumeKg: round2(
-          workouts.reduce((total, workout) => total + workout.volumeKg, 0),
-        ),
-        caloriesKcal: null,
+        workingSets: workouts.reduce((total, workout) => total + workout.setCount, 0),
+        volumeKg: round2(workouts.reduce((total, workout) => total + workout.volumeKg, 0)),
         averageRpe: rpes.length
           ? round2(rpes.reduce((total, rpe) => total + rpe, 0) / rpes.length)
           : null,
       },
-      activity,
-      intensityTrend: [...intensityByDate]
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([date, values]) => ({
+      plan: {
+        ...periodPlan,
+        currentStreakDays: streak.currentStreakDays,
+        longestStreakDays: streak.longestStreakDays,
+      },
+      activity: [...activityByDate].map(([date, day]) => ({
+        date,
+        ...day,
+        volumeKg: round2(day.volumeKg),
+      })),
+      intensityTrend: dateKeys(keys.from, keys.to).map((date) => {
+        const values = intensityByDate.get(date) ?? [];
+        return {
           date,
           averageRpe: values.length
-            ? round2(
-                values.reduce((total, value) => total + value, 0) /
-                  values.length,
-              )
+            ? round2(values.reduce((total, value) => total + value, 0) / values.length)
             : null,
-        })),
-      muscleGroups: [],
+        };
+      }),
+      muscleGroups: muscleGroups.slice(0, 5),
     };
   }
 
-  async intensity(userId: number, date: string) {
-    const from = new Date(`${date}T00:00:00.000Z`);
-    const toExclusive = new Date(from.getTime() + DAY_MS);
-    const rows = (await this.db
-      .select({
-        durationSeconds: finishedWorkouts.durationSeconds,
-        volumeKg: finishedWorkouts.volumeKg,
-        payload: finishedWorkouts.payload,
-      })
-      .from(finishedWorkouts)
-      .where(workoutConditions(userId, from, toExclusive))) as Pick<
-      WorkoutFact,
-      'durationSeconds' | 'volumeKg' | 'payload'
-    >[];
-    const workouts = rows.map((row) => ({
-      ...row,
-      sets: setsFromPayload(row.payload),
-    }));
+  async intensity(
+    userId: number,
+    query: { from: string; to: string; timeZone?: string },
+  ) {
+    const timeZone = timeZoneOf(query.timeZone);
+    const { workouts } = await this.periodWorkouts(userId, query);
     const sets = workouts.flatMap((workout) => workout.sets);
     const rpes = sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe]));
-    const totalVolume = workouts.reduce(
-      (total, workout) => total + workout.volumeKg,
-      0,
-    );
-    const activeSeconds = workouts.reduce(
-      (total, workout) => total + workout.durationSeconds,
-      0,
-    );
+    const totalVolume = workouts.reduce((total, workout) => total + workout.volumeKg, 0);
+    const activeSeconds = workouts.reduce((total, workout) => total + workout.durationSeconds, 0);
+    const trend = new Map<string, { rpes: number[]; volumeKg: number }>();
+    for (const workout of workouts) {
+      const date = localDate(workout.finishedAt, timeZone);
+      const day = trend.get(date) ?? { rpes: [], volumeKg: 0 };
+      day.rpes.push(...workout.sets.flatMap((set) => (set.rpe === null ? [] : [set.rpe])));
+      day.volumeKg += workout.volumeKg;
+      trend.set(date, day);
+    }
     const ranges = [
-      { range: '1-2', min: 1, max: 2 },
-      { range: '3-4', min: 3, max: 4 },
-      { range: '5-6', min: 5, max: 6 },
-      { range: '7-8', min: 7, max: 8 },
-      { range: '9-10', min: 9, max: 10 },
+      { range: '4-5', min: 4, max: 5 },
+      { range: '6-7', min: 6, max: 7 },
+      { range: '8-10', min: 8, max: 10 },
     ];
+    const setsToFailure = sets.filter((set) => set.isFailure).length;
     return {
       averageRpe: rpes.length
         ? round2(rpes.reduce((total, rpe) => total + rpe, 0) / rpes.length)
         : null,
-      volumePerMinute:
-        activeSeconds > 0 ? round2(totalVolume / (activeSeconds / 60)) : null,
-      setsToFailure: sets.filter((set) => set.isFailure).length,
+      volumePerMinute: activeSeconds > 0 ? round2(totalVolume / (activeSeconds / 60)) : null,
+      totalVolumeKg: round2(totalVolume),
+      setsToFailure,
       totalSets: sets.length,
-      rpeDistribution: rpes.length
-        ? ranges.map(({ range, min, max }) => {
-            const count = rpes.filter((rpe) => rpe >= min && rpe <= max).length;
-            return {
-              range,
-              sets: count,
-              percentage: round2((count / rpes.length) * 100),
-            };
-          })
-        : [],
+      failurePercentage: percentage(setsToFailure, sets.length),
+      trend: [...trend]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([date, day]) => ({
+          date,
+          averageRpe: day.rpes.length
+            ? round2(day.rpes.reduce((total, value) => total + value, 0) / day.rpes.length)
+            : null,
+          volumeKg: round2(day.volumeKg),
+        })),
+      rpeDistribution: ranges.map(({ range: label, min, max }) => {
+        const count = rpes.filter((rpe) => rpe >= min && rpe <= max).length;
+        return { range: label, sets: count, percentage: percentage(count, rpes.length) ?? 0 };
+      }),
     };
   }
 
-  muscleGroups(
-    _userId: number,
-    query: { from: string; to: string; metric: 'workingSets' | 'volume' },
+  async muscleGroups(
+    userId: number,
+    query: { from: string; to: string; timeZone?: string },
   ) {
-    rangeQuery(query);
-    // Exercise-to-muscle mappings and catalog names are not included in the
-    // analytics event stream, so an empty result is more honest than guessing.
-    return { muscleGroups: [] };
+    const { workouts } = await this.periodWorkouts(userId, query);
+    return { muscleGroups: this.muscleTotals(workouts) };
+  }
+
+  async strength(userId: number, query: { from: string; to: string }) {
+    const { workouts } = await this.periodWorkouts(userId, query);
+    const grouped = new Map<number, { exerciseId: number; name: string | null; sets: (WorkoutSet & { finishedAt: Date; workoutId: number })[] }>();
+    for (const workout of workouts) {
+      for (const set of workout.sets) {
+        const exercise = grouped.get(set.exerciseId) ?? {
+          exerciseId: set.exerciseId,
+          name: set.exerciseName ?? null,
+          sets: [],
+        };
+        exercise.name ??= set.exerciseName ?? null;
+        exercise.sets.push({ ...set, finishedAt: workout.finishedAt, workoutId: workout.workoutId });
+        grouped.set(set.exerciseId, exercise);
+      }
+    }
+    return {
+      exercises: [...grouped.values()].map((exercise) => {
+        const ordered = [...exercise.sets].sort((left, right) => left.finishedAt.getTime() - right.finishedAt.getTime());
+        const latest = ordered.at(-1)!;
+        const best = ordered.reduce((winner, set) =>
+          set.weight > winner.weight || (set.weight === winner.weight && set.reps > winner.reps) ? set : winner,
+        );
+        const bestE1rmKg = Math.max(...ordered.map((set) => set.weight * (1 + set.reps / 30)));
+        return {
+          exerciseId: exercise.exerciseId,
+          name: exercise.name,
+          lastSetWeightKg: round2(latest.weight),
+          lastSetReps: latest.reps,
+          bestWeightKg: round2(best.weight),
+          bestRepsAtWeight: best.reps,
+          bestE1rmKg: round2(bestE1rmKg),
+          changeKg: round2(latest.weight - ordered[0].weight),
+        };
+      }).sort((left, right) => (left.name ?? '').localeCompare(right.name ?? '')),
+    };
   }
 
   async exerciseSets(
@@ -438,8 +580,10 @@ export class AnalyticsQueryService {
       sets: rows.flatMap((workout) =>
         setsFromPayload(workout.payload)
           .filter((set) => set.exerciseId === exerciseId)
-          .map((set) => ({
+          .map((set, index) => ({
             date: utcDate(workout.finishedAt),
+            finishedAt: workout.finishedAt.toISOString(),
+            setNumber: index + 1,
             workoutId: workout.workoutId,
             weightKg: round2(set.weight),
             reps: set.reps,

@@ -14,7 +14,6 @@ import {
 } from '../auth/jwt-auth.guard';
 import {
   DateRangeQueryDto,
-  IntensityDayQueryDto,
   MuscleGroupsQueryDto,
   RequiredDateRangeQueryDto,
   WeeklyVolumeQueryDto,
@@ -56,9 +55,9 @@ export class AnalyticsController {
   @Get('intensity')
   intensity(
     @CurrentUser() user: AuthUser,
-    @Query() query: IntensityDayQueryDto,
+    @Query() query: RequiredDateRangeQueryDto,
   ) {
-    return this.queries.intensity(user.id, query.date);
+    return this.queries.intensity(user.id, query);
   }
 
   @Get('muscle-groups')
@@ -67,6 +66,14 @@ export class AnalyticsController {
     @Query() query: MuscleGroupsQueryDto,
   ) {
     return this.queries.muscleGroups(user.id, query);
+  }
+
+  @Get('strength')
+  strength(
+    @CurrentUser() user: AuthUser,
+    @Query() query: RequiredDateRangeQueryDto,
+  ) {
+    return this.queries.strength(user.id, query);
   }
 
   @Get('exercises/:exerciseId/progress')

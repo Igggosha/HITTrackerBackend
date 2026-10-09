@@ -31,6 +31,7 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
       rpeDistribution: [],
     })),
     muscleGroups: jest.fn(() => ({ muscleGroups: [] })),
+    strength: jest.fn(() => ({ exercises: [] })),
     exerciseSets: jest.fn(() => ({ sets: [] })),
     exerciseProgress: jest.fn(() => ({ points: [] })),
     bodyMetrics: jest.fn(() => ({ points: [] })),
@@ -162,21 +163,37 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
     });
 
     await request(app.getHttpServer())
-      .get('/analytics/me/intensity?date=2026-09-30')
+      .get(
+        '/analytics/me/intensity?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&timeZone=Europe%2FBerlin',
+      )
       .set(auth)
       .expect(200);
-    expect(queries.intensity).toHaveBeenCalledWith(7, '2026-09-30');
+    expect(queries.intensity).toHaveBeenCalledWith(7, {
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
+      timeZone: 'Europe/Berlin',
+    });
 
     await request(app.getHttpServer())
       .get(
-        '/analytics/me/muscle-groups?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&metric=volume',
+        '/analytics/me/muscle-groups?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
       )
       .set(auth)
       .expect(200);
     expect(queries.muscleGroups).toHaveBeenCalledWith(7, {
       from: '2026-09-01T00:00:00Z',
       to: '2026-09-30T23:59:59Z',
-      metric: 'volume',
+    });
+
+    await request(app.getHttpServer())
+      .get(
+        '/analytics/me/strength?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
+      )
+      .set(auth)
+      .expect(200);
+    expect(queries.strength).toHaveBeenCalledWith(7, {
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
     });
 
     await request(app.getHttpServer())
@@ -195,8 +212,8 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
     '/analytics/me/overview?from=2026-09-01&to=2026-09-30',
     '/analytics/me/overview?from=2026-09-01T00:00:00&to=2026-09-30T23:59:59Z',
     '/analytics/me/overview?from=bad&to=2026-09-30T23:59:59Z',
-    '/analytics/me/intensity?date=2026-02-30',
-    '/analytics/me/muscle-groups?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&metric=calories',
+    '/analytics/me/intensity?from=2026-09-01T00:00:00Z',
+    '/analytics/me/intensity?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&timeZone=this-is-not-a-timezone-but-is-too-long-to-pass-validation-and-should-be-rejected-before-query-service',
     '/analytics/me/exercises/0/sets?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
     '/analytics/me/exercises/3/sets?from=2026-09-01T00:00:00Z',
   ])('rejects invalid new analytics input: %s', async (url) => {
@@ -208,7 +225,7 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
 
   it('rejects unauthenticated requests to the new endpoints', async () => {
     await request(app.getHttpServer())
-      .get('/analytics/me/intensity?date=2026-09-30')
+      .get('/analytics/me/intensity?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z')
       .expect(401);
     expect(queries.intensity).not.toHaveBeenCalled();
   });
