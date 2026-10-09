@@ -64,34 +64,41 @@ consistent: a finished workout normally appears within about a second.
 
 ### Period analytics
 
-`GET /analytics/me/overview?from=<ISO timestamp>&to=<ISO timestamp>` uses
-inclusive timestamp bounds with an explicit `Z` or numeric offset. Activity
-days and intensity trend dates use UTC. The response contains `summary`, a
-daily `activity` series, `intensityTrend`, and `muscleGroups`. `workouts` and
-`completedWorkouts` count finished workouts; `activeMinutes` sums their active
-durations. RPE averages omit sets without RPE and are `null` when no set is
-rated. Because the current events do not project schedule facts, planned-workout
-counts are `null`; calories are `null`; muscle groups are an empty array until
-exercise-to-muscle mappings and catalog names are available in this service.
+`GET /analytics/me/overview?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+uses inclusive timestamp bounds with an explicit `Z` or numeric offset. The
+response contains period `summary`, daily `activity`, `intensityTrend`, the top
+five `muscleGroups`, and `plan`. Finished workouts supply active minutes,
+working sets, volume, RPE, exercise names, and muscle mappings. RPE averages
+omit sets without RPE and are `null` when no set is rated.
 
-`GET /analytics/me/intensity?date=YYYY-MM-DD` treats the date as a UTC calendar
-day. `totalSets` includes sets without RPE; those sets are omitted from both the
-average RPE and distribution denominator. Failure count uses the persisted
-`isFailure` value. Volume per minute divides workout volume by active duration,
-excluding pauses, and is `null` when active duration is zero. RPE distribution
-uses `1-2`, `3-4`, `5-6`, `7-8`, and `9-10` buckets, with percentages among
-rated sets; it is empty when no sets have RPE.
+`plan.adherencePercent` is completed scheduled assignments divided by scheduled
+assignments whose local day has ended. A late linked completion counts for
+adherence on its original scheduled date. Streaks use consecutive scheduled
+days: every assignment on the date must be completed on that same local date;
+days without a schedule are skipped, unfinished today does not break the run,
+and a late completion does not repair it.
 
-`GET /analytics/me/muscle-groups?from=<ISO timestamp>&to=<ISO timestamp>&metric=workingSets|volume`
-validates the metric and inclusive range. It currently returns
-`{ "muscleGroups": [] }` because exercise muscle mappings/names are not carried
-by analytics events.
+`GET /analytics/me/intensity?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+returns average RPE, a local-date trend, total volume, density, failure counts,
+and RPE bands `4-5`, `6-7`, and `8-10`. `totalSets` includes sets without RPE;
+unrated sets are omitted from the average and distribution denominator. Density
+divides volume by persisted active duration and is `null` when it is zero.
+
+`GET /analytics/me/muscle-groups?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+returns working-set counts from finished workout snapshots. A set contributes
+once to every canonical muscle group mapped to its exercise, so totals across
+groups are intentionally non-additive.
+
+`GET /analytics/me/strength?from=<ISO timestamp>&to=<ISO timestamp>` returns one
+row per performed exercise with its catalog name, latest set, best set, best
+Epley e1RM, and selected-period weight change.
 
 `GET /analytics/me/exercises/:exerciseId/sets?from=<ISO timestamp>&to=<ISO timestamp>`
 returns sets from completed workouts in ascending workout completion time. Set
-dates use the workout completion timestamp; the source event has no individual
-set timestamps. The event contract has no warm-up marker, so all recorded
-performed sets are treated as working sets. `rpe` is omitted when not recorded.
+dates use the workout completion timestamp; each row includes `workoutId`,
+`setNumber`, weight, reps, optional RPE, and failure state. The event contract
+has no warm-up marker, so all recorded performed sets are treated as working
+sets.
 
 `GET /analytics/me/weekly-volume?weeks=12` (`weeks` 1..104, default 12):
 `{ "weeks": [ { "isoWeekStart": "2026-07-13", "workouts": 0, "sets": 0, "reps": 0, "volumeKg": 0, "durationSeconds": 0 }, ... ] }`

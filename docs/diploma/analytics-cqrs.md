@@ -3,8 +3,8 @@
 **What.** `services/analytics/` is a separately deployable NestJS service (own
 package, Dockerfile, database, migrations). It consumes the domain events the
 outbox relay publishes (`hit.workout.v1`, `hit.user.v1`) and keeps read models
-for charts: `weekly_volume`, `personal_records`, `training_streaks`,
-`exercise_progress`, `body_metrics_timeline`. The mobile app reads them via the
+for charts: completed workout/set facts, scheduled assignments, weekly volume,
+personal records, exercise progress, and body metrics. The mobile app reads them via the
 main API (`GET /analytics/*` is a thin proxy), so it keeps one base URL. The
 endpoint contract is in `services/analytics/README.md`.
 
@@ -53,11 +53,14 @@ message is retried `ANALYTICS_MAX_ATTEMPTS` (5) times, then sent to
 headers. Database/network errors are *transient*: they are retried forever
 with capped backoff and heartbeats, so an outage never dead-letters good events.
 
-**Rules.** UTC everywhere. Week = ISO week starting Monday. Streak = consecutive
-UTC days with at least one finished workout; several workouts on one day count
-once; the current streak is reported as 0 after a full UTC day without one.
-PRs: heaviest set (weight, then reps) and best Epley e1RM `w*(1+reps/30)`,
-each first-achievement wins ties; a row is written only when beaten.
+**Rules.** Stored instants are UTC; period grouping receives a validated IANA
+time zone. Week = ISO week starting Monday. The period overview's adherence is
+completed assignments divided by assignments whose local scheduled day has
+ended. Its streak is a sequence of successful scheduled days, skipping days
+without assignments; every assignment must finish on that same local day, an
+unfinished current day does not break the run, and a late completion never
+repairs it. PRs use the heaviest set (weight, then reps) and best Epley e1RM
+`w*(1+reps/30)`; each first-achievement wins ties.
 
 **Rebuild from the log.** Domain topics have `retention.ms=-1` (kafka-init
 re-applies it every start), so the log can rebuild every read model; the DLQ
@@ -73,10 +76,10 @@ replays `user.deleted`, which removes the data again. Crypto-shredding or
 compaction are the production answers.
 
 **Backfill.** History from before the outbox is not in Kafka.
-`scripts/backfill-analytics-events.ts` enqueues `workout.finished` and
-`body_metric.recorded` outbox rows for old rows that have no event yet. Ids are
-uuid v5 of `<type>:<id>`, inserted `on conflict (id) do nothing`, so a second
-run inserts 0. Run it with the migration image:
+`scripts/backfill-analytics-events.ts` enqueues enriched `workout.finished`,
+`body_metric.recorded`, and current `program.scheduled` outbox rows. Ids are
+deterministic uuid v5 values, inserted `on conflict (id) do nothing`, so a
+second run inserts 0. Run it with the migration image:
 `docker compose run --rm --no-deps -v "$PWD/packages:/app/packages:ro" -v "$PWD/scripts:/app/scripts:ro" migrate npx tsx scripts/backfill-analytics-events.ts`.
 
 **Observability.** `/metrics` (Bearer `METRICS_TOKEN`):
