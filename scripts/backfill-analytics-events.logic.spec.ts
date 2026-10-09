@@ -2,6 +2,7 @@ import {
   BACKFILL_NAMESPACE,
   backfillEventId,
   bodyMetricRow,
+  programScheduledRow,
   uuidV5,
   workoutFinishedRow,
 } from './backfill-analytics-events.logic';
@@ -86,6 +87,23 @@ describe('analytics backfill', () => {
       aggregateType: 'user',
       aggregateId: '7',
       payload: { metricId: 9, userId: 7, source: 'body_metrics' },
+    });
+  });
+
+  it('normalizes database Date values for scheduled assignments', () => {
+    expect(
+      programScheduledRow({
+        userId: 7,
+        programId: 4,
+        scheduleId: 9,
+        scheduledFor: new Date('2026-09-02T00:00:00.000Z'),
+      }),
+    ).toMatchObject({
+      occurredAt: '2026-09-02T00:00:00.000Z',
+      payload: {
+        scheduledFor: '2026-09-02',
+        assignments: [{ scheduleId: 9, scheduledFor: '2026-09-02' }],
+      },
     });
   });
 });

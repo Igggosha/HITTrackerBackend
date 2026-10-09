@@ -5,8 +5,8 @@
  *   DATABASE_URL=... npx tsx scripts/backfill-analytics-events.ts [--dry-run]
  *
  * Enqueues `workout.finished` for every completed workout and
- * `body_metric.recorded` for every body-metric row that has no live outbox
- * event yet. Event ids are deterministic (uuid v5 of `<type>:<id>`), inserts
+ * `body_metric.recorded` for every body-metric row and `program.scheduled` for
+ * every current assignment. Event ids are deterministic (uuid v5 of `<type>:<id>`), inserts
  * are ON CONFLICT (id) DO NOTHING, and the analytics consumer dedups by
  * event id and by workout/metric id, so re-running it is harmless. The relay
  * then publishes the rows like any other outbox event.
