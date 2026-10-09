@@ -46,6 +46,8 @@ export const finishedWorkouts = pgTable(
     workoutId: integer('workout_id').primaryKey(),
     userId: integer('user_id').notNull(),
     eventId: uuid('event_id').notNull(),
+    scheduleId: integer('schedule_id'),
+    scheduledFor: date('scheduled_for'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
     finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
     durationSeconds: integer('duration_seconds').notNull(),
@@ -58,6 +60,23 @@ export const finishedWorkouts = pgTable(
     index('finished_workouts_user_finished_idx').on(
       table.userId,
       table.finishedAt,
+    ),
+  ],
+);
+
+/** Planned calendar assignments, copied from `program.scheduled` events. */
+export const scheduledAssignments = pgTable(
+  'scheduled_assignments',
+  {
+    scheduleId: integer('schedule_id').primaryKey(),
+    userId: integer('user_id').notNull(),
+    programId: integer('program_id').notNull(),
+    scheduledFor: date('scheduled_for').notNull(),
+  },
+  (table) => [
+    index('scheduled_assignments_user_date_idx').on(
+      table.userId,
+      table.scheduledFor,
     ),
   ],
 );
@@ -179,6 +198,7 @@ export const allAnalyticsTables = [
   'processed_events',
   'finished_workouts',
   'finished_sets',
+  'scheduled_assignments',
   'erased_users',
   'weekly_volume',
   'personal_records',
