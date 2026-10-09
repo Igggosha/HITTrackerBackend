@@ -2,6 +2,8 @@
 
 Scope: the NestJS/TypeScript API in this repository. For product scope read `../docs/PRODUCT_SPEC/README.md`; for the system map read `../docs/ARCHITECTURE.md`; for runtime/database setup read `README.md`. Google OAuth setup is in `GOOGLE_OAUTH_SETUP.md`.
 
+Commit frequently: finish one small, coherent function, contract, migration, or tested fix, run its nearest practical check, and create a focused commit before starting the next unit. Stage files explicitly and never include unrelated or another contributor's uncommitted changes.
+
 ## Architecture and dependencies
 
 - Preserve the current direction: controller → feature service → `src/db/db.ts`/`src/db/schema.ts`. DTOs define input validation. Do not add repository/interface/use-case layers without a real second implementation or demonstrated need.
