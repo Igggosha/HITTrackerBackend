@@ -17,6 +17,21 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
     summary: jest.fn(() => ({ ok: true })),
     weeklyVolume: jest.fn(() => ({ weeks: [] })),
     personalRecords: jest.fn(() => ({ records: [] })),
+    overview: jest.fn(() => ({
+      summary: {},
+      activity: [],
+      intensityTrend: [],
+      muscleGroups: [],
+    })),
+    intensity: jest.fn(() => ({
+      averageRpe: null,
+      volumePerMinute: null,
+      setsToFailure: 0,
+      totalSets: 0,
+      rpeDistribution: [],
+    })),
+    muscleGroups: jest.fn(() => ({ muscleGroups: [] })),
+    exerciseSets: jest.fn(() => ({ sets: [] })),
     exerciseProgress: jest.fn(() => ({ points: [] })),
     bodyMetrics: jest.fn(() => ({ points: [] })),
   };
@@ -131,5 +146,70 @@ describe('Analytics read API (guard, DTO validation, error envelope)', () => {
       from: '2026-09-01',
       to: '2026-09-30',
     });
+  });
+
+  it('validates and scopes each new endpoint to the JWT subject', async () => {
+    const auth = { Authorization: `Bearer ${token()}` };
+    await request(app.getHttpServer())
+      .get(
+        '/analytics/me/overview?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
+      )
+      .set(auth)
+      .expect(200);
+    expect(queries.overview).toHaveBeenCalledWith(7, {
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
+    });
+
+    await request(app.getHttpServer())
+      .get('/analytics/me/intensity?date=2026-09-30')
+      .set(auth)
+      .expect(200);
+    expect(queries.intensity).toHaveBeenCalledWith(7, '2026-09-30');
+
+    await request(app.getHttpServer())
+      .get(
+        '/analytics/me/muscle-groups?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&metric=volume',
+      )
+      .set(auth)
+      .expect(200);
+    expect(queries.muscleGroups).toHaveBeenCalledWith(7, {
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
+      metric: 'volume',
+    });
+
+    await request(app.getHttpServer())
+      .get(
+        '/analytics/me/exercises/3/sets?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
+      )
+      .set(auth)
+      .expect(200);
+    expect(queries.exerciseSets).toHaveBeenCalledWith(7, 3, {
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
+    });
+  });
+
+  it.each([
+    '/analytics/me/overview?from=2026-09-01&to=2026-09-30',
+    '/analytics/me/overview?from=2026-09-01T00:00:00&to=2026-09-30T23:59:59Z',
+    '/analytics/me/overview?from=bad&to=2026-09-30T23:59:59Z',
+    '/analytics/me/intensity?date=2026-02-30',
+    '/analytics/me/muscle-groups?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z&metric=calories',
+    '/analytics/me/exercises/0/sets?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z',
+    '/analytics/me/exercises/3/sets?from=2026-09-01T00:00:00Z',
+  ])('rejects invalid new analytics input: %s', async (url) => {
+    await request(app.getHttpServer())
+      .get(url)
+      .set('Authorization', `Bearer ${token()}`)
+      .expect(400);
+  });
+
+  it('rejects unauthenticated requests to the new endpoints', async () => {
+    await request(app.getHttpServer())
+      .get('/analytics/me/intensity?date=2026-09-30')
+      .expect(401);
+    expect(queries.intensity).not.toHaveBeenCalled();
   });
 });

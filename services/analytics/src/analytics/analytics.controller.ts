@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Param,
@@ -11,7 +12,13 @@ import {
   JwtAuthGuard,
   type AuthUser,
 } from '../auth/jwt-auth.guard';
-import { DateRangeQueryDto, WeeklyVolumeQueryDto } from './analytics.dto';
+import {
+  DateRangeQueryDto,
+  IntensityDayQueryDto,
+  MuscleGroupsQueryDto,
+  RequiredDateRangeQueryDto,
+  WeeklyVolumeQueryDto,
+} from './analytics.dto';
 import { AnalyticsQueryService } from './analytics-query.service';
 
 /** Read API. Every route answers for the caller only (`sub` of the JWT). */
@@ -38,6 +45,30 @@ export class AnalyticsController {
     return this.queries.personalRecords(user.id);
   }
 
+  @Get('overview')
+  overview(
+    @CurrentUser() user: AuthUser,
+    @Query() query: RequiredDateRangeQueryDto,
+  ) {
+    return this.queries.overview(user.id, query);
+  }
+
+  @Get('intensity')
+  intensity(
+    @CurrentUser() user: AuthUser,
+    @Query() query: IntensityDayQueryDto,
+  ) {
+    return this.queries.intensity(user.id, query.date);
+  }
+
+  @Get('muscle-groups')
+  muscleGroups(
+    @CurrentUser() user: AuthUser,
+    @Query() query: MuscleGroupsQueryDto,
+  ) {
+    return this.queries.muscleGroups(user.id, query);
+  }
+
   @Get('exercises/:exerciseId/progress')
   exerciseProgress(
     @CurrentUser() user: AuthUser,
@@ -45,6 +76,17 @@ export class AnalyticsController {
     @Query() query: DateRangeQueryDto,
   ) {
     return this.queries.exerciseProgress(user.id, exerciseId, query);
+  }
+
+  @Get('exercises/:exerciseId/sets')
+  exerciseSets(
+    @CurrentUser() user: AuthUser,
+    @Param('exerciseId', ParseIntPipe) exerciseId: number,
+    @Query() query: RequiredDateRangeQueryDto,
+  ) {
+    if (exerciseId < 1)
+      throw new BadRequestException('exerciseId must be a positive integer');
+    return this.queries.exerciseSets(user.id, exerciseId, query);
   }
 
   @Get('body-metrics')

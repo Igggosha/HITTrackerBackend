@@ -62,6 +62,37 @@ consistent: a finished workout normally appears within about a second.
 `null` and every number 0 for a user without finished workouts.
 `streak.currentDays` is 0 once a whole UTC day passed without a workout.
 
+### Period analytics
+
+`GET /analytics/me/overview?from=<ISO timestamp>&to=<ISO timestamp>` uses
+inclusive timestamp bounds with an explicit `Z` or numeric offset. Activity
+days and intensity trend dates use UTC. The response contains `summary`, a
+daily `activity` series, `intensityTrend`, and `muscleGroups`. `workouts` and
+`completedWorkouts` count finished workouts; `activeMinutes` sums their active
+durations. RPE averages omit sets without RPE and are `null` when no set is
+rated. Because the current events do not project schedule facts, planned-workout
+counts are `null`; calories are `null`; muscle groups are an empty array until
+exercise-to-muscle mappings and catalog names are available in this service.
+
+`GET /analytics/me/intensity?date=YYYY-MM-DD` treats the date as a UTC calendar
+day. `totalSets` includes sets without RPE; those sets are omitted from both the
+average RPE and distribution denominator. Failure count uses the persisted
+`isFailure` value. Volume per minute divides workout volume by active duration,
+excluding pauses, and is `null` when active duration is zero. RPE distribution
+uses `1-2`, `3-4`, `5-6`, `7-8`, and `9-10` buckets, with percentages among
+rated sets; it is empty when no sets have RPE.
+
+`GET /analytics/me/muscle-groups?from=<ISO timestamp>&to=<ISO timestamp>&metric=workingSets|volume`
+validates the metric and inclusive range. It currently returns
+`{ "muscleGroups": [] }` because exercise muscle mappings/names are not carried
+by analytics events.
+
+`GET /analytics/me/exercises/:exerciseId/sets?from=<ISO timestamp>&to=<ISO timestamp>`
+returns sets from completed workouts in ascending workout completion time. Set
+dates use the workout completion timestamp; the source event has no individual
+set timestamps. The event contract has no warm-up marker, so all recorded
+performed sets are treated as working sets. `rpe` is omitted when not recorded.
+
 `GET /analytics/me/weekly-volume?weeks=12` (`weeks` 1..104, default 12):
 `{ "weeks": [ { "isoWeekStart": "2026-07-13", "workouts": 0, "sets": 0, "reps": 0, "volumeKg": 0, "durationSeconds": 0 }, ... ] }`
 - exactly `weeks` entries, oldest first, ending with the current ISO week (Monday, UTC); empty weeks are zeros.
