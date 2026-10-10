@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsDefined,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  IsString,
+} from 'class-validator';
 
 export class WeeklyVolumeQueryDto {
   @IsOptional()
@@ -20,3 +30,30 @@ export class DateRangeQueryDto {
   @IsISO8601({ strict: true })
   to?: string;
 }
+
+/** Required inclusive ISO timestamp bounds for period analytics. */
+export class RequiredDateRangeQueryDto {
+  @IsDefined()
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/)
+  from: string;
+
+  @IsDefined()
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/)
+  to: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  timeZone?: string;
+}
+
+export class IntensityDayQueryDto {
+  @IsDefined()
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  date: string;
+}
+
+export class MuscleGroupsQueryDto extends RequiredDateRangeQueryDto {}

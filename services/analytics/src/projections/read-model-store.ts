@@ -17,6 +17,8 @@ export type FinishedWorkoutFact = {
   workoutId: number;
   userId: number;
   eventId: string;
+  scheduleId: number | null;
+  scheduledFor: string | null;
   startedAt: Date;
   finishedAt: Date;
   durationSeconds: number;
@@ -30,6 +32,13 @@ export type FinishedWorkoutFact = {
     weightKg: number;
     reps: number;
   }[];
+};
+
+export type ScheduledAssignmentFact = {
+  scheduleId: number;
+  userId: number;
+  programId: number;
+  scheduledFor: string;
 };
 
 export type BodyMetricFact = {
@@ -64,6 +73,13 @@ export interface ReadModelTx {
   isErased(userId: number): Promise<boolean>;
   /** Inserts the workout and its sets; `false` if the workout id already exists. */
   insertFinishedWorkout(fact: FinishedWorkoutFact): Promise<boolean>;
+  insertScheduledAssignments(
+    facts: readonly ScheduledAssignmentFact[],
+  ): Promise<number>;
+  deleteScheduledAssignments(
+    userId: number,
+    scheduleIds: readonly number[],
+  ): Promise<number>;
   workoutTotalsBetween(
     userId: number,
     fromInclusive: Date,

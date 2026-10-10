@@ -33,16 +33,10 @@
           "type": "integer"
         },
         "programId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "scheduleId": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "startedAt": {
           "type": "string"
@@ -68,6 +62,9 @@
         "totalVolume": {
           "type": "number"
         },
+        "scheduledFor": {
+          "type": ["string", "null"]
+        },
         "sets": {
           "type": "array",
           "items": {
@@ -86,10 +83,7 @@
                 "type": "number"
               },
               "rpe": {
-                "type": [
-                  "number",
-                  "null"
-                ]
+                "type": ["number", "null"]
               },
               "isFailure": {
                 "type": "boolean"
@@ -99,6 +93,25 @@
               },
               "volume": {
                 "type": "number"
+              },
+              "exerciseName": {
+                "type": "string"
+              },
+              "muscleGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "commonName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "commonName"],
+                  "additionalProperties": false
+                }
               }
             },
             "required": [

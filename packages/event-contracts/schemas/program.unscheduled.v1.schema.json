@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "user.registered v1",
+  "title": "program.unscheduled v1",
   "type": "object",
   "properties": {
     "id": {
@@ -8,7 +8,7 @@
       "format": "uuid"
     },
     "type": {
-      "const": "user.registered"
+      "const": "program.unscheduled"
     },
     "version": {
       "const": 1
@@ -29,14 +29,14 @@
         "userId": {
           "type": "integer"
         },
-        "method": {
-          "enum": ["email", "google"]
-        },
-        "registeredAt": {
-          "type": "string"
+        "scheduleIds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         }
       },
-      "required": ["userId", "method", "registeredAt"],
+      "required": ["userId", "scheduleIds"],
       "additionalProperties": false
     }
   },

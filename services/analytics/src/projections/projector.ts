@@ -19,6 +19,8 @@ import {
 } from './read-model-store';
 import type {
   BodyMetricRecordedV1,
+  ProgramScheduledV1,
+  ProgramUnscheduledV1,
   UserDeletedV1,
   WorkoutFinishedV1,
 } from '../../../../packages/event-contracts/events';
@@ -76,7 +78,11 @@ export class Projector {
         // follow `workout.finished` (the API refuses it), so ignoring it is safe.
         case 'workout.started':
         case 'workout.cancelled':
+          return 'ignored';
         case 'program.scheduled':
+          return this.programScheduled(tx, envelope.payload);
+        case 'program.unscheduled':
+          return this.programUnscheduled(tx, envelope.payload);
         case 'user.registered':
           return 'ignored';
         default: {
@@ -102,6 +108,8 @@ export class Projector {
       workoutId: payload.workoutId,
       userId,
       eventId,
+      scheduleId: payload.scheduleId,
+      scheduledFor: payload.scheduledFor ?? null,
       startedAt: parseInstant(payload.startedAt, 'startedAt'),
       finishedAt,
       durationSeconds: Math.max(0, Math.round(payload.durationSeconds)),
@@ -148,6 +156,45 @@ export class Projector {
       await tx.savePersonalRecords(userId, records);
     }
     return 'applied';
+  }
+
+  private async programScheduled(
+    tx: ReadModelTx,
+    payload: ProgramScheduledV1,
+  ): Promise<ApplyResult> {
+    if (await tx.isErased(payload.userId)) return 'erased_user';
+    const assignments =
+      payload.assignments ??
+      (payload.scheduleIds.length === 1
+        ? [
+            {
+              scheduleId: payload.scheduleIds[0],
+              scheduledFor: payload.scheduledFor,
+            },
+          ]
+        : []);
+    if (!assignments.length) return 'ignored';
+    const inserted = await tx.insertScheduledAssignments(
+      assignments.map((assignment) => ({
+        ...assignment,
+        userId: payload.userId,
+        programId: payload.programId,
+      })),
+    );
+    return inserted ? 'applied' : 'duplicate';
+  }
+
+  private async programUnscheduled(
+    tx: ReadModelTx,
+    payload: ProgramUnscheduledV1,
+  ): Promise<ApplyResult> {
+    if (await tx.isErased(payload.userId)) return 'erased_user';
+    if (!payload.scheduleIds.length) return 'ignored';
+    const deleted = await tx.deleteScheduledAssignments(
+      payload.userId,
+      payload.scheduleIds,
+    );
+    return deleted ? 'applied' : 'duplicate';
   }
 
   private async bodyMetricRecorded(

@@ -36,11 +36,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "userId",
-        "deletedByUserId",
-        "deletedAt"
-      ],
+      "required": ["userId", "deletedByUserId", "deletedAt"],
       "additionalProperties": false
     }
   },

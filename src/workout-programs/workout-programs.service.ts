@@ -231,6 +231,19 @@ export class WorkoutProgramsService {
         })
         .onConflictDoNothing()
         .returning();
+      const operationAssignments = await tx
+        .select({
+          id: userProgramSchedule.id,
+          scheduledFor: userProgramSchedule.scheduledFor,
+        })
+        .from(userProgramSchedule)
+        .where(
+          and(
+            eq(userProgramSchedule.userId, userId),
+            eq(userProgramSchedule.programId, dto.programId),
+            eq(userProgramSchedule.scheduledFor, dto.scheduledFor),
+          ),
+        );
 
       if (series || assignments.length) {
         await this.outbox.enqueue(tx, {
@@ -246,6 +259,10 @@ export class WorkoutProgramsService {
             scheduleIds: assignments.map(
               (assignment: { id: number }) => assignment.id,
             ),
+            assignments: operationAssignments.map((assignment) => ({
+              scheduleId: assignment.id,
+              scheduledFor: assignment.scheduledFor,
+            })),
           },
         });
       }
@@ -319,6 +336,13 @@ export class WorkoutProgramsService {
       if (!assignment)
         throw new NotFoundException('Scheduled workout not found');
 
+      const removed = assignment.seriesId
+        ? await tx
+            .select({ id: userProgramSchedule.id })
+            .from(userProgramSchedule)
+            .where(eq(userProgramSchedule.seriesId, assignment.seriesId))
+        : [{ id }];
+
       if (assignment.seriesId) {
         await tx
           .delete(userProgramScheduleSeries)
@@ -328,6 +352,11 @@ export class WorkoutProgramsService {
           .delete(userProgramSchedule)
           .where(eq(userProgramSchedule.id, id));
       }
+      await this.outbox.enqueue(tx, {
+        type: 'program.unscheduled',
+        aggregateId: userId,
+        payload: { userId, scheduleIds: removed.map((item) => item.id) },
+      });
     });
   }
 
@@ -971,10 +1000,33 @@ export class WorkoutProgramsService {
           seriesId: item.id,
         })),
     );
-    if (assignments.length)
-      await tx
+    if (assignments.length) {
+      const inserted = await tx
         .insert(userProgramSchedule)
         .values(assignments)
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning();
+      for (const assignment of inserted) {
+        await this.outbox.enqueue(tx, {
+          type: 'program.scheduled',
+          aggregateId: userId,
+          payload: {
+            userId,
+            programId: assignment.programId,
+            scheduledFor: assignment.scheduledFor,
+            repeat: 'weekly',
+            repeatUntil: null,
+            seriesId: assignment.seriesId,
+            scheduleIds: [assignment.id],
+            assignments: [
+              {
+                scheduleId: assignment.id,
+                scheduledFor: assignment.scheduledFor,
+              },
+            ],
+          },
+        });
+      }
+    }
   }
 }

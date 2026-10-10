@@ -21,6 +21,8 @@ import { db } from '../db/db';
 import { readerFor, recordWrite } from '../db/read-consistency';
 import {
   exercises,
+  exercisesTrainMuscles,
+  muscles,
   sets,
   userProgramSchedule,
   workouts,
@@ -567,11 +569,46 @@ export class WorkoutsService {
       }
 
       // recordSet/updateSet hold the same row lock, so this is the final set list.
-      const performedSets = await tx
-        .select()
+      const setRows = await tx
+        .select({
+          set: sets,
+          exerciseName: exercises.name,
+          muscleId: muscles.id,
+          muscleCommonName: muscles.commonName,
+        })
         .from(sets)
+        .leftJoin(exercises, eq(exercises.id, sets.exerciseId))
+        .leftJoin(
+          exercisesTrainMuscles,
+          eq(exercisesTrainMuscles.exerciseId, sets.exerciseId),
+        )
+        .leftJoin(muscles, eq(muscles.id, exercisesTrainMuscles.muscleId))
         .where(eq(sets.workoutId, workoutId))
         .orderBy(sets.id);
+      const performedSets = [
+        ...new Map(setRows.map((row) => [row.set.id, row])).values(),
+      ].map((row) => ({
+        ...row.set,
+        exerciseName: row.exerciseName,
+        muscleGroups: setRows
+          .filter(
+            (candidate) =>
+              candidate.set.id === row.set.id && candidate.muscleId !== null,
+          )
+          .map((candidate) => ({
+            id: candidate.muscleId!,
+            commonName: candidate.muscleCommonName!,
+          })),
+      }));
+      const schedule = workout.scheduleId
+        ? (
+            await tx
+              .select({ scheduledFor: userProgramSchedule.scheduledFor })
+              .from(userProgramSchedule)
+              .where(eq(userProgramSchedule.id, workout.scheduleId))
+              .limit(1)
+          )[0]
+        : undefined;
       const totalSeconds = Math.max(
         0,
         Math.floor((finishedAt.getTime() - workout.createdAt.getTime()) / 1000),
@@ -590,6 +627,7 @@ export class WorkoutsService {
           durationSeconds,
           pausedSeconds: Math.max(0, totalSeconds - durationSeconds),
           ...performedSetsPayload(performedSets),
+          scheduledFor: schedule?.scheduledFor ?? null,
         },
       });
 

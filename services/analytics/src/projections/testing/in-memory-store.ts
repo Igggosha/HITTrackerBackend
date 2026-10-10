@@ -10,6 +10,7 @@ import type {
   BodyMetricFact,
   EventSource,
   FinishedWorkoutFact,
+  ScheduledAssignmentFact,
   ReadModelStore,
   ReadModelTx,
 } from '../read-model-store';
@@ -25,6 +26,7 @@ export type MemoryState = {
   records: Map<string, PersonalRecord & { userId: number; writes: number }>;
   progress: Map<string, DayProgress>;
   bodyMetrics: Map<number, BodyMetricFact>;
+  assignments: Map<number, ScheduledAssignmentFact>;
 };
 
 function emptyState(): MemoryState {
@@ -38,6 +40,7 @@ function emptyState(): MemoryState {
     records: new Map(),
     progress: new Map(),
     bodyMetrics: new Map(),
+    assignments: new Map(),
   };
 }
 
@@ -54,6 +57,7 @@ function cloneState(state: MemoryState): MemoryState {
     ),
     progress: new Map(state.progress),
     bodyMetrics: new Map(state.bodyMetrics),
+    assignments: new Map(state.assignments),
   };
 }
 
@@ -96,8 +100,13 @@ class MemoryTx implements ReadModelTx {
   }
 
   insertFinishedWorkout(fact: FinishedWorkoutFact) {
-    if (this.s.workouts.has(fact.workoutId)) return Promise.resolve(false);
     const { sets, ...workout } = fact;
+    const existing = this.s.workouts.get(fact.workoutId);
+    if (
+      existing &&
+      JSON.stringify(existing.payload) === JSON.stringify(workout.payload)
+    )
+      return Promise.resolve(false);
     this.s.workouts.set(fact.workoutId, workout);
     for (const set of sets)
       if (!this.s.sets.has(set.setId))
@@ -110,6 +119,27 @@ class MemoryTx implements ReadModelTx {
           finishedAt: fact.finishedAt,
         });
     return Promise.resolve(true);
+  }
+
+  insertScheduledAssignments(facts: readonly ScheduledAssignmentFact[]) {
+    let inserted = 0;
+    for (const fact of facts) {
+      if (this.s.assignments.has(fact.scheduleId)) continue;
+      this.s.assignments.set(fact.scheduleId, fact);
+      inserted += 1;
+    }
+    return Promise.resolve(inserted);
+  }
+
+  deleteScheduledAssignments(userId: number, scheduleIds: readonly number[]) {
+    let deleted = 0;
+    for (const scheduleId of scheduleIds) {
+      const assignment = this.s.assignments.get(scheduleId);
+      if (assignment?.userId !== userId) continue;
+      this.s.assignments.delete(scheduleId);
+      deleted += 1;
+    }
+    return Promise.resolve(deleted);
   }
 
   workoutTotalsBetween(userId: number, from: Date, to: Date) {
@@ -212,6 +242,7 @@ class MemoryTx implements ReadModelTx {
     drop(this.s.weeks, (w) => w.userId);
     drop(this.s.records, (r) => r.userId);
     drop(this.s.bodyMetrics, (m) => m.userId);
+    drop(this.s.assignments, (assignment) => assignment.userId);
     this.s.streaks.delete(userId);
     for (const key of [...this.s.progress.keys()])
       if (key.startsWith(`${userId}:`)) this.s.progress.delete(key);

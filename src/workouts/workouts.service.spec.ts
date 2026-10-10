@@ -124,25 +124,38 @@ describe('WorkoutsService transactions', () => {
       fake.returns('update', workouts, [workoutRow({ status: 'completed' })]);
       fake.returns('select', sets, [
         {
-          id: 1,
-          workoutId: 7,
-          exerciseId: 3,
-          weight: 100,
-          reps: 5,
-          rpe: 8,
-          isFailure: false,
-          isDropSet: false,
+          set: {
+            id: 1,
+            workoutId: 7,
+            exerciseId: 3,
+            weight: 100,
+            reps: 5,
+            rpe: 8,
+            isFailure: false,
+            isDropSet: false,
+          },
+          exerciseName: 'Barbell bench press',
+          muscleId: 1,
+          muscleCommonName: 'Chest',
         },
         {
-          id: 2,
-          workoutId: 7,
-          exerciseId: 5,
-          weight: 40,
-          reps: 10,
-          rpe: null,
-          isFailure: true,
-          isDropSet: true,
+          set: {
+            id: 2,
+            workoutId: 7,
+            exerciseId: 5,
+            weight: 40,
+            reps: 10,
+            rpe: null,
+            isFailure: true,
+            isDropSet: true,
+          },
+          exerciseName: 'Lat pulldown',
+          muscleId: 2,
+          muscleCommonName: 'Lats',
         },
+      ]);
+      fake.returns('select', userProgramSchedule, [
+        { scheduledFor: '2026-10-10' },
       ]);
 
       const result = await service.finishWorkout(7, 1, { notes: 'good' });
@@ -158,6 +171,7 @@ describe('WorkoutsService transactions', () => {
           workoutId: 7,
           userId: 1,
           scheduleId: 4,
+          scheduledFor: '2026-10-10',
           setCount: 2,
           exerciseIds: [3, 5],
           totalVolume: 900,

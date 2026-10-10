@@ -2,6 +2,7 @@ import {
   BACKFILL_NAMESPACE,
   backfillEventId,
   bodyMetricRow,
+  programScheduledRow,
   uuidV5,
   workoutFinishedRow,
 } from './backfill-analytics-events.logic';
@@ -11,6 +12,7 @@ const workout = {
   userId: 7,
   programId: null,
   scheduleId: 3,
+  scheduledFor: '2026-09-01',
   startedAt: '2026-09-01T10:00:00.000Z',
   finishedAt: '2026-09-01T11:00:00.000Z',
   durationSeconds: 3000,
@@ -44,6 +46,9 @@ describe('analytics backfill', () => {
     );
     expect(backfillEventId('workout.finished', 43)).not.toBe(id);
     expect(backfillEventId('body_metric.recorded', 42)).not.toBe(id);
+    expect(workoutFinishedRow(workout).id).toBe(
+      backfillEventId('workout.finished.analytics-v2', 42),
+    );
     expect(workoutFinishedRow(workout)).toEqual(workoutFinishedRow(workout));
   });
 
@@ -82,6 +87,23 @@ describe('analytics backfill', () => {
       aggregateType: 'user',
       aggregateId: '7',
       payload: { metricId: 9, userId: 7, source: 'body_metrics' },
+    });
+  });
+
+  it('normalizes database Date values for scheduled assignments', () => {
+    expect(
+      programScheduledRow({
+        userId: 7,
+        programId: 4,
+        scheduleId: 9,
+        scheduledFor: new Date('2026-09-02T00:00:00.000Z'),
+      }),
+    ).toMatchObject({
+      occurredAt: '2026-09-02T00:00:00.000Z',
+      payload: {
+        scheduledFor: '2026-09-02',
+        assignments: [{ scheduleId: 9, scheduledFor: '2026-09-02' }],
+      },
     });
   });
 });

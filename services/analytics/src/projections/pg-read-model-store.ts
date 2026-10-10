@@ -9,6 +9,7 @@ import {
   finishedWorkouts,
   personalRecords,
   processedEvents,
+  scheduledAssignments,
   trainingStreaks,
   weeklyVolume,
 } from '../db/schema';
@@ -71,6 +72,8 @@ class PgReadModelTx implements ReadModelTx {
         workoutId: fact.workoutId,
         userId: fact.userId,
         eventId: fact.eventId,
+        scheduleId: fact.scheduleId,
+        scheduledFor: fact.scheduledFor,
         startedAt: fact.startedAt,
         finishedAt: fact.finishedAt,
         durationSeconds: fact.durationSeconds,
@@ -79,7 +82,22 @@ class PgReadModelTx implements ReadModelTx {
         volumeKg: fact.volumeKg,
         payload: fact.payload,
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: finishedWorkouts.workoutId,
+        set: {
+          eventId: fact.eventId,
+          scheduleId: fact.scheduleId,
+          scheduledFor: fact.scheduledFor,
+          startedAt: fact.startedAt,
+          finishedAt: fact.finishedAt,
+          durationSeconds: fact.durationSeconds,
+          setCount: fact.setCount,
+          reps: fact.reps,
+          volumeKg: fact.volumeKg,
+          payload: fact.payload,
+        },
+        setWhere: sql`${finishedWorkouts.payload} is distinct from excluded.payload`,
+      })
       .returning({ workoutId: finishedWorkouts.workoutId });
     if (!rows.length) return false;
     if (fact.sets.length)
@@ -95,6 +113,35 @@ class PgReadModelTx implements ReadModelTx {
         )
         .onConflictDoNothing();
     return true;
+  }
+
+  async insertScheduledAssignments(
+    facts: readonly import('./read-model-store').ScheduledAssignmentFact[],
+  ) {
+    if (!facts.length) return 0;
+    const rows = await this.tx
+      .insert(scheduledAssignments)
+      .values([...facts])
+      .onConflictDoNothing()
+      .returning({ scheduleId: scheduledAssignments.scheduleId });
+    return rows.length;
+  }
+
+  async deleteScheduledAssignments(
+    userId: number,
+    scheduleIds: readonly number[],
+  ) {
+    if (!scheduleIds.length) return 0;
+    const rows = await this.tx
+      .delete(scheduledAssignments)
+      .where(
+        and(
+          eq(scheduledAssignments.userId, userId),
+          inArray(scheduledAssignments.scheduleId, [...scheduleIds]),
+        ),
+      )
+      .returning({ scheduleId: scheduledAssignments.scheduleId });
+    return rows.length;
   }
 
   workoutTotalsBetween(userId: number, fromInclusive: Date, toExclusive: Date) {
@@ -224,6 +271,7 @@ class PgReadModelTx implements ReadModelTx {
       trainingStreaks,
       exerciseProgress,
       bodyMetricsTimeline,
+      scheduledAssignments,
     ])
       await this.tx.delete(table).where(eq(table.userId, userId));
     await this.tx

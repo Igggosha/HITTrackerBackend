@@ -16,13 +16,13 @@ drizzle/           versioned migrations of this database only
 
 ## Commands (from this directory)
 
-| Command | What |
-| --- | --- |
-| `npm ci` | install (own `package-lock.json`) |
-| `npm test` | unit + HTTP tests (no database/Kafka needed) |
-| `npm run typecheck` / `npm run build` | `tsc --noEmit` / `nest build` -> `dist/services/analytics/src/main.js` |
-| `npm run db:generate` / `npm run db:migrate` | drizzle-kit on `ANALYTICS_DATABASE_URL` |
-| lint (from the repo root) | `npx eslint -c services/analytics/eslint.config.mjs "services/analytics/{src,test}/**/*.ts"` |
+| Command                                      | What                                                                                         |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `npm ci`                                     | install (own `package-lock.json`)                                                            |
+| `npm test`                                   | unit + HTTP tests (no database/Kafka needed)                                                 |
+| `npm run typecheck` / `npm run build`        | `tsc --noEmit` / `nest build` -> `dist/services/analytics/src/main.js`                       |
+| `npm run db:generate` / `npm run db:migrate` | drizzle-kit on `ANALYTICS_DATABASE_URL`                                                      |
+| lint (from the repo root)                    | `npx eslint -c services/analytics/eslint.config.mjs "services/analytics/{src,test}/**/*.ts"` |
 
 Environment: `ANALYTICS_DATABASE_URL` (required), `JWT_SECRET` (the main
 API's, required), `KAFKA_BROKERS` (unset = read API only), `METRICS_TOKEN`,
@@ -49,12 +49,36 @@ consistent: a finished workout normally appears within about a second.
 {
   "userId": 7,
   "generatedAt": "2026-09-28T10:15:00.000Z",
-  "thisWeek": { "isoWeekStart": "2026-09-28", "workouts": 2, "sets": 9, "reps": 61, "volumeKg": 4720, "durationSeconds": 5400 },
-  "lastWeek": { "isoWeekStart": "2026-09-21", "workouts": 3, "sets": 14, "reps": 98, "volumeKg": 6100.5, "durationSeconds": 8100 },
+  "thisWeek": {
+    "isoWeekStart": "2026-09-28",
+    "workouts": 2,
+    "sets": 9,
+    "reps": 61,
+    "volumeKg": 4720,
+    "durationSeconds": 5400
+  },
+  "lastWeek": {
+    "isoWeekStart": "2026-09-21",
+    "workouts": 3,
+    "sets": 14,
+    "reps": 98,
+    "volumeKg": 6100.5,
+    "durationSeconds": 8100
+  },
   "volumeChangePercent": -22.62,
-  "streak": { "currentDays": 2, "longestDays": 5, "lastWorkoutDate": "2026-09-28" },
+  "streak": {
+    "currentDays": 2,
+    "longestDays": 5,
+    "lastWorkoutDate": "2026-09-28"
+  },
   "personalRecordCount": 6,
-  "lastWorkout": { "workoutId": 812, "finishedAt": "2026-09-28T09:58:12.000Z", "durationSeconds": 2700, "setCount": 5, "volumeKg": 2600 }
+  "lastWorkout": {
+    "workoutId": 812,
+    "finishedAt": "2026-09-28T09:58:12.000Z",
+    "durationSeconds": 2700,
+    "setCount": 5,
+    "volumeKg": 2600
+  }
 }
 ```
 
@@ -62,19 +86,66 @@ consistent: a finished workout normally appears within about a second.
 `null` and every number 0 for a user without finished workouts.
 `streak.currentDays` is 0 once a whole UTC day passed without a workout.
 
+### Period analytics
+
+`GET /analytics/me/overview?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+uses inclusive timestamp bounds with an explicit `Z` or numeric offset. The
+response contains period `summary`, daily `activity`, `intensityTrend`, the top
+five `muscleGroups`, and `plan`. Finished workouts supply active minutes,
+working sets, volume, RPE, exercise names, and muscle mappings. RPE averages
+omit sets without RPE and are `null` when no set is rated.
+
+`plan.adherencePercent` is completed scheduled assignments divided by scheduled
+assignments whose local day has ended. A late linked completion counts for
+adherence on its original scheduled date. Streaks use consecutive scheduled
+days: every assignment on the date must be completed on that same local date;
+days without a schedule are skipped, unfinished today does not break the run,
+and a late completion does not repair it.
+
+`GET /analytics/me/intensity?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+returns average RPE, a local-date trend, total volume, density, failure counts,
+and RPE bands `4-5`, `6-7`, and `8-10`. `totalSets` includes sets without RPE;
+unrated sets are omitted from the average and distribution denominator. Density
+divides volume by persisted active duration and is `null` when it is zero.
+
+`GET /analytics/me/muscle-groups?from=<ISO timestamp>&to=<ISO timestamp>&timeZone=<IANA zone>`
+returns working-set counts from finished workout snapshots. A set contributes
+once to every canonical muscle group mapped to its exercise, so totals across
+groups are intentionally non-additive.
+
+`GET /analytics/me/strength?from=<ISO timestamp>&to=<ISO timestamp>` returns one
+row per performed exercise with its catalog name, latest set, best set, best
+Epley e1RM, and selected-period weight change.
+
+`GET /analytics/me/exercises/:exerciseId/sets?from=<ISO timestamp>&to=<ISO timestamp>`
+returns sets from completed workouts in ascending workout completion time. Set
+dates use the workout completion timestamp; each row includes `workoutId`,
+`setNumber`, weight, reps, optional RPE, and failure state. The event contract
+has no warm-up marker, so all recorded performed sets are treated as working
+sets.
+
 `GET /analytics/me/weekly-volume?weeks=12` (`weeks` 1..104, default 12):
 `{ "weeks": [ { "isoWeekStart": "2026-07-13", "workouts": 0, "sets": 0, "reps": 0, "volumeKg": 0, "durationSeconds": 0 }, ... ] }`
+
 - exactly `weeks` entries, oldest first, ending with the current ISO week (Monday, UTC); empty weeks are zeros.
 
 `GET /analytics/me/personal-records`
 
 ```json
-{ "records": [ {
-  "exerciseId": 3,
-  "bestWeightKg": 105, "bestRepsAtWeight": 3,
-  "achievedAt": "2026-09-28T09:58:12.000Z", "workoutId": 812,
-  "bestE1rmKg": 116.67, "bestE1rmAchievedAt": "2026-09-22T18:00:00.000Z", "bestE1rmWorkoutId": 790
-} ] }
+{
+  "records": [
+    {
+      "exerciseId": 3,
+      "bestWeightKg": 105,
+      "bestRepsAtWeight": 3,
+      "achievedAt": "2026-09-28T09:58:12.000Z",
+      "workoutId": 812,
+      "bestE1rmKg": 116.67,
+      "bestE1rmAchievedAt": "2026-09-22T18:00:00.000Z",
+      "bestE1rmWorkoutId": 790
+    }
+  ]
+}
 ```
 
 The heaviest set (weight, then reps) and the best Epley e1RM

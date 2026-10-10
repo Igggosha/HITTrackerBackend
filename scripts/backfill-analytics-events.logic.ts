@@ -26,7 +26,11 @@ export function uuidV5(name: string, namespace: string): string {
 }
 
 export function backfillEventId(
-  type: 'workout.finished' | 'body_metric.recorded',
+  type:
+    | 'workout.finished'
+    | 'workout.finished.analytics-v2'
+    | 'body_metric.recorded'
+    | 'program.scheduled',
   key: number,
 ): string {
   return uuidV5(`${type}:${key}`, BACKFILL_NAMESPACE);
@@ -47,6 +51,7 @@ export type HistoricalWorkout = {
   userId: number;
   programId: number | null;
   scheduleId: number | null;
+  scheduledFor: string | Date | null;
   /** ISO timestamps (UTC). */
   startedAt: string;
   finishedAt: string;
@@ -59,6 +64,8 @@ export type HistoricalWorkout = {
     rpe: number | null;
     isFailure: boolean;
     isDropSet: boolean;
+    exerciseName?: string | null;
+    muscleGroups?: { id: number; commonName: string }[];
   }[];
 };
 
@@ -81,9 +88,14 @@ export function workoutFinishedRow(workout: HistoricalWorkout): OutboxRow {
     durationSeconds,
     pausedSeconds: Math.max(0, totalSeconds - durationSeconds),
     ...performedSetsPayload(workout.sets),
+    scheduledFor: workout.scheduledFor
+      ? calendarDate(workout.scheduledFor)
+      : null,
   };
   return {
-    id: backfillEventId('workout.finished', workout.id),
+    // A distinct deterministic id lets this richer fact update projections
+    // created by the original analytics backfill.
+    id: backfillEventId('workout.finished.analytics-v2', workout.id),
     aggregateType: outboxEventDefinitions['workout.finished'].aggregateType,
     aggregateId: String(workout.id),
     eventType: 'workout.finished',
@@ -91,6 +103,40 @@ export function workoutFinishedRow(workout: HistoricalWorkout): OutboxRow {
     payload,
     occurredAt: workout.finishedAt,
   };
+}
+
+export function programScheduledRow(row: {
+  userId: number;
+  programId: number;
+  scheduleId: number;
+  scheduledFor: string | Date;
+}): OutboxRow {
+  const scheduledFor = calendarDate(row.scheduledFor);
+  return {
+    id: backfillEventId('program.scheduled', row.scheduleId),
+    aggregateType: outboxEventDefinitions['program.scheduled'].aggregateType,
+    aggregateId: String(row.userId),
+    eventType: 'program.scheduled',
+    eventVersion: outboxEventDefinitions['program.scheduled'].version,
+    payload: {
+      userId: row.userId,
+      programId: row.programId,
+      scheduledFor,
+      repeat: 'none',
+      repeatUntil: null,
+      seriesId: null,
+      scheduleIds: [row.scheduleId],
+      assignments: [{ scheduleId: row.scheduleId, scheduledFor }],
+    },
+    occurredAt: `${scheduledFor}T00:00:00.000Z`,
+  };
+}
+
+function calendarDate(value: string | Date): string {
+  const normalized = value instanceof Date ? value.toISOString() : value;
+  const match = /^\d{4}-\d{2}-\d{2}/.exec(normalized);
+  if (!match) throw new Error(`Invalid calendar date: ${normalized}`);
+  return match[0];
 }
 
 export function bodyMetricRow(metric: {

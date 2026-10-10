@@ -164,6 +164,49 @@ describe('Projector', () => {
     expect(store.state.bodyMetrics.size).toBe(1);
   });
 
+  it('adds and removes scheduled assignments idempotently', async () => {
+    const { store, projector } = setup();
+    const scheduled = {
+      id: '00000000-0000-5000-8000-000000000010',
+      type: 'program.scheduled' as const,
+      version: 1 as const,
+      occurredAt: '2026-09-20T08:00:00Z',
+      aggregateType: 'user',
+      aggregateId: '7',
+      payload: {
+        userId: 7,
+        programId: 3,
+        scheduledFor: '2026-09-22',
+        repeat: 'none' as const,
+        repeatUntil: null,
+        seriesId: null,
+        scheduleIds: [41],
+        assignments: [{ scheduleId: 41, scheduledFor: '2026-09-22' }],
+      },
+    };
+    expect(await projector.apply(scheduled, source())).toBe('applied');
+    expect(store.state.assignments.get(41)).toMatchObject({
+      userId: 7,
+      programId: 3,
+      scheduledFor: '2026-09-22',
+    });
+    expect(
+      await projector.apply(
+        {
+          id: '00000000-0000-5000-8000-000000000011',
+          type: 'program.unscheduled',
+          version: 1,
+          occurredAt: '2026-09-20T09:00:00Z',
+          aggregateType: 'user',
+          aggregateId: '7',
+          payload: { userId: 7, scheduleIds: [41] },
+        },
+        source(),
+      ),
+    ).toBe('applied');
+    expect(store.state.assignments.has(41)).toBe(false);
+  });
+
   it('user.deleted erases every row of that user only, and late events stay erased', async () => {
     const { store, projector } = setup();
     await projector.apply(w1(), source());
