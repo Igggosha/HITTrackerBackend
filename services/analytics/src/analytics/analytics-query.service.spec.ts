@@ -183,6 +183,10 @@ describe('AnalyticsQueryService new read models', () => {
       setsToFailure: 2,
       totalSets: 3,
       failurePercentage: 66.67,
+      setRpeTrend: [
+        { date: '2026-08-21', setNumber: 1, rpe: 8 },
+        { date: '2026-08-21', setNumber: 2, rpe: 4 },
+      ],
       trend: [{ date: '2026-08-21', averageRpe: 6, volumeKg: 1350 }],
       rpeDistribution: [
         { range: '4-5', sets: 1, percentage: 50 },
@@ -208,6 +212,7 @@ describe('AnalyticsQueryService new read models', () => {
       setsToFailure: 0,
       totalSets: 0,
       failurePercentage: null,
+      setRpeTrend: [],
       trend: [],
       rpeDistribution: [
         { range: '4-5', sets: 0, percentage: 0 },

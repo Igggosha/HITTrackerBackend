@@ -548,6 +548,19 @@ export class AnalyticsQueryService {
       setsToFailure,
       totalSets: sets.length,
       failurePercentage: percentage(setsToFailure, sets.length),
+      setRpeTrend: workouts.flatMap((workout) =>
+        workout.sets.flatMap((set, index) =>
+          set.rpe === null
+            ? []
+            : [
+                {
+                  date: localDate(workout.finishedAt, timeZone),
+                  setNumber: index + 1,
+                  rpe: set.rpe,
+                },
+              ],
+        ),
+      ),
       trend: [...trend]
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([date, day]) => ({
