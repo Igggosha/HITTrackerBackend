@@ -284,8 +284,10 @@ sweep cleans abandoned multipart uploads. The API never uses the MinIO root
 credentials.
 The patched MinIO release is built from its official source and verified
 against `MINIO_SOURCE_COMMIT`, because upstream no longer publishes that server
-release as an official container image. The `mc` bootstrap image remains
-registry-pinned.
+release as an official container image. The `mc` bootstrap and backup client
+are likewise built from the pinned official source and verified against
+`MINIO_MC_SOURCE_COMMIT`; a clean Docker installation no longer depends on the
+removed Quay/Docker Hub images.
 
 MinIO publishes no ports on the host. The API reaches the S3 endpoint at
 `http://minio:9000` over the private Docker network. For browser and phone

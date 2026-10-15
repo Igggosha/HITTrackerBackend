@@ -1,7 +1,20 @@
-ARG MC_IMAGE=quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
-FROM ${MC_IMAGE} AS mc
+FROM golang:1.24.8-alpine3.22 AS mc-build
+
+ARG MC_RELEASE=RELEASE.2025-08-13T08-35-41Z
+ARG MC_COMMIT=7394ce0dd2a80935aded936b09fa12cbb3cb8096
+
+RUN apk add --no-cache ca-certificates git
+WORKDIR /src
+RUN git init && \
+    git remote add origin https://github.com/minio/mc.git && \
+    git fetch --depth 1 origin "refs/tags/${MC_RELEASE}" && \
+    git checkout --detach FETCH_HEAD && \
+    test "$(git rev-parse HEAD)" = "${MC_COMMIT}"
+RUN mkdir /out && \
+    LDFLAGS="$(MC_RELEASE=RELEASE go run buildscripts/gen-ldflags.go)" && \
+    CGO_ENABLED=0 go build -trimpath --ldflags "${LDFLAGS}" -o /out/mc
 
 FROM postgres:17.6-alpine
-COPY --from=mc /usr/bin/mc /usr/local/bin/mc
+COPY --from=mc-build /out/mc /usr/local/bin/mc
 ENTRYPOINT ["/bin/sh", "/scripts/entrypoint.sh"]
 CMD ["schedule"]

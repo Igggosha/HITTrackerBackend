@@ -197,7 +197,13 @@ services:
   # Creates the bucket and a bucket-scoped service account for the API.
   # The bucket stays private: objects are read through short-lived presigned URLs.
   minio-init:
-    image: quay.io/minio/mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+    image: hit-tracker-mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+    build:
+      context: .
+      dockerfile: docker/mc.Dockerfile
+      args:
+        MC_RELEASE: ${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+        MC_COMMIT: ${MINIO_MC_SOURCE_COMMIT:-7394ce0dd2a80935aded936b09fa12cbb3cb8096}
     depends_on:
       minio:
         condition: service_healthy
@@ -231,7 +237,8 @@ services:
     build:
       context: ./docker/backup
       args:
-        MC_IMAGE: quay.io/minio/mc:${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+        MC_RELEASE: ${MINIO_MC_IMAGE_TAG:-RELEASE.2025-08-13T08-35-41Z}
+        MC_COMMIT: ${MINIO_MC_SOURCE_COMMIT:-7394ce0dd2a80935aded936b09fa12cbb3cb8096}
     depends_on:
       postgres:
         condition: service_healthy
@@ -685,6 +692,9 @@ services:
       args:
         EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:?Set public HTTPS API URL for the web build}
         EXPO_PUBLIC_WEB_URL: ${EXPO_PUBLIC_WEB_URL:?Set public HTTPS web URL for the web build}
+        RELEASE_BUILD: ${FRONTEND_RELEASE_BUILD:-1}
+    ports:
+      - '127.0.0.1:${FRONTEND_PORT:-5173}:80'
     restart: unless-stopped
     networks:
       - edge
