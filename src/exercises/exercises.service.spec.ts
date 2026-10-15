@@ -70,6 +70,7 @@ describe('ExercisesService likes', () => {
           videoUrl: null,
           difficulty: 2,
           muscleId: 1,
+          muscleRole: 'primary',
           muscleCommonName: 'Chest',
           scientificName: null,
         },
@@ -85,7 +86,13 @@ describe('ExercisesService likes', () => {
       imageUrl: null,
       difficulty: 2,
       muscles: [
-        { id: 1, name: 'Chest', commonName: 'Chest', scientificName: null },
+        {
+          id: 1,
+          name: 'Chest',
+          commonName: 'Chest',
+          scientificName: null,
+          role: 'primary',
+        },
       ],
     });
   });
@@ -108,5 +115,29 @@ describe('ExercisesService concurrent creation', () => {
     await expect(
       service.createExercise({ name: 'Squat' } as any),
     ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('ExercisesService muscle roles', () => {
+  const service = new ExercisesService(storage, outbox);
+
+  it('rejects the same muscle in both role groups', async () => {
+    await expect(
+      service.createExercise({
+        name: 'Bench press',
+        primaryMuscleIds: [1],
+        secondaryMuscleIds: [1],
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'EXERCISE_MUSCLE_ROLE_CONFLICT' },
+    });
+  });
+
+  it('requires both role groups for an atomic muscle PATCH', async () => {
+    await expect(
+      service.updateExercise(2, { primaryMuscleIds: [1] }),
+    ).rejects.toMatchObject({
+      response: { code: 'EXERCISE_MUSCLE_GROUPS_INCOMPLETE' },
+    });
   });
 });

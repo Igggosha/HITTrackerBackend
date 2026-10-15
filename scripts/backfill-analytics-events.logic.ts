@@ -65,7 +65,11 @@ export type HistoricalWorkout = {
     isFailure: boolean;
     isDropSet: boolean;
     exerciseName?: string | null;
-    muscleGroups?: { id: number; commonName: string }[];
+    muscleGroups?: {
+      id: number;
+      commonName: string;
+      role?: 'primary' | 'secondary';
+    }[];
   }[];
 };
 

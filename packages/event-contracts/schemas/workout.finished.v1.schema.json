@@ -107,6 +107,9 @@
                     },
                     "commonName": {
                       "type": "string"
+                    },
+                    "role": {
+                      "enum": ["primary", "secondary"]
                     }
                   },
                   "required": ["id", "commonName"],

@@ -90,9 +90,10 @@ async function backfillWorkouts(client: Client, dryRun: boolean) {
       exercise_name: string | null;
       muscle_id: number | null;
       muscle_common_name: string | null;
+      muscle_role: 'primary' | 'secondary' | null;
     }>(
       `select s.id, s.workout_id, s.exercise_id, s.weight, s.reps, s.rpe, s.is_failure, s.is_drop_set,
-              e.name as exercise_name, m.id as muscle_id, m.common_name as muscle_common_name
+              e.name as exercise_name, m.id as muscle_id, m.common_name as muscle_common_name, etm.role as muscle_role
          from sets s left join exercises e on e.id = s.exercise_id
          left join exercises_train_muscles etm on etm.exercise_id = s.exercise_id
          left join muscles m on m.id = etm.muscle_id
@@ -129,6 +130,7 @@ async function backfillWorkouts(client: Client, dryRun: boolean) {
             .map((m) => ({
               id: m.muscle_id!,
               commonName: m.muscle_common_name!,
+              role: m.muscle_role ?? 'primary',
             })),
         })) satisfies HistoricalWorkout['sets'],
       }),

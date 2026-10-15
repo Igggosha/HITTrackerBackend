@@ -47,7 +47,11 @@ const fields = {
             type: 'array',
             items: {
               type: 'object',
-              properties: { id: integer, commonName: string },
+              properties: {
+                id: integer,
+                commonName: string,
+                role: { enum: ['primary', 'secondary'] },
+              },
               required: ['id', 'commonName'],
               additionalProperties: false,
             },

@@ -44,5 +44,13 @@ export class UpdateExerciseDto {
   @Type(() => Number)
   @IsInt({ each: true })
   @Min(1, { each: true })
-  muscleIds?: number[];
+  primaryMuscleIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  secondaryMuscleIds?: number[];
 }

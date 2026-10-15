@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
@@ -108,6 +109,7 @@ export class ExercisesService {
         imageKey: exercises.imageKey,
         difficulty: exercises.difficulty,
         muscleId: muscles.id,
+        muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
         scientificName: muscles.scientificName,
       })
@@ -164,6 +166,7 @@ export class ExercisesService {
         name: string | null;
         commonName: string | null;
         scientificName: string | null;
+        role: string;
       }>;
     };
     const exercisesMap = new Map<number, ExerciseWithMuscles>();
@@ -194,6 +197,7 @@ export class ExercisesService {
             name: row.muscleCommonName,
             commonName: row.muscleCommonName,
             scientificName: row.scientificName,
+            role: row.muscleRole as 'primary' | 'secondary',
           });
         }
       }
@@ -213,6 +217,7 @@ export class ExercisesService {
         imageKey: exercises.imageKey,
         difficulty: exercises.difficulty,
         muscleId: muscles.id,
+        muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
         scientificName: muscles.scientificName,
       })
@@ -242,6 +247,7 @@ export class ExercisesService {
                 name: row.muscleCommonName,
                 commonName: row.muscleCommonName,
                 scientificName: row.scientificName,
+                role: row.muscleRole as 'primary' | 'secondary',
               },
             ],
       ),
@@ -252,6 +258,14 @@ export class ExercisesService {
    * Створення вправи
    */
   async createExercise(data: CreateExerciseDto) {
+    const primaryMuscleIds = data.primaryMuscleIds ?? [];
+    const secondaryMuscleIds = data.secondaryMuscleIds ?? [];
+    if (primaryMuscleIds.some((id) => secondaryMuscleIds.includes(id))) {
+      throw new BadRequestException({
+        message: 'A muscle cannot be both primary and secondary.',
+        code: 'EXERCISE_MUSCLE_ROLE_CONFLICT',
+      });
+    }
     const trimmedName = data.name.trim();
 
     const existing = await db
@@ -280,12 +294,19 @@ export class ExercisesService {
           })
           .returning();
 
-        if (data.muscleIds && data.muscleIds.length > 0) {
-          const uniqueMuscleIds = Array.from(new Set(data.muscleIds));
-          const relations = uniqueMuscleIds.map((muscleId) => ({
-            exerciseId: newExercise.id,
-            muscleId: muscleId,
-          }));
+        if (primaryMuscleIds.length || secondaryMuscleIds.length) {
+          const relations = [
+            ...primaryMuscleIds.map((muscleId) => ({
+              exerciseId: newExercise.id,
+              muscleId,
+              role: 'primary' as const,
+            })),
+            ...secondaryMuscleIds.map((muscleId) => ({
+              exerciseId: newExercise.id,
+              muscleId,
+              role: 'secondary' as const,
+            })),
+          ];
           await tx.insert(exercisesTrainMuscles).values(relations);
         }
 
@@ -293,7 +314,8 @@ export class ExercisesService {
 
         return {
           ...newExercise,
-          muscleIds: data.muscleIds || [],
+          primaryMuscleIds,
+          secondaryMuscleIds,
         };
       })
       .then(
@@ -315,7 +337,24 @@ export class ExercisesService {
   }
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
-    const { muscleIds, ...exercise } = data;
+    const { primaryMuscleIds, secondaryMuscleIds, ...exercise } = data;
+    const changesMuscles =
+      primaryMuscleIds !== undefined || secondaryMuscleIds !== undefined;
+    if (
+      changesMuscles &&
+      (primaryMuscleIds === undefined || secondaryMuscleIds === undefined)
+    ) {
+      throw new BadRequestException({
+        message: 'Primary and secondary muscle lists must be updated together.',
+        code: 'EXERCISE_MUSCLE_GROUPS_INCOMPLETE',
+      });
+    }
+    if (primaryMuscleIds?.some((id) => secondaryMuscleIds!.includes(id))) {
+      throw new BadRequestException({
+        message: 'A muscle cannot be both primary and secondary.',
+        code: 'EXERCISE_MUSCLE_ROLE_CONFLICT',
+      });
+    }
     const changes = {
       ...(exercise.name !== undefined ? { name: exercise.name.trim() } : {}),
       ...(exercise.description !== undefined
@@ -348,22 +387,31 @@ export class ExercisesService {
           }
           if (!updated) throw new NotFoundException('Exercise not found');
 
-          if (muscleIds !== undefined) {
+          if (changesMuscles) {
             await tx
               .delete(exercisesTrainMuscles)
               .where(eq(exercisesTrainMuscles.exerciseId, id));
-            if (muscleIds.length) {
-              await tx
-                .insert(exercisesTrainMuscles)
-                .values(
-                  muscleIds.map((muscleId) => ({ exerciseId: id, muscleId })),
-                );
+            const primary = primaryMuscleIds ?? [];
+            const secondary = secondaryMuscleIds ?? [];
+            if (primary.length || secondary.length) {
+              await tx.insert(exercisesTrainMuscles).values([
+                ...primary.map((muscleId) => ({
+                  exerciseId: id,
+                  muscleId,
+                  role: 'primary' as const,
+                })),
+                ...secondary.map((muscleId) => ({
+                  exerciseId: id,
+                  muscleId,
+                  role: 'secondary' as const,
+                })),
+              ]);
             }
           }
 
           await this.enqueueSearchChange(tx, id);
 
-          return { ...updated, muscleIds: muscleIds ?? undefined };
+          return { ...updated, primaryMuscleIds, secondaryMuscleIds };
         })
         .then((result) => this.withImageUrl(result));
     } catch (error: unknown) {

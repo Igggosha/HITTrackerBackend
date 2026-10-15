@@ -35,7 +35,11 @@ type WorkoutSet = {
   setId?: number;
   exerciseId: number;
   exerciseName?: string;
-  muscleGroups?: { id: number; commonName: string }[];
+  muscleGroups?: {
+    id: number;
+    commonName: string;
+    role?: 'primary' | 'secondary';
+  }[];
   weight: number;
   reps: number;
   rpe: number | null;
@@ -356,7 +360,13 @@ export class AnalyticsQueryService {
   private muscleTotals(workouts: ReturnType<typeof asWorkoutFact>[]) {
     const groups = new Map<
       number,
-      { muscleId: number; name: string; workingSets: number }
+      {
+        muscleId: number;
+        name: string;
+        workingSets: number;
+        primaryWorkingSets: number;
+        secondaryWorkingSets: number;
+      }
     >();
     for (const set of workouts.flatMap((workout) => workout.sets)) {
       for (const muscle of set.muscleGroups ?? []) {
@@ -365,8 +375,14 @@ export class AnalyticsQueryService {
           muscleId: muscle.id,
           name: muscle.commonName,
           workingSets: 0,
+          primaryWorkingSets: 0,
+          secondaryWorkingSets: 0,
         };
-        current.workingSets += 1;
+        if (muscle.role === 'secondary') current.secondaryWorkingSets += 1;
+        else current.primaryWorkingSets += 1;
+        current.workingSets = round2(
+          current.primaryWorkingSets + current.secondaryWorkingSets * 0.5,
+        );
         groups.set(muscle.id, current);
       }
     }

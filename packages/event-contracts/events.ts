@@ -29,7 +29,11 @@ export type PerformedSetV1 = {
   /** weight * reps */
   volume: number;
   exerciseName?: string;
-  muscleGroups?: { id: number; commonName: string }[];
+  muscleGroups?: {
+    id: number;
+    commonName: string;
+    role?: 'primary' | 'secondary';
+  }[];
 };
 
 export type WorkoutFinishedV1 = {
@@ -225,7 +229,11 @@ export function performedSetsPayload(
     isFailure: boolean;
     isDropSet: boolean;
     exerciseName?: string | null;
-    muscleGroups?: { id: number; commonName: string }[];
+    muscleGroups?: {
+      id: number;
+      commonName: string;
+      role?: 'primary' | 'secondary';
+    }[];
   }[],
 ) {
   const sets: PerformedSetV1[] = rows.map((row) => ({

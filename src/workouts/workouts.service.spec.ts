@@ -136,6 +136,7 @@ describe('WorkoutsService transactions', () => {
           },
           exerciseName: 'Barbell bench press',
           muscleId: 1,
+          muscleRole: 'primary',
           muscleCommonName: 'Chest',
         },
         {
@@ -151,6 +152,7 @@ describe('WorkoutsService transactions', () => {
           },
           exerciseName: 'Lat pulldown',
           muscleId: 2,
+          muscleRole: 'secondary',
           muscleCommonName: 'Lats',
         },
       ]);
@@ -184,6 +186,7 @@ describe('WorkoutsService transactions', () => {
               volume: 500,
               isFailure: false,
               isDropSet: false,
+              muscleGroups: [{ id: 1, commonName: 'Chest', role: 'primary' }],
             },
             {
               setId: 2,
@@ -193,6 +196,7 @@ describe('WorkoutsService transactions', () => {
               volume: 400,
               isFailure: true,
               isDropSet: true,
+              muscleGroups: [{ id: 2, commonName: 'Lats', role: 'secondary' }],
             },
           ],
         },

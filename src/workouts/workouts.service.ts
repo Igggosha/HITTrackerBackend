@@ -574,6 +574,7 @@ export class WorkoutsService {
           set: sets,
           exerciseName: exercises.name,
           muscleId: muscles.id,
+          muscleRole: exercisesTrainMuscles.role,
           muscleCommonName: muscles.commonName,
         })
         .from(sets)
@@ -598,6 +599,7 @@ export class WorkoutsService {
           .map((candidate) => ({
             id: candidate.muscleId!,
             commonName: candidate.muscleCommonName!,
+            role: candidate.muscleRole as 'primary' | 'secondary',
           })),
       }));
       const schedule = workout.scheduleId

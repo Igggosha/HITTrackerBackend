@@ -238,6 +238,38 @@ describe('AnalyticsQueryService new read models', () => {
     ).resolves.toEqual({ muscleGroups: [] });
   });
 
+  it('uses fractional secondary sets and treats legacy roles as primary', async () => {
+    const muscle = (role?: 'primary' | 'secondary') => ({
+      id: 1,
+      commonName: 'Chest',
+      ...(role ? { role } : {}),
+    });
+    const { service } = setup([
+      workout(1, '2026-08-21T10:00:00Z', [
+        { ...set(3, 100, 5, 8, false), muscleGroups: [muscle('primary')] },
+        { ...set(4, 30, 10, 7, false), muscleGroups: [muscle('secondary')] },
+        { ...set(5, 20, 12, 6, false), muscleGroups: [muscle()] },
+      ]),
+    ]);
+
+    await expect(
+      service.muscleGroups(7, {
+        from: '2026-08-21T00:00:00Z',
+        to: '2026-08-21T23:59:59Z',
+      }),
+    ).resolves.toEqual({
+      muscleGroups: [
+        {
+          muscleId: 1,
+          name: 'Chest',
+          primaryWorkingSets: 2,
+          secondaryWorkingSets: 1,
+          workingSets: 2.5,
+        },
+      ],
+    });
+  });
+
   it('returns chronological set history for the requested exercise and user', async () => {
     const { service, builder } = setup([
       workout(19, '2026-08-21T10:00:00Z', [

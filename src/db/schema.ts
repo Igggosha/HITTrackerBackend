@@ -613,6 +613,10 @@ export const exerciseLikes = pgTable(
 export const exercisesTrainMuscles = pgTable(
   'exercises_train_muscles',
   {
+    role: text('role')
+      .$type<'primary' | 'secondary'>()
+      .notNull()
+      .default('primary'),
     muscleId: integer('muscle_id')
       .notNull()
       .references(() => muscles.id, {
@@ -626,6 +630,10 @@ export const exercisesTrainMuscles = pgTable(
       }),
   },
   (table) => ({
+    roleCheck: check(
+      'exercises_train_muscles_role_check',
+      sql`${table.role} in ('primary', 'secondary')`,
+    ),
     pk: primaryKey({
       columns: [table.muscleId, table.exerciseId],
     }),

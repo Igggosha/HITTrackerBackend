@@ -197,7 +197,7 @@ export class CatalogSearchService {
               exists(select 1 from exercise_likes el where el.exercise_id = e.id and el.user_id = $2) as "isLiked",
               exists(select 1 from exercise_bookmarks eb where eb.exercise_id = e.id and eb.user_id = $2) as "isBookmarked",
               coalesce(jsonb_agg(distinct jsonb_build_object('id', m.id, 'name', m.common_name,
-                'commonName', m.common_name, 'scientificName', m.scientific_name))
+                'commonName', m.common_name, 'scientificName', m.scientific_name, 'role', etm.role))
                 filter (where m.id is not null), '[]'::jsonb) as muscles
          from exercises e
          left join exercises_train_muscles etm on etm.exercise_id = e.id
