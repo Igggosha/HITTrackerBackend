@@ -1,3 +1,6 @@
+// EN: Validates shared access JWTs and attaches the authenticated user identity used to isolate analytics read models.
+// UK: Перевіряє спільні JWT доступу й додає ідентичність користувача, потрібну для ізоляції моделей читання аналітики.
+
 import {
   CanActivate,
   ExecutionContext,
@@ -32,6 +35,8 @@ export class JwtAuthGuard implements CanActivate {
     if (!token) throw new UnauthorizedException();
     let claims: AccessTokenClaims;
     try {
+      // EN: The algorithm allowlist prevents accepting a token under a different signing method even when its header requests one.
+      // UK: Список дозволених алгоритмів не дає прийняти токен з іншим методом підпису, навіть якщо його заголовок цього вимагає.
       claims = await this.jwt.verifyAsync<AccessTokenClaims>(token, {
         algorithms: ['HS256'],
       });
