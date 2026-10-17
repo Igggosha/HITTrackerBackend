@@ -1,3 +1,6 @@
+// EN: Converts versioned workout event payloads into normalized analytics facts and derived aggregates without database side effects.
+// UK: Перетворює дані версіонованих подій тренувань на нормалізовані аналітичні факти й похідні агрегати без побічних дій бази даних.
+
 /**
  * Pure read-model calculations. Every projection is recomputed from stored
  * facts (never incremented), so applying the same facts in any order, or
