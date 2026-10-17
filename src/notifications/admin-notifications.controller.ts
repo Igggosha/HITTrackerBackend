@@ -1,3 +1,6 @@
+// EN: Exposes administrator-only campaign creation and history endpoints with a required idempotency key.
+// UK: Надає лише адміністраторам маршрути API створення та історії кампаній з обов'язковим ключем ідемпотентності.
+
 import {
   BadRequestException,
   Body,
