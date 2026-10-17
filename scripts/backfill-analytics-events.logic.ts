@@ -1,3 +1,6 @@
+// EN: Converts historical database records into deterministic outbox rows compatible with the live analytics event contracts.
+// UK: Перетворює історичні записи бази даних на детерміновані рядки outbox, сумісні з актуальними контрактами аналітичних подій.
+
 import { createHash } from 'node:crypto';
 import {
   outboxEventDefinitions,
@@ -12,6 +15,9 @@ import {
  * DO NOTHING) and the analytics consumer's processed_events both dedup.
  */
 export const BACKFILL_NAMESPACE = '6f1c1d52-4d0e-4b8e-9c61-3c5a9b0e7a11';
+
+// EN: The namespace and source key form a stable UUID, making retries converge on the same outbox and projection records.
+// UK: Простір імен і ключ вихідного запису утворюють стабільний UUID, тому повторні запуски збігаються до тих самих записів outbox і проєкцій.
 
 /** RFC 4122 version-5 (SHA-1, name-based) UUID. */
 export function uuidV5(name: string, namespace: string): string {
