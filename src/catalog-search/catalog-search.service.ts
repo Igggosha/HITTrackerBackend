@@ -1,3 +1,6 @@
+// EN: Uses Elasticsearch to rank candidate IDs, then rehydrates and reauthorizes ordered catalog results from PostgreSQL.
+// UK: Використовує Elasticsearch для ранжування ID-кандидатів, а потім відновлює та повторно авторизує впорядковані результати з PostgreSQL.
+
 import {
   Inject,
   Injectable,
@@ -69,6 +72,8 @@ export class CatalogSearchService {
         this.record('ok', started);
         return { items: [], nextCursor: null, fallback: false };
       }
+      // EN: Elasticsearch returns only ordered IDs and sort values; PostgreSQL remains authoritative for fields and access control.
+      // UK: Elasticsearch повертає лише впорядковані ID та значення сортування; PostgreSQL залишається джерелом істини для полів і контролю доступу.
       const response = await this.client.search({
         index: aliasesFor(dto.section).read,
         size: dto.limit + 1,
@@ -91,6 +96,8 @@ export class CatalogSearchService {
       const ids = page
         .map((hit) => Number(hit._id))
         .filter((id) => Number.isInteger(id));
+      // EN: Rehydration preserves Elasticsearch order but drops candidates that no longer satisfy current PostgreSQL visibility.
+      // UK: Відновлення зберігає порядок Elasticsearch, але відкидає кандидатів, які більше не відповідають поточній видимості в PostgreSQL.
       const items =
         dto.section === 'programs'
           ? await this.programs(userId, ids)
