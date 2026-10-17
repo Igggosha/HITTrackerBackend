@@ -1,3 +1,6 @@
+# EN: Provisions Prometheus as Grafana's default metrics datasource on the internal observability network.
+# UK: Підключає Prometheus як стандартне джерело метрик Grafana у внутрішній мережі спостережуваності.
+
 apiVersion: 1
 datasources:
   - name: Prometheus
