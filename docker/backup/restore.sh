@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Restores a selected database backup only after validating its metadata, checksum, and explicit destructive-action safeguards.
+# UK: Відновлює вибрану резервну копію бази даних лише після перевірки метаданих, контрольної суми та явних запобіжників руйнівної операції.
+
 set -eu
 umask 077
 
