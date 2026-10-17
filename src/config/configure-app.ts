@@ -1,3 +1,6 @@
+// EN: Installs the API's ordered Express middleware, validation, OAuth session storage, security headers, and CORS policy.
+// UK: Встановлює впорядковані middleware Express, валідацію, сховище OAuth-сесій, захисні заголовки та політику CORS для API.
+
 import type { INestApplication } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import type { Express } from 'express';
