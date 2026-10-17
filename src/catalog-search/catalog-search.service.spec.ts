@@ -1,3 +1,6 @@
+// EN: Verifies authentication, search metrics, Elasticsearch-only ranking, and authoritative PostgreSQL visibility rechecks.
+// UK: Перевіряє автентифікацію, метрики пошуку, ранжування лише через Elasticsearch і остаточну перевірку видимості в PostgreSQL.
+
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { pool } from '../db/db';
 import { JwtGuard } from '../auth/jwt.guard';
