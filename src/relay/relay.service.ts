@@ -1,3 +1,6 @@
+// EN: Relays claimed transactional outbox events to Kafka with bounded retries, idempotent production, DLQ priority, and LISTEN-assisted polling.
+// UK: Передає захоплені транзакційні події outbox до Kafka з обмеженими повторами, ідемпотентною публікацією, пріоритетом DLQ та опитуванням із LISTEN.
+
 import {
   Injectable,
   Logger,
@@ -226,6 +229,8 @@ export class RelayService implements OnModuleInit, OnModuleDestroy {
 
   private async publish(event: ClaimedOutboxEvent, deadLetter: boolean) {
     const envelope = envelopeFrom(event);
+    // EN: The aggregate-derived key keeps related events in one Kafka partition; full acknowledgement and the idempotent producer reduce duplicate risk.
+    // UK: Ключ агрегату зберігає пов'язані події в одному розділі Kafka; повне підтвердження та ідемпотентний видавець зменшують ризик дублікатів.
     await producerSpan(
       `publish ${deadLetter ? 'hit.events.dlq' : topicFor(envelope.type)}`,
       event.traceContext,
