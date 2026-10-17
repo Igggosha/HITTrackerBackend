@@ -1,3 +1,6 @@
+// EN: Validates presence heartbeats and treats installation ID plus platform as an all-or-nothing pair for push-device registration.
+// UK: Перевіряє presence-сигнали та вимагає, щоб ідентифікатор установки й платформа передавалися разом для реєстрації push-пристрою.
+
 import { IsIn, IsUUID, ValidateIf } from 'class-validator';
 
 export class PresenceDto {
