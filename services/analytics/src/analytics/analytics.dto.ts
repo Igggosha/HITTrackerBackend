@@ -1,3 +1,6 @@
+// EN: Validates analytics date ranges, grouping, filters, sorting, and bounded cursor or page parameters.
+// UK: Перевіряє діапазони дат, групування, фільтри, сортування та обмежені параметри курсора або сторінки аналітики.
+
 import { Type } from 'class-transformer';
 import {
   IsDefined,
