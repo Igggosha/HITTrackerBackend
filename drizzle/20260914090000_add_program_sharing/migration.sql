@@ -1,3 +1,6 @@
+-- EN: Adds revocable share tokens and publication metadata for controlled access to workout programs.
+-- UK: Додає відкличні токени поширення та дані публікації для контрольованого доступу до програм тренувань.
+
 ALTER TABLE "workout_programs"
   ADD COLUMN "share_token" text,
   ADD COLUMN "source_program_id" integer;
