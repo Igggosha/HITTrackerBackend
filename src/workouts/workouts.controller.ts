@@ -1,3 +1,6 @@
+// EN: Defines authenticated workout lifecycle, set logging, history, dashboard, statistics, and cancellation endpoints.
+// UK: Визначає автентифіковані маршрути API життєвого циклу тренування, запису підходів, історії, панелі огляду, статистики та скасування.
+
 import {
   Body,
   Controller,
