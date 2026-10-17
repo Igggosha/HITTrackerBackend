@@ -1,3 +1,6 @@
+// EN: Verifies LISTEN wakeups, fallback polling, bounded Kafka publishing, retries, DLQ ordering, reconnects, and shutdown.
+// UK: Перевіряє пробудження LISTEN, резервне опитування, обмежену публікацію Kafka, повтори, порядок DLQ, перепідключення та завершення.
+
 import {
   envelopeFrom,
   eventKey,
