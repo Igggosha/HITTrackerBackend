@@ -1,3 +1,6 @@
+-- EN: Creates the initial analytics CQRS read models, projection checkpoints, and processed-event idempotency ledger.
+-- UK: Створює початкові CQRS моделі читання аналітики, контрольні точки проєкцій і журнал ідемпотентності оброблених подій.
+
 -- Initial analytics read side (own database `analytics`, owned by the
 -- `analytics_app` role). No foreign keys to the main API: ids are copied from
 -- events. Purely additive; rollback is dropping these tables (the read models
