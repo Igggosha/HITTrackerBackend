@@ -1,3 +1,6 @@
+// EN: Verifies the public error envelope, safe status recovery, request IDs, and sanitization of internal failures.
+// UK: Перевіряє публічний формат помилок, безпечне відновлення статусу, ідентифікатори запитів і приховування внутрішніх збоїв.
+
 import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost } from '@nestjs/common';
 import type { PinoLogger } from 'nestjs-pino';
