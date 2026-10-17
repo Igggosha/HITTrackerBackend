@@ -1,3 +1,6 @@
+// EN: Implements notification ownership, inbox and preference reads, encrypted device registration, campaigns, scheduling, media, and delivery rows.
+// UK: Реалізує власність сповіщень, читання скриньки й налаштувань, зашифровану реєстрацію пристроїв, кампанії, планування, медіа та рядки доставки.
+
 import {
   BadRequestException,
   Injectable,
@@ -147,9 +150,13 @@ export class NotificationsService {
     if (dto.permissionStatus === 'granted' && !token) {
       throw new BadRequestException({ code: 'PUSH_TOKEN_REQUIRED' });
     }
+    // EN: The hash finds duplicate ownership without decryption; ciphertext is retained only because the delivery worker must recover the provider token.
+    // UK: Хеш знаходить дублікати власності без розшифрування; шифротекст зберігається лише тому, що процес доставки має відновити токен провайдера.
     const tokenHash = token ? hashPushToken(token) : null;
     const tokenCiphertext = token ? this.tokenCrypto.encrypt(token) : null;
 
+    // EN: Revoking any previous owner and upserting the authenticated user's installation are one transaction, so a token cannot belong to two accounts.
+    // UK: Відкликання попереднього власника й вставлення або оновлення установки автентифікованого користувача є однією транзакцією, тому токен не належатиме двом обліковим записам.
     await primaryDb.transaction(async (tx) => {
       if (tokenHash) {
         await tx
