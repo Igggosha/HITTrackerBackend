@@ -1,3 +1,6 @@
+// EN: Composes the standalone relay from outbox publishing, metrics, and tracing-shutdown infrastructure.
+// UK: Формує окремий relay з інфраструктури публікації outbox, метрик і завершення трасування.
+
 import { Module } from '@nestjs/common';
 import { OutboxModule } from '../outbox/outbox.module';
 import { MetricsModule } from '../metrics/metrics.module';
