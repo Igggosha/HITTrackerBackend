@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Idempotently provisions the least-privilege PostgreSQL monitoring role used by postgres-exporter.
+# UK: Ідемпотентно створює роль PostgreSQL з мінімальними привілеями для моніторингу через postgres-exporter.
+
 set -eu
 
 # Grants postgres-exporter a dedicated, least-privilege login instead of the
