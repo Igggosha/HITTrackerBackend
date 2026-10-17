@@ -1,3 +1,6 @@
+// EN: Implements SHA-256 PKCE verification and hashing for short-lived, single-use mobile OAuth codes.
+// UK: Реалізує перевірку PKCE через SHA-256 і хешування короткочасних одноразових кодів mobile OAuth.
+
 import { createHash, timingSafeEqual } from 'crypto';
 
 export function hashOAuthCode(code: string): string {
