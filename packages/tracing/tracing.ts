@@ -1,3 +1,6 @@
+// EN: Provides shared OpenTelemetry setup, safe context propagation, instrumentation hooks, and ordered shutdown for backend processes.
+// UK: Надає спільне налаштування OpenTelemetry, безпечне передавання контексту, підключення інструментування та впорядковане завершення процесів бекенду.
+
 import {
   context,
   propagation,
