@@ -1,3 +1,6 @@
+// EN: Centralizes stable Elasticsearch aliases, index prefixes, and the indexed catalog document shape shared by producers and readers.
+// UK: Централізує стабільні псевдоніми Elasticsearch, префікси індексів і форму документа каталогу, спільну для запису та читання.
+
 export const PROGRAMS_READ_ALIAS = 'hit-programs-read';
 export const PROGRAMS_WRITE_ALIAS = 'hit-programs-write';
 export const EXERCISES_READ_ALIAS = 'hit-exercises-read';
