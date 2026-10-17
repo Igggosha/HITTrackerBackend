@@ -1,3 +1,6 @@
+// EN: Implements exercise catalog reads and ownership-aware mutations, including atomic muscle roles, media, reactions, and outbox events.
+// UK: Реалізує читання каталогу вправ і зміни з перевіркою власника, включно з атомарними ролями м'язів, медіа, реакціями та подіями outbox.
+
 import {
   Injectable,
   BadRequestException,
@@ -258,8 +261,12 @@ export class ExercisesService {
    * Створення вправи
    */
   async createExercise(data: CreateExerciseDto) {
+    // EN: Omitted role lists keep the legacy creation contract and mean "no muscle links"; supplied IDs are persisted with an explicit role.
+    // UK: Відсутні списки ролей зберігають старий контракт створення й означають «без зв'язків із м'язами»; передані ID зберігаються з явною роллю.
     const primaryMuscleIds = data.primaryMuscleIds ?? [];
     const secondaryMuscleIds = data.secondaryMuscleIds ?? [];
+    // EN: One muscle cannot occupy both roles because consumers group workload and history by this mutually exclusive classification.
+    // UK: Один м'яз не може мати обидві ролі, бо споживачі групують навантаження та історію за цією взаємовиключною класифікацією.
     if (primaryMuscleIds.some((id) => secondaryMuscleIds.includes(id))) {
       throw new BadRequestException({
         message: 'A muscle cannot be both primary and secondary.',
@@ -338,6 +345,8 @@ export class ExercisesService {
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
     const { primaryMuscleIds, secondaryMuscleIds, ...exercise } = data;
+    // EN: Omitting both lists preserves existing links; providing either list switches to full replacement and therefore requires both.
+    // UK: Відсутність обох списків зберігає наявні зв'язки; передавання хоча б одного вмикає повну заміну, тому потрібні обидва.
     const changesMuscles =
       primaryMuscleIds !== undefined || secondaryMuscleIds !== undefined;
     if (
@@ -388,6 +397,8 @@ export class ExercisesService {
           if (!updated) throw new NotFoundException('Exercise not found');
 
           if (changesMuscles) {
+            // EN: Delete-and-insert runs in the same transaction, so readers never observe a partially replaced primary/secondary assignment.
+            // UK: Видалення й вставлення виконуються в одній транзакції, тому читачі не побачать частково заміненого розподілу основних і допоміжних м'язів.
             await tx
               .delete(exercisesTrainMuscles)
               .where(eq(exercisesTrainMuscles.exerciseId, id));
