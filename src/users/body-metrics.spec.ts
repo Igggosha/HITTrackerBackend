@@ -1,3 +1,6 @@
+// EN: Verifies body-metric aggregation, nullable measurements, rounded changes, DTO transformations, and period rules.
+// UK: Перевіряє агрегацію показників тіла, відсутні вимірювання, округлені зміни, перетворення DTO та правила періоду.
+
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
