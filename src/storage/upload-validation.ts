@@ -1,3 +1,6 @@
+// EN: Performs decoder-independent upload checks using actual bytes and returns stable machine-readable rejection codes.
+// UK: Виконує незалежні від декодера перевірки завантаження за фактичними байтами та повертає стабільні машинозчитувані коди відхилення.
+
 /**
  * Everything about an upload that can be decided without decoding the image.
  *
