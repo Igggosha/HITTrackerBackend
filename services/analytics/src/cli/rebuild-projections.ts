@@ -1,3 +1,6 @@
+// EN: Rebuilds analytics projections from Kafka into fresh read-model state while preserving consumer and event-order contracts.
+// UK: Перебудовує аналітичні проєкції з Kafka у свіжий стан моделей читання зі збереженням контрактів споживача й порядку подій.
+
 /**
  * Rebuild every read model from the Kafka log (CQRS demo):
  *
@@ -36,6 +39,8 @@ async function main() {
   const config = loadConfig();
   if (!config.kafkaBrokers.length) throw new Error('KAFKA_BROKERS is required');
 
+  // EN: Kafka refuses the reset while the consumer group is active; operators stop analytics first to avoid replaying into tables being truncated.
+  // UK: Kafka відхиляє скидання, доки група споживачів активна; оператори спершу зупиняють аналітику, щоб не відтворювати події в таблиці під час очищення.
   const admin = createKafka(config.kafkaBrokers).admin();
   await admin.connect();
   try {
