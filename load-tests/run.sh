@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Orchestrates one labeled k6 measurement, captures database and container evidence, and writes reproducible result metadata.
+# UK: Керує одним позначеним вимірюванням k6, збирає дані бази й контейнерів та записує відтворювані метадані результату.
+
 # Runs one measured k6 run inside the `loadtest` Compose project and stores
 #   load-tests/results/<label>.json       k6 --summary-export
 #   load-tests/results/<label>.meta.json  arm, VUs, pg_stat_database deltas of
