@@ -1,3 +1,6 @@
+// EN: Verifies fail-fast validation for secrets, production safeguards, external services, and relay tuning values.
+// UK: Перевіряє ранню валідацію секретів, production-запобіжників, зовнішніх сервісів і параметрів relay-процесу.
+
 import { validateEnvironment, validateRelayEnvironment } from './environment';
 
 const secureEnvironment = {
