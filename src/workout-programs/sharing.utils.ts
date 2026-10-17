@@ -1,3 +1,6 @@
+// EN: Detects whether a program references exercises unavailable to a recipient before copying or assigning shared content.
+// UK: Визначає, чи посилається програма на недоступні одержувачу вправи перед копіюванням або призначенням спільного вмісту.
+
 type ExerciseReference = { exerciseId: number };
 
 export const hasSameExerciseMultiset = (
