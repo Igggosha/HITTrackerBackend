@@ -1,3 +1,6 @@
+// EN: Verifies bounded route labels and correct accounting for completed, unmatched, aborted, and scrape requests.
+// UK: Перевіряє обмежені мітки маршрутів і правильний облік завершених, невідповідних, перерваних запитів та запитів збирання метрик.
+
 import { EventEmitter } from 'node:events';
 import type { Request, Response } from 'express';
 import { createMetricsMiddleware, routeLabel } from './metrics.middleware';
