@@ -1,3 +1,6 @@
+// EN: Detects migration effects already present in an imported schema and records a safe Drizzle baseline without rerunning their DDL.
+// UK: Виявляє наслідки міграцій, уже наявні в імпортованій схемі, та безпечно фіксує початковий стан Drizzle без повторного виконання їхнього DDL.
+
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -101,6 +104,8 @@ export async function recordMigrationIfMissing(
   client: QueryableClient,
   name: string,
 ): Promise<boolean> {
+  // EN: The stored hash comes from the real migration file, while the name guard makes repeated baseline runs idempotent.
+  // UK: Збережений хеш обчислюється з фактичного файла міграції, а перевірка назви робить повторні запуски початкової фіксації ідемпотентними.
   const sql = await readFile(join('drizzle', name, 'migration.sql'));
   const hash = createHash('sha256').update(sql).digest('hex');
 
