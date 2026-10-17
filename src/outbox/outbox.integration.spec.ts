@@ -1,3 +1,6 @@
+// EN: Verifies transactional event rollback, PostgreSQL notifications, disjoint SKIP LOCKED batches, retries, DLQ eligibility, and relay indexes.
+// UK: Перевіряє відкат транзакційних подій, сповіщення PostgreSQL, неперетинні пакети SKIP LOCKED, повтори, готовність до DLQ та індекси relay.
+
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
