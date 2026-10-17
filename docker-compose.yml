@@ -1,3 +1,6 @@
+# EN: Defines the complete local platform, including API, data stores, messaging, analytics, backups, and optional observability profiles.
+# UK: Визначає повну локальну платформу: API, сховища даних, обмін повідомленнями, аналітику, резервні копії та необов’язкові профілі спостережуваності.
+
 # Pinned so the Compose project name never depends on the checkout directory
 # name: Alloy (docker/observability/alloy/config.alloy) filters discovered
 # containers by `com.docker.compose.project`, and that label's value is this
