@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Creates or repairs the main API database role and grants only the privileges required by the application schema.
+# UK: Створює або виправляє роль бази даних основного API та надає лише потрібні для схеми застосунку привілеї.
+
 set -eu
 
 case "${APP_DB_USERNAME:-}" in
