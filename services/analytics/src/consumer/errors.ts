@@ -1,3 +1,6 @@
+// EN: Classifies consumer failures as retryable or permanent and removes sensitive details from persisted or logged diagnostics.
+// UK: Класифікує помилки споживача як повторювані або остаточні та вилучає чутливі деталі зі збереженої чи журналюваної діагностики.
+
 /**
  * Transient = worth retrying forever with backoff (the database or the
  * network is temporarily unavailable). Everything else is permanent: it is
