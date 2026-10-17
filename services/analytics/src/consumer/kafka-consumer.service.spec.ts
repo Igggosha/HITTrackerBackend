@@ -1,3 +1,6 @@
+// EN: Verifies manual offset ordering, retries, DLQ acknowledgement, heartbeats, metrics, and graceful Kafka shutdown.
+// UK: Перевіряє ручний порядок зміщень, повтори, підтвердження DLQ, сигнали активності, метрики та коректне завершення Kafka.
+
 import type { Kafka } from 'kafkajs';
 import { MetricsService } from '../metrics/metrics.service';
 import { KafkaConsumerService, partitionLag } from './kafka-consumer.service';
