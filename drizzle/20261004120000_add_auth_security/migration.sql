@@ -1,3 +1,6 @@
+-- EN: Strengthens authentication with refresh-token families, MFA state, recovery codes, and related security metadata.
+-- UK: Посилює автентифікацію сімействами токенів оновлення, станом MFA, кодами відновлення та пов’язаними даними безпеки.
+
 ALTER TABLE "auth_refresh_sessions"
   ADD COLUMN IF NOT EXISTS "family_id" uuid DEFAULT gen_random_uuid() NOT NULL,
   ADD COLUMN IF NOT EXISTS "parent_session_id" integer,
