@@ -1,3 +1,6 @@
+// EN: Verifies trace propagation through outbox and Kafka boundaries, URL redaction, consumer spans, and explicit shutdown ownership.
+// UK: Перевіряє передавання трасування через межі outbox і Kafka, очищення URL, проміжки споживача та явну відповідальність за завершення трасування.
+
 import { context, propagation, trace } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
