@@ -1,3 +1,6 @@
+// EN: Wires authentication controllers, Passport strategies, guards, MFA services, and shared storage dependencies.
+// UK: Об'єднує контролери автентифікації, стратегії Passport, guards, MFA-сервіси та спільні залежності сховища.
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
