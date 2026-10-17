@@ -1,3 +1,6 @@
+// EN: Declares the dependency-injection token that separates resolved storage configuration from its consumers.
+// UK: Оголошує токен впровадження залежностей, який відокремлює підготовлену конфігурацію сховища від її споживачів.
+
 /**
  * Injection token for the resolved storage configuration.
  *
