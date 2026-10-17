@@ -1,3 +1,6 @@
+// EN: Exposes the token-protected Prometheus scrape endpoint for analytics process and consumer metrics.
+// UK: Надає захищений токеном маршрут Prometheus для метрик процесу аналітики та споживача.
+
 import {
   Controller,
   Get,
