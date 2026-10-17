@@ -1,7 +1,12 @@
 #!/bin/sh
+# EN: Idempotently enables PostgreSQL streaming replication and maintains the dedicated replication role and access rule.
+# UK: Ідемпотентно вмикає потокову реплікацію PostgreSQL та підтримує окрему роль реплікації й правило доступу.
+
 set -eu
 
 # Runs on every Compose startup, including databases created before replication.
+# EN: Reapplying settings on every startup also upgrades existing volumes; it does not rely only on first-run init hooks.
+# UK: Повторне застосування налаштувань під час кожного запуску оновлює також наявні томи й не залежить лише від початкових сценаріїв ініціалізації.
 # REPLICATION_PASSWORD is a dedicated credential, never the superuser password:
 # it is what pg_basebackup -R stores in the replica's postgresql.auto.conf, so
 # it must be able to rotate independently of POSTGRES_PASSWORD/DB_PASSWORD.
