@@ -1,3 +1,6 @@
+// EN: Verifies weekly date expansion and derived planned, missed, or completed schedule status.
+// UK: Перевіряє розгортання щотижневих дат і визначення запланованого, пропущеного або завершеного стану розкладу.
+
 import {
   expandScheduleDates,
   scheduleStatus,
