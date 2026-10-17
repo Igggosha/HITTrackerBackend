@@ -1,3 +1,6 @@
+// EN: Flushes OpenTelemetry only after other NestJS providers finish graceful shutdown work that may create final spans.
+// UK: Очищає OpenTelemetry лише після завершення коректної зупинки інших провайдерів NestJS, яка може створити останні spans.
+
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { shutdownTracing } from '../../packages/tracing/tracing';
 
