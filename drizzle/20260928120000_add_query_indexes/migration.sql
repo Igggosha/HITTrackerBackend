@@ -1,3 +1,6 @@
+-- EN: Adds non-destructive indexes for frequent history, schedule, library, and outbox access paths.
+-- UK: Додає безпечні індекси для частих запитів до історії, розкладу, бібліотеки та outbox.
+
 -- Additive B-tree indexes for history and program browsing. Rollback: DROP INDEX
 -- for each name below; removing them does not remove data or constraints.
 CREATE INDEX IF NOT EXISTS "sets_workout_id_idx" ON "sets" ("workout_id");
