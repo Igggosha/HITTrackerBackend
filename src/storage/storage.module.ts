@@ -1,3 +1,6 @@
+// EN: Provides the validated optional storage configuration and the single shared StorageService to feature modules.
+// UK: Надає функціональним модулям перевірену необов'язкову конфігурацію сховища та єдиний спільний StorageService.
+
 import { Module } from '@nestjs/common';
 import {
   isStorageConfigured,
