@@ -1,3 +1,6 @@
+// EN: Provides an in-memory read-model store that mirrors idempotency and mutation semantics for projection tests.
+// UK: Надає сховище моделей читання у памʼяті, яке відтворює семантику ідемпотентності та змін для тестів проєкцій.
+
 import type {
   DayProgress,
   PersonalRecord,
