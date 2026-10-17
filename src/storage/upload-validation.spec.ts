@@ -1,3 +1,6 @@
+// EN: Verifies byte-signature format detection, required-file handling, and resistance to forged type or size metadata.
+// UK: Перевіряє визначення формату за сигнатурою байтів, обов'язковість файла та захист від підроблених даних про тип чи розмір.
+
 import {
   detectImageFormat,
   validateImageUpload,
