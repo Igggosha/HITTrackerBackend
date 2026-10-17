@@ -1,3 +1,6 @@
+// EN: Validates exercise creation data, including separate optional lists for primary and secondary trained muscles.
+// UK: Перевіряє дані створення вправи, включно з окремими необов'язковими списками основних і допоміжних м'язів.
+
 import { Type } from 'class-transformer';
 import {
   ArrayUnique,
