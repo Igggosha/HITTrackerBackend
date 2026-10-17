@@ -1,3 +1,6 @@
+-- EN: Adds preferred reminder days and time so scheduled workout notifications can be generated consistently.
+-- UK: Додає бажані дні й час нагадувань для узгодженого створення запланованих сповіщень про тренування.
+
 ALTER TABLE "notification_preferences"
 ADD COLUMN "reminder_days" integer[] DEFAULT ARRAY[1,2,3,4,5]::integer[] NOT NULL;
 --> statement-breakpoint
