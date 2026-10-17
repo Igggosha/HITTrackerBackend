@@ -1,3 +1,6 @@
+// EN: Consumes catalog Kafka events, validates and applies them in partition order, commits offsets, retries failures, and publishes invalid messages to DLQ.
+// UK: Споживає події каталогу Kafka, перевіряє та застосовує їх у порядку розділу, фіксує зміщення, повторює збої й надсилає некоректні повідомлення до DLQ.
+
 import {
   Injectable,
   Logger,
@@ -121,6 +124,8 @@ export class SearchIndexerService
       } catch {
         this.metrics.searchIndexerRetries.inc({ type: envelope.type });
         if (attempt >= Number(process.env.SEARCH_INDEXER_MAX_ATTEMPTS ?? 5)) {
+          // EN: The source offset is committed only after DLQ publication succeeds, so a failed DLQ write leaves the Kafka message available for retry.
+          // UK: Зміщення джерела фіксується лише після успішної публікації до DLQ, тому невдалий запис DLQ залишає повідомлення Kafka доступним для повтору.
           await this.deadLetter(
             source.topic,
             source.partition,
