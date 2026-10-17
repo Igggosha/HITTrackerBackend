@@ -1,3 +1,6 @@
+// EN: Materializes preference-aware body-metric and scheduled-workout reminders for each user's local date and time zone.
+// UK: Створює нагадування про показники тіла та заплановані тренування з урахуванням налаштувань, локальної дати й часового поясу користувача.
+
 import { Injectable } from '@nestjs/common';
 import { and, eq, gte, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
 import { primaryDb } from '../db/db';
