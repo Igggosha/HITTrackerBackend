@@ -1,3 +1,6 @@
+// EN: Verifies real PostgreSQL locking and transaction behavior for concurrent domain writes that emit outbox events.
+// UK: Перевіряє реальні блокування PostgreSQL і транзакційну поведінку конкурентних доменних записів, які створюють події outbox.
+
 import * as bcrypt from 'bcrypt';
 import * as orm from 'drizzle-orm';
 import { AuthService } from '../auth/auth.service';
