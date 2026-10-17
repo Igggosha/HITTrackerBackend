@@ -1,3 +1,6 @@
+-- EN: Adds workout lifecycle status and timestamps required to distinguish active, completed, and abandoned sessions.
+-- UK: Додає стан і часові позначки життєвого циклу тренування для розрізнення активних, завершених і покинутих сесій.
+
 ALTER TABLE "workouts"
   ADD COLUMN "status" text NOT NULL DEFAULT 'active',
   ADD COLUMN "paused_at" timestamp,
