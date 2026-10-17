@@ -1,3 +1,6 @@
+// EN: Builds hashed throttle identities so Redis coordinates limits without storing raw IP addresses or user identifiers.
+// UK: Створює хешовані ідентичності для обмеження запитів, щоб Redis координував ліміти без зберігання сирих IP-адрес чи ідентифікаторів користувачів.
+
 import { createHash } from 'node:crypto';
 import type { Request } from 'express';
 
