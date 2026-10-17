@@ -1,3 +1,6 @@
+// EN: Exposes role-protected administration endpoints for listing, inspecting, suspending, and managing user accounts.
+// UK: Надає захищені ролями адміністративні endpoints для перегляду, перевірки, блокування та керування обліковими записами користувачів.
+
 import {
   Body,
   Controller,
