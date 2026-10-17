@@ -1,3 +1,6 @@
+-- EN: Adds the transactional outbox that publishes committed domain changes to asynchronous consumers without dual-write loss.
+-- UK: Додає транзакційний outbox для передавання підтверджених доменних змін асинхронним споживачам без втрат подвійного запису.
+
 -- Transactional outbox. Rows are inserted inside the business transaction and
 -- claimed later by a relay with FOR UPDATE SKIP LOCKED. gen_random_uuid() is
 -- built into PostgreSQL 13+, so no extension is required.
