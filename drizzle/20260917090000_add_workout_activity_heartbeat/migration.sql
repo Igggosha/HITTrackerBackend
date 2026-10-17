@@ -1,3 +1,6 @@
+-- EN: Adds a heartbeat timestamp used to recognize workouts that are still active or have become stale.
+-- UK: Додає часову позначку контрольного сигналу для розпізнавання активних і застарілих тренувань.
+
 ALTER TABLE "workouts" ADD COLUMN "last_activity_at" timestamp;
 
 UPDATE "workouts"
