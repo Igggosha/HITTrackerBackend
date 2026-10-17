@@ -1,3 +1,6 @@
+// EN: Orchestrates time-limited MFA login and enrollment challenges, encrypted TOTP credentials, and one-time recovery codes.
+// UK: Керує обмеженими в часі MFA challenge для входу й налаштування, зашифрованими TOTP-даними та одноразовими recovery-кодами.
+
 import {
   ConflictException,
   ForbiddenException,
