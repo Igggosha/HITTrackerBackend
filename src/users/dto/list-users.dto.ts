@@ -1,3 +1,6 @@
+// EN: Validates bounded pagination and filters for administrative user lists and activity history.
+// UK: Перевіряє обмежену пагінацію та фільтри для адміністративних списків користувачів і історії активності.
+
 import { Type } from 'class-transformer';
 import {
   IsIn,
