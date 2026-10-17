@@ -1,3 +1,6 @@
+// EN: Verifies active-duration calculations across pauses, completion, cancellation, and inactivity expiry.
+// UK: Перевіряє обчислення активної тривалості з паузами, завершенням, скасуванням та завершенням через неактивність.
+
 import {
   activeDurationSeconds,
   isWorkoutInactive,
