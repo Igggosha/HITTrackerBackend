@@ -1,3 +1,6 @@
+// EN: Verifies private image-key handling, signed URL projection, ownership checks, replacement cleanup, and deletion order.
+// UK: Перевіряє приватність ключів зображень, формування підписаних URL, права власника, очищення після заміни та порядок видалення.
+
 import { ForbiddenException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
