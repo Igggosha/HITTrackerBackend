@@ -1,3 +1,6 @@
+// EN: Rehydrates authoritative catalog documents from PostgreSQL and writes idempotent externally versioned updates to Elasticsearch aliases.
+// UK: Відновлює авторитетні документи каталогу з PostgreSQL і записує ідемпотентні оновлення із зовнішньою версією до псевдонімів Elasticsearch.
+
 import { Inject, Injectable } from '@nestjs/common';
 import type { Client } from '@elastic/elasticsearch';
 import { pool } from '../db/db';
@@ -50,6 +53,8 @@ export class IndexWriterService {
     envelope: EventEnvelope,
     targets: { programs?: string; exercises?: string } = {},
   ): Promise<'applied' | 'ignored'> {
+    // EN: Explicit targets support rebuilding versioned physical indices before an atomic alias swap; live events default to stable write aliases.
+    // UK: Явні цілі підтримують перебудову версіонованих фізичних індексів до атомарної заміни псевдоніма; поточні події типово пишуть у стабільні псевдоніми запису.
     switch (envelope.type) {
       case 'catalog.program.changed':
         await this.program(
@@ -83,6 +88,8 @@ export class IndexWriterService {
     payload: CatalogProgramChangedV1,
     index: string,
   ) {
+    // EN: Events identify what changed, but PostgreSQL supplies the complete current document and remains authoritative over Elasticsearch.
+    // UK: Події визначають, що змінилося, але повний актуальний документ надає PostgreSQL, який залишається авторитетним щодо Elasticsearch.
     const [document] = await programDocuments(pool, [payload.programId]);
     await this.upsert(index, payload.programId, document, envelope);
   }
@@ -124,6 +131,8 @@ export class IndexWriterService {
           lastEventAt: envelope.occurredAt,
           lastEventId: envelope.id,
         };
+    // EN: Event time plus ID makes replay idempotent and prevents an older retry from overwriting a newer indexed state.
+    // UK: Час події разом з ID робить повторне відтворення ідемпотентним і не дозволяє старішому повтору перезаписати новіший стан індексу.
     await this.client.update({
       index,
       id: String(id),
