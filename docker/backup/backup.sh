@@ -1,6 +1,11 @@
 #!/bin/sh
+# EN: Creates a compressed PostgreSQL dump, records integrity metadata, uploads it to object storage, and triggers retention rotation.
+# UK: Створює стиснений дамп PostgreSQL, фіксує дані цілісності, завантажує його до об’єктного сховища та запускає ротацію зберігання.
+
 set -eu
 umask 077
+# EN: Restrictive permissions protect database contents and temporary credentials throughout the backup pipeline.
+# UK: Обмежені дозволи захищають вміст бази даних і тимчасові облікові дані на всіх етапах резервного копіювання.
 ROOT=${BACKUP_ROOT:-/backups}
 BUCKET=${S3_BUCKET:-hit-tracker}
 ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
