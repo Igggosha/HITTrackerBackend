@@ -1,3 +1,6 @@
+// EN: Verifies safe upstream URL construction, selective header forwarding, response passthrough, timeout handling, and stable failure codes.
+// UK: Перевіряє безпечне формування URL внутрішнього сервісу, вибіркове передавання заголовків, повернення відповіді, обмеження часу та стабільні коди помилок.
+
 import * as http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
