@@ -1,3 +1,6 @@
+// EN: Enforces suspension and global session-revocation rules before an account may authenticate or reuse an access token.
+// UK: Застосовує правила блокування та глобального відкликання сесій до автентифікації облікового запису або повторного використання access-токена.
+
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { primaryDb } from '../db/db';
