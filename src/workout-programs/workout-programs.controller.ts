@@ -1,3 +1,6 @@
+// EN: Defines authenticated program library, scheduling, sharing, media, reaction, and public token-read endpoints.
+// UK: Визначає автентифіковані маршрути API бібліотеки програм, планування, поширення, медіа, реакцій і публічного читання за токеном.
+
 import {
   Body,
   Controller,
