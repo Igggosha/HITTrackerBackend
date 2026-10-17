@@ -1,3 +1,6 @@
+// EN: Parses and validates one Kafka record, applies its CQRS projection transactionally, and distinguishes retryable from DLQ failures.
+// UK: Розбирає й перевіряє один запис Kafka, транзакційно застосовує CQRS-проєкцію та відрізняє повторювані помилки від помилок для DLQ.
+
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eventContext } from '../common/log-context';
 import { EventValidator } from '../events/event-validator';
@@ -136,6 +139,8 @@ export class MessageHandler {
           context.eventId = id.slice(0, 64);
         if (context.eventType === 'unknown' && typeof type === 'string')
           context.eventType = type.slice(0, 64);
+        // EN: Unknown future contracts are safely skipped, while malformed known contracts retry and eventually reach DLQ for diagnosis.
+        // UK: Невідомі майбутні контракти безпечно пропускаються, а пошкоджені відомі контракти повторюються й зрештою потрапляють до DLQ для діагностики.
         const validation = this.validator.validate(parsed);
         if (validation.kind === 'unknown') {
           context.eventType = validation.type;
