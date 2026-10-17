@@ -1,3 +1,6 @@
+// EN: Verifies production middleware order so request IDs and metrics also cover body-parser failures that happen before Nest routing.
+// UK: Перевіряє робочий порядок middleware, щоб ідентифікатори запитів і метрики охоплювали також помилки body-parser до маршрутизації Nest.
+
 import { Module, INestApplication } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
@@ -66,6 +69,8 @@ describe('bootstrap middleware order (e2e)', () => {
       imports: [BootstrapOrderTestModule],
     }).compile();
 
+    // EN: Disabling Nest's automatic parser lets configureApp install request ID and metrics middleware before the explicit parser.
+    // UK: Вимкнення автоматичного парсера Nest дає configureApp змогу встановити middleware ідентифікатора запиту та метрик перед явним парсером.
     app = moduleFixture.createNestApplication({ bodyParser: false });
     app.useLogger(app.get(Logger));
     configureApp(app);
