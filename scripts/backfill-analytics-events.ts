@@ -1,3 +1,6 @@
+// EN: Scans pre-outbox workout, schedule, and body-metric history and safely enqueues equivalent analytics events in batches.
+// UK: Пакетно переглядає історію тренувань, розкладу й показників тіла, створену до outbox, та безпечно додає відповідні аналітичні події.
+
 /**
  * One-off, manually run backfill of analytics history that predates the
  * transactional outbox (see docs/diploma/analytics-cqrs.md):
@@ -28,6 +31,8 @@ const iso = (column: string) =>
   `to_char(${column}, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 
 async function insertRows(client: Client, rows: OutboxRow[], dryRun: boolean) {
+  // EN: Deterministic event IDs plus ON CONFLICT make the backfill resumable without duplicating downstream facts.
+  // UK: Детерміновані ідентифікатори подій разом з ON CONFLICT дають змогу продовжувати наповнення без дублювання похідних фактів.
   if (!rows.length || dryRun) return rows.length;
   let inserted = 0;
   for (const row of rows) {
