@@ -1,3 +1,6 @@
+-- EN: Creates notification preferences, devices, messages, campaigns, and delivery records with per-user ownership constraints.
+-- UK: Створює налаштування сповіщень, пристрої, повідомлення, кампанії та записи доставки з обмеженнями належності користувачу.
+
 CREATE TABLE "push_devices" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "user_id" integer NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade,
