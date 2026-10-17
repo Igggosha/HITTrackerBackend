@@ -1,3 +1,6 @@
+// EN: Validates process-wide environment contracts before modules connect to security-sensitive or external services.
+// UK: Перевіряє загальні контракти змінних середовища до підключення модулів до чутливих або зовнішніх сервісів.
+
 import { validateStorageEnvironment } from '../storage/storage.config';
 import { validateFirebaseEnvironment } from '../firebase/firebase.config';
 import { parseTotpEncryptionKeys } from '../auth/mfa-crypto';
