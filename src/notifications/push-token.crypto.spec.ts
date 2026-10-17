@@ -1,3 +1,6 @@
+// EN: Verifies reversible authenticated encryption of push tokens without exposing plaintext in persisted ciphertext.
+// UK: Перевіряє зворотне автентифіковане шифрування push-токенів без розкриття відкритого тексту в збереженому шифротексті.
+
 import {
   decryptPushToken,
   encryptPushToken,
