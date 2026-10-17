@@ -1,3 +1,6 @@
+// EN: Reads precomputed CQRS projections to answer dashboards, trends, exercise progress, adherence, and paginated workout analytics.
+// UK: Читає попередньо обчислені CQRS-проєкції для панелей огляду, тенденцій, прогресу вправ, дотримання плану та пагінованої аналітики тренувань.
+
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
   and,
