@@ -1,3 +1,6 @@
+// EN: Configures Passport's Google strategy and converts a verified Google profile into the minimal identity accepted by AuthService.
+// UK: Налаштовує Google-стратегію Passport і перетворює перевірений профіль Google на мінімальну ідентичність для AuthService.
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
