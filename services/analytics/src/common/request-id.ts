@@ -1,3 +1,6 @@
+// EN: Assigns and propagates a safe request correlation ID for analytics responses, logs, and traces.
+// UK: Призначає та передає безпечний кореляційний ID запиту для відповідей, журналів і трас аналітики.
+
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { requestIds } from './log-context';
