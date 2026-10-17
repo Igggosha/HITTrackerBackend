@@ -1,3 +1,6 @@
+// EN: Shares one metrics registry between request middleware, application services, and the Prometheus controller.
+// UK: Надає один реєстр метрик middleware запитів, сервісам застосунку та контролеру Prometheus.
+
 import { Module } from '@nestjs/common';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
