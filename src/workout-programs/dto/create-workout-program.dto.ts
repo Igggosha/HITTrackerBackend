@@ -1,3 +1,6 @@
+// EN: Validates program metadata and nested day/exercise content used to create a complete workout plan.
+// UK: Перевіряє метадані програми та вкладений вміст днів і вправ для створення повного плану тренувань.
+
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
