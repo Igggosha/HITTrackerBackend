@@ -1,3 +1,6 @@
+// EN: Verifies image orientation, resizing, square cropping, animated-input handling, and metadata removal during re-encoding.
+// UK: Перевіряє орієнтацію, зміну розміру, квадратне кадрування, обробку анімованих вхідних даних і видалення метаданих під час перекодування.
+
 import sharp from 'sharp';
 import {
   processImage,
