@@ -1,3 +1,6 @@
+// EN: Converts NestJS and lower-level HTTP failures into one safe, traceable response contract for every API route.
+// UK: Перетворює помилки NestJS і нижчого HTTP-рівня на єдиний безпечний та відстежуваний формат відповіді для всіх маршрутів API.
+
 import {
   ArgumentsHost,
   Catch,
