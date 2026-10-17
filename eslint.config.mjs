@@ -1,3 +1,6 @@
+// EN: Defines repository-wide TypeScript linting, with tailored type-awareness for tests and standalone maintenance scripts.
+// UK: Визначає загальні правила перевірки TypeScript із окремими налаштуваннями типів для тестів і самостійних службових скриптів.
+
 // @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
