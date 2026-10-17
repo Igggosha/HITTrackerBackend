@@ -1,3 +1,6 @@
+-- EN: Adds temporary registration records so email verification can finish before a permanent user is created.
+-- UK: Додає тимчасові записи реєстрації, щоб підтвердження електронної пошти завершувалося до створення постійного користувача.
+
 CREATE TABLE "pending_registrations" (
   "email" text PRIMARY KEY,
   "password_hash" text NOT NULL,
