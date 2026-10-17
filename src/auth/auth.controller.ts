@@ -1,3 +1,6 @@
+// EN: Defines the public authentication endpoints and adapts web cookies, mobile PKCE exchange, MFA, and OAuth redirects to AuthService.
+// UK: Визначає публічні endpoints автентифікації та передає AuthService роботу з web-cookie, mobile PKCE, MFA й OAuth-перенаправленнями.
+
 import {
   BadRequestException,
   Body,
