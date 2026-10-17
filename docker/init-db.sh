@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Initializes a fresh primary database from the canonical schema dump, then establishes the Drizzle migration baseline.
+# UK: Ініціалізує нову основну базу з канонічного дампа схеми, а потім створює початковий стан міграцій Drizzle.
+
 set -eu
 
 set -- --set ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB"
