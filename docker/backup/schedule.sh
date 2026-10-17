@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Runs backups once per configured UTC day and survives container restarts without requiring a cron daemon.
+# UK: Запускає резервне копіювання один раз на налаштовану добу UTC та переживає перезапуски контейнера без служби cron.
+
 set -eu
 umask 077
 target=${BACKUP_TIME:-03:00}
