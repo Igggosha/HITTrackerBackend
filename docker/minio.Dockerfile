@@ -1,3 +1,6 @@
+# EN: Builds a reproducible MinIO server image from a pinned upstream source revision and verifies the produced binary.
+# UK: Створює відтворюваний образ сервера MinIO із зафіксованої ревізії вихідного коду та перевіряє отриманий виконуваний файл.
+
 FROM golang:1.24.8-alpine3.22 AS build
 
 ARG MINIO_RELEASE=RELEASE.2025-10-15T17-29-55Z
