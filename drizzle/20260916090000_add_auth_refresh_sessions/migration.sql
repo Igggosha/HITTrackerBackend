@@ -1,3 +1,6 @@
+-- EN: Adds persistent refresh-token sessions for rotation, revocation, device tracking, and bounded lifetime.
+-- UK: Додає постійні сесії токенів оновлення для ротації, відкликання, обліку пристроїв та обмеженого строку дії.
+
 CREATE TABLE "auth_refresh_sessions" (
   "id" serial PRIMARY KEY NOT NULL,
   "user_id" integer NOT NULL,
