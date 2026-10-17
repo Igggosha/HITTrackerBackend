@@ -1,3 +1,6 @@
+// EN: Verifies authenticated analytics HTTP contracts, validation, ownership isolation, pagination, and empty-state responses.
+// UK: Перевіряє автентифіковані HTTP-контракти аналітики, валідацію, ізоляцію власності, пагінацію та відповіді порожнього стану.
+
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { JwtModule, JwtService } from '@nestjs/jwt';
