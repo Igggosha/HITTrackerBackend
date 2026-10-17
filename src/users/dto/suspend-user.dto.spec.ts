@@ -1,3 +1,6 @@
+// EN: Verifies normalized suspension reasons and valid future ISO expiry values.
+// UK: Перевіряє нормалізовані причини блокування та коректні майбутні ISO-значення завершення строку.
+
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SuspendUserDto } from './suspend-user.dto';
