@@ -1,3 +1,6 @@
+// EN: Verifies controller-level refresh-cookie handling, delayed native OAuth sessions, and safe suspended-user redirects.
+// UK: Перевіряє роботу refresh-cookie в контролері, відкладене створення native OAuth-сесій і безпечні перенаправлення заблокованих користувачів.
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 jest.mock('./mfa.service', () => ({ MfaService: class MfaService {} }));
