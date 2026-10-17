@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Dispatches the backup container to scheduled, immediate, restore, rotation, or verification modes without an intermediate process.
+# UK: Спрямовує контейнер резервного копіювання в режим розкладу, негайного запуску, відновлення, ротації або перевірки без проміжного процесу.
+
 set -eu
 case "${1:-schedule}" in
   schedule) exec /bin/sh /scripts/schedule.sh ;;
