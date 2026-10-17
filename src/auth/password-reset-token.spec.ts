@@ -1,3 +1,6 @@
+// EN: Verifies deterministic irreversible storage values for password-reset tokens.
+// UK: Перевіряє детерміновані незворотні значення для зберігання токенів скидання пароля.
+
 import { hashPasswordResetToken } from './password-reset-token';
 
 describe('password reset token hashing', () => {
