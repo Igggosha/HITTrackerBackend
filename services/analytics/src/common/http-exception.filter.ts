@@ -1,3 +1,6 @@
+// EN: Converts analytics HTTP failures into a safe error envelope with request correlation and sanitized internal errors.
+// UK: Перетворює HTTP-помилки аналітики на безпечний формат із кореляцією запиту та прихованими внутрішніми деталями.
+
 import {
   ArgumentsHost,
   Catch,
