@@ -1,7 +1,12 @@
 #!/bin/sh
+# EN: Bootstraps a PostgreSQL standby from the primary when needed, then starts it in streaming-replica mode.
+# UK: За потреби створює резервний сервер PostgreSQL з основного та запускає його в режимі потокової репліки.
+
 set -eu
 
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
+  # EN: Existing replica data is reused; pg_basebackup runs only for an uninitialized data directory.
+  # UK: Наявні дані репліки використовуються повторно; pg_basebackup запускається лише для неініціалізованого каталогу даних.
   mkdir -p "$PGDATA"
   chown postgres:postgres "$PGDATA"
   # PGPASSWORD (set by Compose to REPLICATION_PASSWORD) authenticates this.
