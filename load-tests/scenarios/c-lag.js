@@ -1,8 +1,13 @@
+// EN: Measures end-to-end CQRS visibility lag from a committed workout finish until the analytics read model exposes it.
+// UK: Вимірює наскрізну затримку видимості CQRS від фіксації завершеного тренування до його появи в аналітичній моделі читання.
+
 // Measurement C: eventual-consistency lag of the analytics read side under
 // load. `background` runs the B read mix; `writer` finishes workouts at a
 // steady rate (start + 5 sets + finish, like the app) and then polls
 // GET /analytics/me/summary until lastWorkout.workoutId is that workout.
 // visibility_lag_ms = time from the finish response (the transaction, and
+// EN: The timer begins after the write transaction responds, isolating asynchronous outbox, Kafka, and projection delay.
+// UK: Відлік починається після відповіді транзакції запису, окремо вимірюючи асинхронну затримку outbox, Kafka та проєкції.
 // its outbox row, are committed by then) to the first poll response that
 // shows the workout; resolution is POLL_MS plus one poll round trip.
 import http from 'k6/http';
