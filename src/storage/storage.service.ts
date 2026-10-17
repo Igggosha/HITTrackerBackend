@@ -1,3 +1,6 @@
+// EN: Centralizes validated image upload, private object storage, presigned reads, and safe replacement cleanup.
+// UK: Централізує перевірене завантаження зображень, приватне сховище об'єктів, підписані читання та безпечне очищення замінених файлів.
+
 import {
   BadRequestException,
   Inject,
