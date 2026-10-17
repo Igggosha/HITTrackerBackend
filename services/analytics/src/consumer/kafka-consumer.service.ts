@@ -1,3 +1,6 @@
+// EN: Consumes versioned domain events with manual offsets, ordered retries, DLQ handling, tracing context, and lag metrics.
+// UK: Споживає версіоновані доменні події з ручними зміщеннями, впорядкованими повторами, DLQ, контекстом трасування й метриками відставання.
+
 import {
   Inject,
   Injectable,
@@ -185,6 +188,8 @@ export class KafkaConsumerService
           () => payload.heartbeat(),
         );
         // Only reached once the effect is durable (see MessageHandler).
+        // EN: Advancing to offset + 1 happens after projection or confirmed DLQ handling; a crash before commit deliberately replays the message.
+        // UK: Перехід до зміщення + 1 відбувається після проєкції або підтвердженої обробки DLQ; збій до фіксації навмисно спричиняє повтор повідомлення.
         await consumer.commitOffsets([
           {
             topic,
