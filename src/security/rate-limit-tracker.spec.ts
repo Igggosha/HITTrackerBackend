@@ -1,3 +1,6 @@
+// EN: Verifies stable privacy-preserving throttle keys for IP addresses and authenticated principals.
+// UK: Перевіряє стабільні ключі обмеження запитів, що зберігають приватність IP-адрес та автентифікованих користувачів.
+
 import {
   ipRateLimitTracker,
   principalRateLimitTracker,
