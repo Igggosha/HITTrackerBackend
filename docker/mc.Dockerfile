@@ -1,3 +1,6 @@
+# EN: Builds a minimal pinned MinIO Client image used by bucket provisioning and storage administration jobs.
+# UK: Створює мінімальний образ зафіксованої версії MinIO Client для створення кошиків і службових операцій зі сховищем.
+
 FROM golang:1.24.8-alpine3.22 AS build
 
 ARG MC_RELEASE=RELEASE.2025-08-13T08-35-41Z
