@@ -1,3 +1,6 @@
+// EN: Validates partial exercise edits while allowing muscle-role lists to be supplied for atomic replacement.
+// UK: Перевіряє часткові зміни вправи та дозволяє передати списки ролей м'язів для атомарної заміни.
+
 import { Type } from 'class-transformer';
 import {
   ArrayUnique,
