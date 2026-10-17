@@ -1,3 +1,6 @@
+// EN: Verifies program-library ownership, assignment behavior, batched preview loading, and schedule isolation between cards.
+// UK: Перевіряє власність у бібліотеці програм, призначення, пакетне завантаження попереднього перегляду та ізоляцію розкладу між картками.
+
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
