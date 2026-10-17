@@ -1,3 +1,6 @@
+// EN: Verifies backward-compatible presence heartbeats and requires complete, valid installation identity when device data is supplied.
+// UK: Перевіряє сумісні зі старими клієнтами presence-сигнали та вимагає повну коректну ідентичність установки, якщо передано дані пристрою.
+
 import { validate } from 'class-validator';
 import { PresenceDto } from './presence.dto';
 
