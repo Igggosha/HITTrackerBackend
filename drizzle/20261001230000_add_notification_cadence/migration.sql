@@ -1,3 +1,6 @@
+-- EN: Adds configurable reminder cadence and records when reminder-producing jobs last ran.
+-- UK: Додає налаштовувану частоту нагадувань і фіксує час останнього запуску завдань, що їх створюють.
+
 ALTER TABLE "notification_preferences"
 ADD COLUMN "workout_reminder_frequency" text DEFAULT 'scheduled' NOT NULL;
 --> statement-breakpoint
