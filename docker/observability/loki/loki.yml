@@ -1,3 +1,6 @@
+# EN: Configures single-binary Loki for internal development log storage, indexing, retention, and query limits.
+# UK: Налаштовує однопроцесний Loki для внутрішнього зберігання журналів розробки, індексації, строків зберігання та обмежень запитів.
+
 # Single-binary Loki for local/dev observability. Auth is disabled because
 # Loki is only reachable on the internal `observability` Compose network
 # (Grafana and Alloy); it has no host port at all (see "Debugging Loki
