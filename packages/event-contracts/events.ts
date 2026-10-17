@@ -1,3 +1,6 @@
+// EN: Declares the shared, versioned outbox event contracts and routing helpers used by producers and downstream consumers.
+// UK: Описує спільні версіоновані контракти подій outbox і правила маршрутизації, які використовують виробники та споживачі подій.
+
 /**
  * Versioned domain events published through the transactional outbox.
  *
@@ -195,6 +198,8 @@ export function topicFor(type: OutboxEventType): string {
 export function eventKey(
   envelope: Pick<EventEnvelope, 'type' | 'aggregateId' | 'payload'>,
 ): string {
+  // EN: User-domain events use userId as the Kafka key to preserve per-user ordering; catalog events stay keyed by their aggregate.
+  // UK: Події користувацького домену використовують userId як ключ Kafka для збереження порядку подій одного користувача, а події каталогу — ідентифікатор свого агрегату.
   if (envelope.type.startsWith('catalog.')) return envelope.aggregateId;
   return String((envelope.payload as { userId: number }).userId);
 }
