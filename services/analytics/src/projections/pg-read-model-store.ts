@@ -1,3 +1,6 @@
+// EN: Implements atomic, idempotent PostgreSQL writes for CQRS read models, processed events, checkpoints, and rebuild state.
+// UK: Реалізує атомарні й ідемпотентні записи PostgreSQL для CQRS-моделей читання, оброблених подій, контрольних точок і стану перебудови.
+
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { ANALYTICS_DB, type AnalyticsDb } from '../db/database';
@@ -36,6 +39,8 @@ class PgReadModelTx implements ReadModelTx {
     event: { id: string; type: string; version: number },
     source: EventSource,
   ) {
+    // EN: The unique event ID is claimed inside the projection transaction, turning Kafka's at-least-once delivery into an exactly-once database effect.
+    // UK: Унікальний ID події захоплюється всередині транзакції проєкції, перетворюючи доставку Kafka at-least-once на exactly-once ефект у базі даних.
     const rows = await this.tx
       .insert(processedEvents)
       .values({
@@ -53,6 +58,8 @@ class PgReadModelTx implements ReadModelTx {
 
   async lockUser(userId: number) {
     // Namespace 7401 keeps these keys apart from any other advisory lock.
+    // EN: Per-user serialization prevents events from different Kafka topics from racing while aggregate rows are recomputed.
+    // UK: Послідовна обробка для кожного користувача не дозволяє подіям із різних тем Kafka конкурувати під час повторного обчислення агрегатів.
     await this.tx.execute(sql`select pg_advisory_xact_lock(7401, ${userId})`);
   }
 
@@ -263,6 +270,8 @@ class PgReadModelTx implements ReadModelTx {
   }
 
   async eraseUser(userId: number, erasedAt: Date) {
+    // EN: Facts are deleted and an erasure tombstone is written atomically, so a late older event cannot recreate the user's analytics.
+    // UK: Факти видаляються, а позначка стирання записується атомарно, тому пізня стара подія не відновить аналітику користувача.
     for (const table of [
       finishedWorkouts,
       finishedSets,
