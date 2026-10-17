@@ -1,3 +1,6 @@
+-- EN: Adds the protected system-owner flag used for the highest administrative authority independently of ordinary roles.
+-- UK: Додає захищену ознаку власника системи для найвищих адміністративних повноважень незалежно від звичайних ролей.
+
 ALTER TABLE "users"
   ADD COLUMN IF NOT EXISTS "is_system_owner" boolean NOT NULL DEFAULT false;
 --> statement-breakpoint
