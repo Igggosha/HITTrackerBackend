@@ -1,3 +1,6 @@
+// EN: Verifies disabled-storage behavior, image upload normalization, managed-key signing, and best-effort cleanup.
+// UK: Перевіряє поведінку вимкненого сховища, нормалізацію завантажень, підписання керованих ключів і очищення без зриву запиту.
+
 import { StorageService } from './storage.service';
 import type { StorageConfig } from './storage.config';
 import sharp from 'sharp';
