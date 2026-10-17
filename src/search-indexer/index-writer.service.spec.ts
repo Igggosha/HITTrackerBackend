@@ -1,3 +1,6 @@
+// EN: Verifies PostgreSQL rehydration, external-version writes, delete handling, user fan-out, and index-health metrics.
+// UK: Перевіряє відновлення з PostgreSQL, записи із зовнішньою версією, видалення, розгортання змін для користувачів і метрики стану індексу.
+
 import {
   exerciseDocuments,
   programDocuments,
