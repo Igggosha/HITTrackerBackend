@@ -1,3 +1,6 @@
+-- EN: Extends completed-workout facts with schedule identity and date fields used by adherence analytics.
+-- UK: Розширює факти завершених тренувань ідентичністю та датою розкладу для аналітики дотримання плану.
+
 ALTER TABLE "finished_workouts" ADD COLUMN IF NOT EXISTS "schedule_id" integer;
 --> statement-breakpoint
 ALTER TABLE "finished_workouts" ADD COLUMN IF NOT EXISTS "scheduled_for" date;
