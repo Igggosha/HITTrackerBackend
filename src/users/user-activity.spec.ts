@@ -1,3 +1,6 @@
+// EN: Verifies deterministic newest-first merging and cursor pagination for administrative user activity from multiple sources.
+// UK: Перевіряє детерміноване об'єднання від найновіших подій і cursor-пагінацію адміністративної активності з кількох джерел.
+
 import {
   paginateUserActivity,
   type AdminUserActivityItem,
