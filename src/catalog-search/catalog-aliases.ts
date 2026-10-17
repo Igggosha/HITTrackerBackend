@@ -1,3 +1,6 @@
+// EN: Defines curated Ukrainian and English search aliases that enrich catalog recall without changing canonical display names.
+// UK: Визначає підібрані українські й англійські пошукові синоніми, які покращують знаходження каталогу без зміни канонічних назв.
+
 const aliases: Record<
   'program' | 'exercise' | 'muscle',
   Record<string, string[]>
