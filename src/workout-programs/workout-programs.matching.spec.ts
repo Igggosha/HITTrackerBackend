@@ -1,3 +1,6 @@
+// EN: Verifies compatibility matching between a user's goal, experience, available days, and candidate programs.
+// UK: Перевіряє відповідність між метою користувача, досвідом, доступними днями та програмами-кандидатами.
+
 import { WorkoutProgramsService } from './workout-programs.service';
 import { OutboxService } from '../outbox/outbox.service';
 
