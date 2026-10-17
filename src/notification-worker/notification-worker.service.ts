@@ -1,3 +1,6 @@
+// EN: Runs the bounded background loop that generates reminders and drains due push deliveries without overlapping batches.
+// UK: Виконує обмежений фоновий цикл, який створює нагадування та обробляє готові push-доставки без накладання пакетів.
+
 import {
   Injectable,
   Logger,
