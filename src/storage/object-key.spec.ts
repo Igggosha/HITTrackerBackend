@@ -1,3 +1,6 @@
+// EN: Verifies generated object-key structure and rejection of traversal, foreign prefixes, and malformed identifiers.
+// UK: Перевіряє структуру створених ключів об'єктів і відхилення обходу шляхів, сторонніх префіксів та некоректних ідентифікаторів.
+
 import { buildObjectKey, isManagedObjectKey } from './object-key';
 
 describe('object keys', () => {
