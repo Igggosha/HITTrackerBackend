@@ -1,3 +1,6 @@
+// EN: Declares Drizzle's navigable entity relationships without changing the foreign-key constraints defined in the schema.
+// UK: Описує навігаційні зв'язки сутностей Drizzle, не змінюючи обмеження зовнішніх ключів, визначені у схемі.
+
 import { defineRelations } from 'drizzle-orm';
 import * as schema from './schema';
 
