@@ -1,3 +1,6 @@
+// EN: Starts OpenTelemetry before PostgreSQL and Kafka imports so the standalone relay is fully instrumented.
+// UK: Запускає OpenTelemetry до імпортів PostgreSQL і Kafka, щоб окремий relay був повністю інструментований.
+
 // Thin entry point for the standalone outbox relay process: this must be the
 // very first import in `src/relay/main.ts`, before Nest, pg, or KafkaJS. It
 // mirrors `src/tracing/register.ts` (the API's entry) but defaults the
