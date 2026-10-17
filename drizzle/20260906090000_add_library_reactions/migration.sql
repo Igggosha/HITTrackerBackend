@@ -1,3 +1,6 @@
+-- EN: Adds likes and ratings for shared workout programs with one reaction of each type per user and program.
+-- UK: Додає вподобання й оцінки спільних програм тренувань: по одній реакції кожного типу від користувача на програму.
+
 CREATE TABLE "program_likes" (
   "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "program_id" integer NOT NULL REFERENCES "workout_programs"("id") ON DELETE CASCADE,
