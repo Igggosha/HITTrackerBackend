@@ -1,3 +1,6 @@
+// EN: Generates strict JSON Schema files from the shared v1 event field definitions for runtime validation outside TypeScript.
+// UK: Створює суворі файли JSON Schema зі спільних описів полів подій версії 1 для перевірки під час виконання поза TypeScript.
+
 const fs = require('node:fs');
 const path = require('node:path');
 const integer = { type: 'integer' },
@@ -137,6 +140,8 @@ const optionalFields = {
 const directory = path.join(__dirname, 'schemas');
 fs.mkdirSync(directory, { recursive: true });
 for (const [type, properties] of Object.entries(fields)) {
+  // EN: Unknown envelope or payload fields are rejected so producers cannot silently drift from the published contract.
+  // UK: Невідомі поля оболонки або корисного навантаження відхиляються, щоб виробники не могли непомітно відхилитися від оприлюдненого контракту.
   const schema = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: `${type} v1`,
