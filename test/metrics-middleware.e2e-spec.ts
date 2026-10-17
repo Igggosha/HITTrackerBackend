@@ -1,3 +1,6 @@
+// EN: Verifies low-cardinality HTTP metric labels across successful, guarded, unmatched, and pre-routing failure paths.
+// UK: Перевіряє низькокардинальні мітки HTTP-метрик для успішних, захищених, невідповідних маршрутів і помилок до маршрутизації.
+
 import {
   Controller,
   Get,
