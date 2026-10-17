@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Starts Redis with mandatory password authentication while preserving container signal handling through exec.
+# UK: Запускає Redis з обов’язковою автентифікацією паролем і зберігає коректну обробку сигналів контейнера через exec.
+
 set -eu
 
 if [ -z "${REDIS_PASSWORD:-}" ]; then
