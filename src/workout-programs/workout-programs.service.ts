@@ -1,3 +1,6 @@
+// EN: Implements ownership-aware program libraries, content, recurring schedules, sharing, matching, reactions, media, and transactional events.
+// UK: Реалізує бібліотеки програм з перевіркою власника, вміст, повторювані розклади, поширення, підбір, реакції, медіа та транзакційні події.
+
 import {
   BadRequestException,
   ConflictException,
@@ -105,6 +108,8 @@ export class WorkoutProgramsService {
     if (program.shareToken) return { token: program.shareToken };
 
     const token = randomUUID();
+    // EN: The conditional update elects one token during concurrent share requests; losers re-read the winner instead of overwriting it.
+    // UK: Умовне оновлення обирає один токен за конкурентних запитів поширення; інші запити повторно читають переможне значення, а не перезаписують його.
     const [updated] = await db
       .update(workoutPrograms)
       .set({ shareToken: token })
@@ -206,6 +211,8 @@ export class WorkoutProgramsService {
     await this.getProgramById(dto.programId, userId, role);
     const weekly = dto.repeat === 'weekly';
 
+    // EN: The schedule row or series and its outbox event commit together, keeping calendar materialization and downstream notifications consistent.
+    // UK: Рядок або серія розкладу та подія outbox фіксуються разом, зберігаючи узгодженість календаря й подальших сповіщень.
     return db.transaction(async (tx: DbTransaction) => {
       const series = weekly
         ? (
