@@ -1,3 +1,6 @@
+# EN: Builds the scheduled PostgreSQL backup image with pinned object-storage and database client tooling.
+# UK: Створює образ для планових резервних копій PostgreSQL із зафіксованими засобами роботи з об’єктним сховищем і базою даних.
+
 FROM golang:1.24.8-alpine3.22 AS mc-build
 
 ARG MC_RELEASE=RELEASE.2025-08-13T08-35-41Z
