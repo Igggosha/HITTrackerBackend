@@ -1,3 +1,6 @@
+// EN: Calculates due reminder dates and safely converts a user's local wall-clock schedule into UTC across time zones and DST.
+// UK: Обчислює дати нагадувань і безпечно перетворює локальний час користувача на UTC з урахуванням часових поясів та DST.
+
 const weekdayNumbers: Record<string, number> = {
   Sun: 0,
   Mon: 1,
