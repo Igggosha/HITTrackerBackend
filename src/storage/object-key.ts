@@ -1,3 +1,6 @@
+// EN: Generates immutable server-owned object keys and validates that existing keys remain inside managed storage prefixes.
+// UK: Створює незмінні серверні ключі об'єктів і перевіряє, що наявні ключі залишаються в межах керованих префіксів сховища.
+
 import { randomUUID } from 'node:crypto';
 
 /**
