@@ -1,3 +1,6 @@
+// EN: Builds a bounded operational snapshot from internal health probes, Prometheus metrics, and allowlisted Loki log counts.
+// UK: Формує обмежений операційний знімок із внутрішніх перевірок стану, метрик Prometheus і дозволених підрахунків журналів Loki.
+
 import { Injectable } from '@nestjs/common';
 
 type Status = 'up' | 'down' | 'unknown';
@@ -129,6 +132,8 @@ export class AdminObservabilityService {
       if (!response.ok) return null;
       return await response.json();
     } catch {
+      // EN: One slow or unavailable observability backend becomes unknown data instead of failing the whole administrator dashboard.
+      // UK: Один повільний або недоступний сервіс спостережуваності дає невідомі дані, а не ламає всю панель адміністратора.
       return null;
     }
   }
@@ -258,6 +263,8 @@ export class AdminObservabilityService {
     );
     const base = process.env.LOKI_INTERNAL_URL;
     if (!base) return { status: 'unknown' as Status, logs: [] as typeof logs };
+    // EN: The server owns this fixed service/level allowlist; administrators cannot submit arbitrary LogQL through the API.
+    // UK: Сервер сам визначає цей фіксований список сервісів і рівнів; адміністратори не можуть передавати довільний LogQL через API.
     const expression =
       'sum by (service, level) (count_over_time({service=~"api|relay|analytics|search-indexer", level=~"warn|error|fatal"}[5m]))';
     const data = (await this.fetchJson(
@@ -290,6 +297,8 @@ export class AdminObservabilityService {
       data?: unknown;
     } | null;
     if (!data) return { status: 'down' as Status, services: [] as string[] };
+    // EN: Jaeger output is filtered to known project services before it enters the public administrator response.
+    // UK: Дані Jaeger фільтруються до відомих сервісів проєкту перед додаванням у публічну відповідь адміністратора.
     const services = Array.isArray(data.data)
       ? data.data.filter(
           (value): value is string =>
