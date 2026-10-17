@@ -1,3 +1,6 @@
+// EN: Verifies event validation, permanent rejection, transient projection errors, idempotent duplicates, and projection dispatch.
+// UK: Перевіряє валідацію подій, остаточне відхилення, тимчасові помилки проєкції, ідемпотентні дублікати та виклик проєкцій.
+
 import { EventValidator } from '../events/event-validator';
 import { MetricsService } from '../metrics/metrics.service';
 import { Projector } from '../projections/projector';
