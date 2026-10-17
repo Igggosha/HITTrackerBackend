@@ -1,3 +1,6 @@
+// EN: Provides timezone-stable date-only helpers for recurring weekly assignments and display-time schedule status.
+// UK: Надає стабільні щодо часових поясів утиліти дат для щотижневих призначень і відображення стану розкладу.
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function expandScheduleDates(
