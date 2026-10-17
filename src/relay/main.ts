@@ -1,3 +1,6 @@
+// EN: Boots the standalone outbox relay, validates tuning, exposes relay metrics, and manages graceful shutdown.
+// UK: Запускає окремий outbox relay, перевіряє параметри, надає метрики relay та керує коректним завершенням.
+
 import './register';
 import { NestFactory } from '@nestjs/core';
 import { ConsoleLogger } from '@nestjs/common';
