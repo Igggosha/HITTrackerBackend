@@ -1,3 +1,6 @@
+// EN: Verifies username normalization, length and character policy, and reserved product or staff identities.
+// UK: Перевіряє нормалізацію username, правила довжини й символів та зарезервовані назви продукту або службових ролей.
+
 import {
   isReservedUsername,
   isValidUsername,
