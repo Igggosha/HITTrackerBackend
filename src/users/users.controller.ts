@@ -1,3 +1,6 @@
+// EN: Defines authenticated profile, username, presence, body-metric, and avatar endpoints and delegates business rules to UsersService.
+// UK: Визначає автентифіковані endpoints профілю, username, presence, показників тіла й аватара та передає бізнес-правила UsersService.
+
 import {
   Body,
   Controller,
