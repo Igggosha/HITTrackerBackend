@@ -1,3 +1,6 @@
+// EN: Parses and validates the optional S3/MinIO contract, failing startup when configuration is partial or unsafe.
+// UK: Розбирає та перевіряє необов'язковий контракт S3/MinIO, зупиняючи запуск за неповної або небезпечної конфігурації.
+
 /**
  * Object storage settings, read once from the environment.
  *
