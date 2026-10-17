@@ -1,3 +1,6 @@
+// EN: Adapts class-validator failures into the machine-readable body-metric error contract while preserving NestJS defaults elsewhere.
+// UK: Перетворює помилки class-validator на машинозчитуваний формат помилок показників тіла, зберігаючи стандартну поведінку NestJS для інших даних.
+
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import type { ValidationPipeOptions } from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
