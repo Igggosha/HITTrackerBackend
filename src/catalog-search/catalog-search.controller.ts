@@ -1,3 +1,6 @@
+// EN: Exposes authenticated catalog search and derives visibility identity from the JWT principal rather than query input.
+// UK: Надає автентифікований пошук каталогу та визначає ідентичність для перевірки видимості з JWT, а не з параметрів запиту.
+
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
