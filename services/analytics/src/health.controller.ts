@@ -1,3 +1,6 @@
+// EN: Reports analytics process liveness and dependency readiness without exposing credentials or internal payloads.
+// UK: Повідомляє про життєздатність процесу аналітики та готовність залежностей без розкриття облікових даних чи внутрішніх даних подій.
+
 import {
   Controller,
   Get,
