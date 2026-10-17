@@ -1,3 +1,6 @@
+// EN: Propagates request, trace, and event identifiers through asynchronous analytics logging without passing them through every call.
+// UK: Передає ідентифікатори запиту, трасування й події через асинхронне журналювання аналітики без явного додавання до кожного виклику.
+
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { context, trace } from '@opentelemetry/api';
 
