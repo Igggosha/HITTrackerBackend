@@ -1,3 +1,6 @@
+// EN: Implements NestJS throttler storage with atomic Redis counters shared across API instances.
+// UK: Реалізує сховище обмеження запитів NestJS з атомарними лічильниками Redis, спільними для всіх екземплярів API.
+
 import { ThrottlerStorage } from '@nestjs/throttler';
 import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
 
