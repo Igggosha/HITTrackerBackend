@@ -1,3 +1,6 @@
+// EN: Validates one-off or weekly program scheduling, including start date, weekday, and optional recurrence end.
+// UK: Перевіряє одноразове або щотижневе планування програми, включно з датою початку, днем тижня та необов'язковим завершенням повторення.
+
 import { IsDateString, IsIn, IsInt, IsOptional, Min } from 'class-validator';
 
 export class ScheduleProgramDto {
