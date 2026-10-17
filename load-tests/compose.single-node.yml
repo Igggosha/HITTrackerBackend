@@ -1,3 +1,6 @@
+# EN: Disables replica reads for the single-node comparison arm while keeping the surrounding container topology unchanged.
+# UK: Вимикає читання з репліки для порівняльного режиму одного вузла, не змінюючи решту топології контейнерів.
+
 # Adds on top of compose.loadtest.yml for the "single node" arm of
 # measurement A: the API gets no DATABASE_REPLICA_URL, so src/db/db.ts routes
 # every query to the primary. The replica container keeps running (streaming
