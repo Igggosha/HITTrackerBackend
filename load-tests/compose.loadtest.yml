@@ -1,3 +1,6 @@
+# EN: Overlays the main Compose stack with isolated ports, resources, observability, and settings for repeatable load measurements.
+# UK: Доповнює основний стек Compose ізольованими портами, ресурсами, спостережуваністю та налаштуваннями для відтворюваних навантажувальних вимірювань.
+
 # Load-test overlay for docker-compose.yml (see docs/diploma/load-testing.md).
 # Always used together with the base file, its own project name and env file:
 #
