@@ -1,3 +1,6 @@
+// EN: Calculates effective workout time and inactivity expiry without counting paused intervals as active training.
+// UK: Обчислює фактичний час тренування та завершення через неактивність, не зараховуючи паузи як активне виконання.
+
 export const WORKOUT_INACTIVITY_LIMIT_MS = 20 * 60 * 1000;
 
 type TimedWorkout = {
