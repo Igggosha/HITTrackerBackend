@@ -1,3 +1,6 @@
+// EN: Validates body-measurement creation and optional ISO period queries, transforming numeric request values for range checks.
+// UK: Перевіряє створення вимірювань тіла та необов'язкові ISO-періоди, перетворюючи числові значення запиту для перевірки діапазонів.
+
 import { Type } from 'class-transformer';
 import {
   IsDateString,
