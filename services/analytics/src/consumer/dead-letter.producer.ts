@@ -1,3 +1,6 @@
+// EN: Publishes rejected analytics input to Kafka DLQ with source metadata and closes its producer during graceful shutdown.
+// UK: Публікує відхилені вхідні події аналітики до Kafka DLQ з метаданими джерела та закриває видавця під час коректного завершення.
+
 import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { Partitioners, type Kafka, type Producer } from 'kafkajs';
 import { KAFKA } from './kafka-consumer.service';
