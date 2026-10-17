@@ -1,3 +1,6 @@
+// EN: Implements user profiles and administration, including role-safe transactions, session control, presence, usernames, body metrics, and avatars.
+// UK: Реалізує профілі й адміністрування користувачів, включно з безпечними для ролей транзакціями, керуванням сесіями, presence, username, показниками тіла та аватарами.
+
 import {
   BadRequestException,
   ConflictException,
@@ -85,6 +88,8 @@ export class UsersService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  // EN: The permission check, access-token cutoff, refresh-session revocation, and audit event must commit as one security decision.
+  // UK: Перевірка дозволу, межа чинності access-токенів, відкликання refresh-сесій і подія аудиту мають фіксуватися як одне безпекове рішення.
   async revokeTargetSessions(actorUserId: number, targetUserId: number) {
     return db.transaction(async (tx) => {
       await this.assertSecurityActionAllowed(tx, actorUserId, targetUserId);
@@ -511,6 +516,8 @@ export class UsersService {
     return paginateUserActivity(sources, page, limit);
   }
 
+  // EN: This upsert makes repeated heartbeats idempotent and ties one installation to the authenticated user rather than request input.
+  // UK: Цей upsert робить повторні presence-сигнали ідемпотентними та прив'язує установку до автентифікованого користувача, а не до довільних даних запиту.
   async touchPresence(userId: number, dto: PresenceDto = {}) {
     const now = new Date();
     await db.update(users).set({ lastSeenAt: now }).where(eq(users.id, userId));
@@ -868,6 +875,8 @@ export class UsersService {
   }
   async getUsernameAvailability(userId: number, value: unknown) {
     const username = this.validateUsername(value);
+    // EN: Availability uses primary because a delayed replica could briefly offer a username that was just claimed or reserved.
+    // UK: Доступність перевіряється на primary, бо затримка репліки могла б тимчасово показати щойно зайнятий або зарезервований username як вільний.
     const [[owner], [reservation]] = await Promise.all([
       primaryDb
         .select({ id: users.id })
@@ -921,6 +930,8 @@ export class UsersService {
       throw new BadRequestException({ code: 'BODY_METRIC_FUTURE_DATE' });
     }
 
+    // EN: The measurement and its outbox event share one transaction, so analytics never receives an event for a rolled-back row.
+    // UK: Вимірювання та його подія outbox записуються в одній транзакції, тому аналітика не отримає подію для скасованого рядка.
     return db.transaction(async (tx) => {
       const [created] = await tx
         .insert(userBodyMetrics)
@@ -1105,6 +1116,8 @@ export class UsersService {
     try {
       // The response is read back in the same transaction, on the primary.
       return await db.transaction(async (tx) => {
+        // EN: Advisory locks serialize changes by user and canonical username, closing races between availability checks and final saves.
+        // UK: Advisory locks послідовно виконують зміни за користувачем і канонічним username, усуваючи гонки між перевіркою доступності та остаточним збереженням.
         await tx.execute(sql`select pg_advisory_xact_lock(42719, ${userId})`);
 
         const [currentUser] = await tx
