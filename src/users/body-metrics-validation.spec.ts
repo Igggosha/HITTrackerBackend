@@ -1,3 +1,6 @@
+// EN: Verifies that global validation converts body-metric and period failures into stable per-field API details.
+// UK: Перевіряє, що глобальна валідація перетворює помилки показників тіла й періоду на стабільні деталізовані відповіді API.
+
 import { BadRequestException } from '@nestjs/common';
 import type { ArgumentMetadata } from '@nestjs/common';
 import { createValidationPipe } from './body-metrics-validation';
