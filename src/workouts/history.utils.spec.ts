@@ -1,3 +1,6 @@
+// EN: Verifies immutable history-plan construction and preservation of exercise order and recorded performance.
+// UK: Перевіряє створення незмінного плану історії та збереження порядку вправ і записаних результатів.
+
 import {
   decodeHistoryCursor,
   encodeHistoryCursor,
