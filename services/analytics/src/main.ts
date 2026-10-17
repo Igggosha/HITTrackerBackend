@@ -1,3 +1,6 @@
+// EN: Boots the analytics HTTP API and Kafka consumer with validation, security middleware, metrics, tracing, and graceful shutdown.
+// UK: Запускає HTTP API аналітики та споживача Kafka з валідацією, захисними проміжними обробниками, метриками, трасуванням і коректним завершенням.
+
 // Must be the very first import: see services/analytics/src/tracing/register.ts.
 import './tracing/register';
 
