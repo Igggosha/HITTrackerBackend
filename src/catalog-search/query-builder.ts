@@ -1,3 +1,6 @@
+// EN: Builds a bounded Elasticsearch bool query whose boosts prioritize exact and phrase matches before prefix, n-gram, and fuzzy recall.
+// UK: Формує обмежений bool-запит Elasticsearch, де коефіцієнти ваги надають перевагу точним і фразовим збігам перед префіксним, n-gram і нечітким пошуком.
+
 import type { estypes } from '@elastic/elasticsearch';
 import type { CatalogSection } from './catalog-search.constants';
 
@@ -20,6 +23,8 @@ export function fuzzyEdits(token: string): 0 | 1 | 2 {
 
 function fuzzyClause(query: string): estypes.QueryDslQueryContainer | null {
   const tokens = query.split(/\s+/u).filter(Boolean);
+  // EN: Short tokens never use fuzziness, limiting noisy expansions and keeping Cyrillic one-to-three-character searches predictable.
+  // UK: Короткі токени не використовують нечіткий пошук, що обмежує зайві розширення та робить кириличні запити з одного-трьох символів передбачуваними.
   if (!tokens.some((token) => fuzzyEdits(token))) return null;
   return {
     bool: {
@@ -56,6 +61,8 @@ export function buildCatalogQuery({
   allowedIds,
 }: SearchOptions): estypes.QueryDslQueryContainer {
   const query = q.trim();
+  // EN: Visibility is a mandatory filter, never a scoring clause, so relevance cannot promote a document the user may not access.
+  // UK: Видимість є обов'язковим фільтром, а не умовою ранжування, тому релевантність не може підняти недоступний користувачу документ.
   const filter: estypes.QueryDslQueryContainer[] = [
     { term: { deleted: false } },
   ];
@@ -114,6 +121,8 @@ export function buildCatalogQuery({
       },
     };
   }
+  // EN: Boosts intentionally descend from exact keyword and phrase matches to prefix, n-gram, all-token, and finally fuzzy recall.
+  // UK: Коефіцієнти ваги навмисно зменшуються від точного й фразового збігу до префіксного, n-gram, збігу всіх токенів і лише потім нечіткого пошуку.
   const should: estypes.QueryDslQueryContainer[] = [
     { term: { 'name.keyword': { value: query.toLowerCase(), boost: 30 } } },
     { term: { 'aliases.keyword': { value: query.toLowerCase(), boost: 25 } } },
