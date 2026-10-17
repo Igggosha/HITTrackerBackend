@@ -1,3 +1,6 @@
+// EN: Verifies query ranking tiers, length-based fuzzy matching, bounded visibility filters, and safe handling of short input.
+// UK: Перевіряє рівні ранжування, нечіткий пошук залежно від довжини, обмежені фільтри видимості та безпечну обробку короткого вводу.
+
 import { buildCatalogQuery, fuzzyEdits } from './query-builder';
 
 describe('catalog query builder', () => {
