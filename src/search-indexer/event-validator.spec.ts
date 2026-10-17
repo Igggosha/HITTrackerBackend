@@ -1,3 +1,6 @@
+// EN: Verifies that the indexer accepts only known versioned event envelopes that satisfy the bundled JSON schemas.
+// UK: Перевіряє, що індексатор приймає лише відомі версіоновані обгортки подій, які відповідають вбудованим JSON-схемам.
+
 import { SearchEventValidator } from './event-validator';
 
 describe('SearchEventValidator', () => {
