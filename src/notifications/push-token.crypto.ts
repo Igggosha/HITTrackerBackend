@@ -1,3 +1,6 @@
+// EN: Protects stored push tokens with versioned AES-GCM and fails safely when encryption material is unavailable.
+// UK: Захищає збережені push-токени версіонованим AES-GCM і безпечно відмовляє за відсутності ключового матеріалу.
+
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
   createCipheriv,
