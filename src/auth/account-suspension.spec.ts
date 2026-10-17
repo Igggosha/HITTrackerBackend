@@ -1,3 +1,6 @@
+// EN: Verifies stable suspension errors, expiry handling, and invalidation of access tokens issued before session revocation.
+// UK: Перевіряє стабільні помилки блокування, завершення строку та скасування access-токенів, виданих до відкликання сесій.
+
 import { ForbiddenException } from '@nestjs/common';
 import {
   assertNotSuspended,
