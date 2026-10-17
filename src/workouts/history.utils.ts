@@ -1,3 +1,6 @@
+// EN: Merges a stored workout plan with performed sets so history remains readable even when source catalog data later changes.
+// UK: Об'єднує збережений план тренування з виконаними підходами, щоб історія залишалася зрозумілою після змін вихідних даних каталогу.
+
 import type { WorkoutHistoryPlanItem } from '../db/schema';
 
 export type HistoryCursor = { finishedAt: Date; id: number };
