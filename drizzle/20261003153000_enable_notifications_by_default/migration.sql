@@ -1,3 +1,6 @@
+-- EN: Enables supported notification categories by default while leaving users able to change their preferences.
+-- UK: Типово вмикає підтримувані категорії сповіщень, залишаючи користувачам можливість змінити налаштування.
+
 ALTER TABLE "notification_preferences"
 ALTER COLUMN "push_enabled" SET DEFAULT true,
 ALTER COLUMN "general_enabled" SET DEFAULT true,
