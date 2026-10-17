@@ -1,3 +1,6 @@
+// EN: Smoke-tests the production application bootstrap by confirming unauthenticated errors preserve the request correlation identifier.
+// UK: Димовий тест запуску робочого застосунку підтверджує, що помилки без автентифікації зберігають ідентифікатор кореляції запиту.
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
