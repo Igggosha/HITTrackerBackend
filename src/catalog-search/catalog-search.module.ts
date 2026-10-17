@@ -1,3 +1,6 @@
+// EN: Provides the guarded catalog search service with one configured Elasticsearch client and shared metrics.
+// UK: Надає захищений сервіс пошуку каталогу з одним налаштованим клієнтом Elasticsearch і спільними метриками.
+
 import { Module } from '@nestjs/common';
 import { StorageModule } from '../storage/storage.module';
 import { MetricsModule } from '../metrics/metrics.module';
