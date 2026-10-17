@@ -1,3 +1,6 @@
+# EN: Provisions Jaeger as Grafana's trace datasource and links spans to matching Loki logs.
+# UK: Підключає Jaeger як джерело трасувань Grafana та пов’язує ділянки трасування з відповідними журналами Loki.
+
 apiVersion: 1
 datasources:
   - name: Jaeger
