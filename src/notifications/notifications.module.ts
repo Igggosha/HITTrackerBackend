@@ -1,3 +1,6 @@
+// EN: Wires notification APIs and shared creation, reminder, delivery, encryption, Firebase, and storage services.
+// UK: З'єднує API сповіщень і спільні сервіси створення, нагадувань, доставки, шифрування, Firebase та сховища.
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RolesGuard } from '../auth/roles.guard';
