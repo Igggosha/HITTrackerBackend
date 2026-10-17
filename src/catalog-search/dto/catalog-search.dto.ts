@@ -1,3 +1,6 @@
+// EN: Validates normalized search text, section, scope, muscle filter, and bounded result count at the HTTP boundary.
+// UK: Перевіряє нормалізований пошуковий текст, розділ, область, фільтр м'язів і обмежену кількість результатів на HTTP-межі.
+
 import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
