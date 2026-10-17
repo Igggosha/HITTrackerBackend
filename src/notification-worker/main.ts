@@ -1,3 +1,6 @@
+// EN: Boots the standalone notification worker, validates its environment, enables graceful shutdown, and starts delivery polling.
+// UK: Запускає окремий процес обробки сповіщень, перевіряє середовище, вмикає коректне завершення та починає опитування доставок.
+
 import '../tracing/register';
 import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
