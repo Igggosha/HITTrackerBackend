@@ -1,3 +1,6 @@
+// EN: Verifies development defaults and the explicit production allowlist used by the browser CORS boundary.
+// UK: Перевіряє типові налаштування розробки та явний production-список дозволених джерел на межі браузерного CORS.
+
 import { getAllowedCorsOrigins, isCorsOriginAllowed } from './cors';
 
 describe('CORS origin allowlist', () => {
