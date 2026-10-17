@@ -1,3 +1,6 @@
+// EN: Owns the private Prometheus registry, application counters and gauges, database collectors, and scrape authorization.
+// UK: Керує приватним реєстром Prometheus, лічильниками й показниками застосунку, збирачами бази даних та авторизацією збирання метрик.
+
 import { Injectable } from '@nestjs/common';
 import {
   Counter,
