@@ -1,3 +1,6 @@
+// EN: Reads canonical program and exercise documents from PostgreSQL for Elasticsearch indexing and stale-document reconciliation.
+// UK: Читає канонічні документи програм і вправ із PostgreSQL для індексації Elasticsearch та узгодження застарілих документів.
+
 import type { Pool, PoolClient } from 'pg';
 import { catalogAliases } from './catalog-aliases';
 
