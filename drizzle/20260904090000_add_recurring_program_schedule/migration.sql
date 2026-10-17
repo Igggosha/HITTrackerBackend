@@ -1,3 +1,6 @@
+-- EN: Adds recurring schedule series and links generated occurrences back to their source series.
+-- UK: Додає повторювані серії розкладу та пов’язує створені події з їхньою вихідною серією.
+
 CREATE TABLE IF NOT EXISTS "user_program_schedule_series" (
   "id" serial PRIMARY KEY,
   "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
