@@ -1,3 +1,6 @@
+// EN: Verifies profile contracts, authorization boundaries, username reservations and races, presence registration, and safe avatar replacement.
+// UK: Перевіряє контракти профілю, межі авторизації, резервування username і конкурентні зміни, реєстрацію presence та безпечну заміну аватара.
+
 import { db } from '../db/db';
 import type { StorageService, StoredImage } from '../storage/storage.service';
 import { UsersService } from './users.service';
