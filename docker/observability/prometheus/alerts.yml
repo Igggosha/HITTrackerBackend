@@ -1,3 +1,6 @@
+# EN: Defines Prometheus alerts for service availability, latency, errors, resource pressure, replication, and backup freshness.
+# UK: Визначає сповіщення Prometheus про доступність сервісів, затримки, помилки, нестачу ресурсів, реплікацію та актуальність резервних копій.
+
 groups:
   - name: observability
     rules:
