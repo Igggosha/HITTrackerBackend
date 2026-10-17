@@ -1,3 +1,6 @@
+// EN: Starts OpenTelemetry before framework imports so automatic instrumentation can patch every relevant dependency.
+// UK: Запускає OpenTelemetry до імпортів фреймворку, щоб автоматичне інструментування могло підключитися до всіх потрібних залежностей.
+
 // Thin entry point for the API process: this must be the very first import
 // in `src/main.ts`, before Nest, pg, or KafkaJS, so their auto-instrumentation
 // patches modules before those modules are required elsewhere. The
