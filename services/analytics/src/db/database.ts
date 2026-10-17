@@ -1,3 +1,6 @@
+// EN: Provides the analytics PostgreSQL pool and Drizzle client as injectable resources with graceful connection shutdown.
+// UK: Надає пул PostgreSQL аналітики та клієнт Drizzle як залежності з коректним закриттям з'єднань.
+
 import {
   Global,
   Inject,
