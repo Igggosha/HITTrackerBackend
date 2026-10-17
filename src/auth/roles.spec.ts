@@ -1,3 +1,6 @@
+// EN: Verifies hierarchical role permissions and the MFA requirement shared by all privileged roles.
+// UK: Перевіряє ієрархічні дозволи ролей і вимогу MFA, спільну для всіх привілейованих ролей.
+
 import { hasMinimumRole, requiresMfa } from './roles';
 
 describe('hasMinimumRole', () => {
