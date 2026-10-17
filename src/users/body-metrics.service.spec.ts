@@ -1,3 +1,6 @@
+// EN: Verifies service-level metric requirements, range and date errors, and period validation before database access.
+// UK: Перевіряє вимоги сервісу до показників, помилки діапазонів і дат та валідацію періоду до звернення до бази даних.
+
 import type { StorageService } from '../storage/storage.service';
 import { ConfigService } from '@nestjs/config';
 import { db } from '../db/db';
