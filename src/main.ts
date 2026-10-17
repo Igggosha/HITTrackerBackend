@@ -1,3 +1,6 @@
+// EN: Boots the NestJS HTTP process, installs shared configuration, and starts listening on the configured port.
+// UK: Запускає HTTP-процес NestJS, застосовує спільну конфігурацію та починає слухати налаштований порт.
+
 import './tracing/register';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
