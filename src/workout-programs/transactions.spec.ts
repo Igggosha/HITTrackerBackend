@@ -1,3 +1,6 @@
+// EN: Verifies atomic scheduling, unscheduling, assignment, outbox emission, and conflict handling for workout programs.
+// UK: Перевіряє атомарне планування, скасування плану, призначення, запис outbox і обробку конфліктів програм тренувань.
+
 import { ConflictException } from '@nestjs/common';
 import { db } from '../db/db';
 import type { StorageService } from '../storage/storage.service';
