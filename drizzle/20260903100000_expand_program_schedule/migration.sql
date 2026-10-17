@@ -1,3 +1,6 @@
+-- EN: Expands scheduled programs from a single-key record into independently addressable schedule entries.
+-- UK: Розширює розклад програм: замість запису з одним ключем створює окремо адресовані елементи розкладу.
+
 ALTER TABLE "user_program_schedule"
   DROP CONSTRAINT IF EXISTS "user_program_schedule_pkey";
 --> statement-breakpoint
