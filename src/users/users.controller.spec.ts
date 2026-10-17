@@ -1,3 +1,6 @@
+// EN: Verifies that self-service endpoints derive ownership from the authenticated principal rather than client-provided identifiers.
+// UK: Перевіряє, що endpoints самообслуговування визначають власника з автентифікованого користувача, а не з переданих клієнтом ідентифікаторів.
+
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request } from 'express';
 import { CreateBodyMetricDto } from './dto/body-metrics.dto';
