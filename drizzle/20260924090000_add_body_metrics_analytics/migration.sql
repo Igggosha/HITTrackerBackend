@@ -1,3 +1,6 @@
+-- EN: Expands body measurements and relaxes mandatory weight so analytics can represent partial check-ins.
+-- UK: Розширює вимірювання тіла та робить вагу необов’язковою, щоб аналітика підтримувала частково заповнені записи.
+
 ALTER TABLE "user_body_metrics" ALTER COLUMN "weight" DROP NOT NULL;
 ALTER TABLE "user_body_metrics" ADD COLUMN "waist_circumference" real;
 
