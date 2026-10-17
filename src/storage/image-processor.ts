@@ -1,3 +1,6 @@
+// EN: Decodes untrusted image bytes and produces a normalized, size-limited WebP asset with metadata removed.
+// UK: Декодує недовірені байти зображення та створює нормалізований WebP-файл з обмеженим розміром і без метаданих.
+
 import sharp from 'sharp';
 
 /**
