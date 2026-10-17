@@ -1,3 +1,6 @@
+-- EN: Idempotently adds shared demo catalog data without deleting or replacing user-owned records.
+-- UK: Ідемпотентно додає спільні демонстраційні дані каталогу, не видаляючи й не замінюючи записи користувачів.
+
 -- Shared starter content only. This script never deletes users, workouts, or personal programs.
 INSERT INTO muscles (common_name, scientific_name) VALUES
   ('Chest', 'Pectoralis Major'), ('Lats', 'Latissimus Dorsi'),
