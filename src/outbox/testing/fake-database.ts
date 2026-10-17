@@ -1,3 +1,6 @@
+// EN: Provides a transaction-aware Drizzle test double that records query scope, locks, commits, and rollbacks without PostgreSQL.
+// UK: Надає тестовий замінник Drizzle з підтримкою транзакцій, який фіксує область запитів, блокування, фіксації та відкати без PostgreSQL.
+
 import { is, SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import type { DbTransaction } from '../transaction';
