@@ -1,3 +1,6 @@
+// EN: Assigns each HTTP request a safe correlation ID and keeps it available across asynchronous logging and tracing work.
+// UK: Призначає кожному HTTP-запиту безпечний кореляційний ідентифікатор і зберігає його доступним під час асинхронного журналювання та трасування.
+
 import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Request, Response, NextFunction } from 'express';
