@@ -1,3 +1,6 @@
+# EN: Tells Grafana to load version-controlled dashboard definitions into the Observability folder.
+# UK: Наказує Grafana завантажувати версіоновані описи панелей до папки Observability.
+
 apiVersion: 1
 providers:
   - name: observability
