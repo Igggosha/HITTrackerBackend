@@ -1,3 +1,6 @@
+// EN: Verifies notification preference, device, campaign, recipient, media, and mutually exclusive scheduling payload rules.
+// UK: Перевіряє правила даних налаштувань сповіщень, пристроїв, кампаній, одержувачів, медіа та взаємовиключного планування.
+
 import 'reflect-metadata';
 import { validate } from 'class-validator';
 import {
