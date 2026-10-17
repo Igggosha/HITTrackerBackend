@@ -1,3 +1,6 @@
+// EN: Configures Drizzle Kit to read the backend schema, store migrations, and connect to PostgreSQL through DATABASE_URL.
+// UK: Налаштовує Drizzle Kit для читання схеми бекенду, зберігання міграцій і підключення до PostgreSQL через DATABASE_URL.
+
 import { defineConfig } from "drizzle-kit";
 import "dotenv/config";
 
