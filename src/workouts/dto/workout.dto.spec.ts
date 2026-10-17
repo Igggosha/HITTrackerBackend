@@ -1,3 +1,6 @@
+// EN: Verifies workout and set payload validation, including backward-compatible optional fields and strict numeric constraints.
+// UK: Перевіряє дані тренувань і підходів, включно з необов'язковими полями для зворотної сумісності та строгими числовими обмеженнями.
+
 import 'reflect-metadata';
 import { validate } from 'class-validator';
 import { RecordSetDto, UpdateSetDto } from './workout.dto';
