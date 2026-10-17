@@ -1,3 +1,6 @@
+// EN: Persists versioned events inside domain transactions and coordinates concurrent ordered publishing, retries, and dead-letter delivery.
+// UK: Зберігає версіоновані події всередині доменних транзакцій і координує конкурентну впорядковану публікацію, повтори та доставку до dead-letter.
+
 import { Injectable } from '@nestjs/common';
 import { and, asc, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../db/db';
@@ -55,6 +58,8 @@ export class OutboxService {
       // Type-checked already; this guards `as any` call sites at runtime.
       throw new Error('OutboxService.enqueue requires the caller transaction');
     }
+    // EN: The event row and domain mutation share the caller's transaction; PostgreSQL commit is the single source of truth for both.
+    // UK: Рядок події та доменна зміна використовують транзакцію виклику; фіксація PostgreSQL є єдиним джерелом істини для обох.
     const definition = outboxEventDefinitions[event.type];
     const traceContext = activeTraceContext();
     await tx.insert(outboxEvents).values({
@@ -80,6 +85,8 @@ export class OutboxService {
       maxAttempts = DEFAULT_OUTBOX_MAX_ATTEMPTS,
     }: ClaimOptions = {},
   ): Promise<ClaimedOutboxEvent[]> {
+    // EN: Oldest-first ordering plus SKIP LOCKED preserves progress while allowing several relay instances to claim non-overlapping work.
+    // UK: Порядок від найстаріших разом із SKIP LOCKED зберігає поступ і дозволяє кільком екземплярам ретранслятора захоплювати роботу без перетину.
     return tx
       .select()
       .from(outboxEvents)
