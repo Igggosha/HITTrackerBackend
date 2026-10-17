@@ -1,3 +1,6 @@
+// EN: Wires Kafka consumption, event validation, PostgreSQL-backed index writing, Elasticsearch, metrics, and tracing shutdown.
+// UK: З'єднує споживання Kafka, перевірку подій, індексацію з PostgreSQL, Elasticsearch, метрики та завершення трасування.
+
 import { Module } from '@nestjs/common';
 import { MetricsModule } from '../metrics/metrics.module';
 import {
