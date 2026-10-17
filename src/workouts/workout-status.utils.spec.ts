@@ -1,3 +1,6 @@
+// EN: Verifies which workout states remain open for mutation and conflict protection.
+// UK: Перевіряє, які стани тренування залишаються відкритими для змін і захисту від конфліктів.
+
 import { isOpenWorkoutStatus } from './workout-status.utils';
 
 describe('isOpenWorkoutStatus', () => {
