@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Idempotently provisions the isolated analytics database and least-privilege application role on the shared PostgreSQL server.
+# UK: Ідемпотентно створює ізольовану базу аналітики та роль застосунку з мінімальними привілеями на спільному сервері PostgreSQL.
+
 set -eu
 
 # Database-per-service on the shared PostgreSQL server: creates (or fixes up)
