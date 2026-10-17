@@ -1,3 +1,6 @@
+-- EN: Adds exercise likes so each user can react to a catalog exercise at most once.
+-- UK: Додає вподобання вправ, щоб кожен користувач міг оцінити вправу каталогу не більше одного разу.
+
 CREATE TABLE "exercise_likes" (
 	"user_id" integer,
 	"exercise_id" integer,
