@@ -1,3 +1,6 @@
+# EN: Provisions Grafana alerts that evaluate Loki log signals for application failures requiring operator attention.
+# UK: Створює правила сповіщень Grafana, які оцінюють сигнали журналів Loki про збої застосунку, що потребують уваги оператора.
+
 # Grafana-managed alert (not a Loki ruler rule): Grafana's built-in alerting
 # engine already evaluates rules against any datasource, including Loki, with
 # no Alertmanager/ruler storage to run — the same way Prometheus's
