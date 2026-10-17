@@ -1,3 +1,6 @@
+// EN: Provides the authenticated same-origin analytics gateway and streams the trusted upstream status, type, and body to the client.
+// UK: Надає автентифікований шлюз аналітики в межах одного походження та передає клієнту статус, тип і тіло відповіді довіреного внутрішнього сервісу.
+
 import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { JwtGuard } from '../auth/jwt.guard';
