@@ -1,3 +1,6 @@
+// EN: Measures read-heavy history traffic with and without PostgreSQL replica routing under the same workload.
+// UK: Вимірює навантаження читання історії з маршрутизацією на репліку PostgreSQL і без неї за однакового профілю запитів.
+
 // Measurement A: read-heavy workout-history browsing. The same script runs
 // against the default stack (DATABASE_REPLICA_URL set) and the single-node
 // arm (compose.single-node.yml); run.sh snapshots pg_stat_database on the
