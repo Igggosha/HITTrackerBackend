@@ -1,3 +1,6 @@
+// EN: Defines the authoritative Drizzle model for identity, catalog, programs, workouts, notifications, and transactional outbox data.
+// UK: Визначає основну модель Drizzle для ідентифікації, каталогу, програм, тренувань, сповіщень і даних транзакційного outbox.
+
 import {
   boolean,
   check,
