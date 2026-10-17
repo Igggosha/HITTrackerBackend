@@ -1,3 +1,6 @@
+// EN: Configures Drizzle Kit to derive analytics migrations from the service's independent CQRS read-model schema.
+// UK: Налаштовує Drizzle Kit для створення міграцій аналітики з незалежної CQRS-схеми моделей читання цього сервісу.
+
 import { defineConfig } from 'drizzle-kit';
 
 // The analytics service owns this database; it never sees the main API's
