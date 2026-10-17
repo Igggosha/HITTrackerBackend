@@ -1,3 +1,6 @@
+// EN: Verifies request-ID validation, propagation, response headers, tracing linkage, and idempotent middleware reuse.
+// UK: Перевіряє валідацію й передавання ідентифікатора запиту, заголовки відповіді, зв'язок із трасуванням та повторне безпечне застосування middleware.
+
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import request from 'supertest';
