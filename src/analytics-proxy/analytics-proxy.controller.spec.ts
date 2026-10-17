@@ -1,3 +1,6 @@
+// EN: Verifies that the protected analytics route forwards only the intended request path and selected correlation or authorization headers.
+// UK: Перевіряє, що захищений маршрут аналітики передає лише потрібний шлях запиту та вибрані заголовки кореляції або авторизації.
+
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
