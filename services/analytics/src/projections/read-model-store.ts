@@ -1,3 +1,6 @@
+// EN: Defines the storage contract that keeps projection logic independent from PostgreSQL and test implementations.
+// UK: Визначає контракт сховища, який відокремлює логіку проєкцій від реалізацій PostgreSQL і тестів.
+
 import type {
   DayProgress,
   PersonalRecord,
