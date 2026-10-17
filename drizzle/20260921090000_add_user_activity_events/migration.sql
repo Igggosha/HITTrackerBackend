@@ -1,3 +1,6 @@
+-- EN: Adds an append-only activity stream for auditable user and administrator actions.
+-- UK: Додає журнал активності лише з дописуванням для аудиту дій користувачів і адміністраторів.
+
 CREATE TABLE "user_activity_events" (
   "id" serial PRIMARY KEY NOT NULL,
   "user_id" integer NOT NULL,
