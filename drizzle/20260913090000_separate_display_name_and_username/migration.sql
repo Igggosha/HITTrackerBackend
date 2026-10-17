@@ -1,3 +1,6 @@
+-- EN: Separates the editable display name from the unique username and backfills existing user records.
+-- UK: Відокремлює змінюване відображуване ім’я від унікального імені користувача та заповнює наявні записи.
+
 ALTER TABLE "users" ADD COLUMN "display_name" text;
 --> statement-breakpoint
 UPDATE "users" SET "display_name" = "username" WHERE "display_name" IS NULL;
