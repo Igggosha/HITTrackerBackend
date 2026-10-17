@@ -1,3 +1,6 @@
+// EN: Defines valid body-measurement ranges and summarizes historical rows into first, current, latest, and change values.
+// UK: Визначає допустимі діапазони вимірювань тіла та узагальнює історію у початкові, поточні, останні значення й зміни.
+
 export const BODY_METRIC_RANGES = {
   weight: { min: 20, max: 400, unit: 'kg' },
   bodyFatPercentage: { min: 2, max: 75, unit: '%' },
