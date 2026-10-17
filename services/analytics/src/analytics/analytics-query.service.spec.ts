@@ -1,3 +1,6 @@
+// EN: Verifies parameterized CQRS queries, metric calculations, filters, pagination, and empty read-model behavior.
+// UK: Перевіряє параметризовані CQRS-запити, обчислення метрик, фільтри, пагінацію та поведінку порожніх моделей читання.
+
 import { PgDialect } from 'drizzle-orm/pg-core';
 import type { AnalyticsDb } from '../db/database';
 import {
