@@ -1,3 +1,6 @@
+// EN: Defines versioned Elasticsearch mappings and analyzers for exact, phrase, prefix, alias, and typo-tolerant catalog matching.
+// UK: Визначає версіоновані схеми полів і аналізатори Elasticsearch для точного, фразового, префіксного, синонімічного та стійкого до помилок пошуку.
+
 import type { estypes } from '@elastic/elasticsearch';
 
 const nameField = {
