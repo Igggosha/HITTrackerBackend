@@ -1,3 +1,6 @@
+// EN: Temporarily routes a user's post-write reads to primary to hide expected asynchronous replica lag.
+// UK: Тимчасово спрямовує читання користувача після запису на primary, щоб приховати очікувану асинхронну затримку репліки.
+
 import { db, primaryDb } from './db';
 
 /**
