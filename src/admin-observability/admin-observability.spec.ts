@@ -1,3 +1,6 @@
+// EN: Verifies administrator guards, fixed observability queries, service-status aggregation, log counts, and unavailable-backend fallbacks.
+// UK: Перевіряє захист роллю адміністратора, фіксовані запити спостережуваності, агрегацію станів сервісів, підрахунок журналів і резервну поведінку за недоступності джерела даних.
+
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { JwtGuard } from '../auth/jwt.guard';
 import { MINIMUM_ROLE_KEY } from '../auth/minimum-role.decorator';
