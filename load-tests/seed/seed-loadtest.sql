@@ -1,3 +1,6 @@
+-- EN: Seeds deterministic synthetic users, programs, schedules, workouts, and metrics exclusively for the disposable load-test database.
+-- UK: Наповнює тимчасову базу навантажувального тестування детермінованими синтетичними користувачами, програмами, розкладом, тренуваннями та метриками.
+
 -- Deterministic load-test data, loaded straight into the PRIMARY (the replica
 -- receives it through streaming replication). Only for the throwaway
 -- `loadtest` Compose project; never run it against real data.
