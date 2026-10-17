@@ -1,3 +1,6 @@
+// EN: Verifies locked administrative decisions and atomic role, suspension, deletion, body-metric, profile, activity, and outbox writes.
+// UK: Перевіряє адміністративні рішення під блокуванням і атомарні записи ролей, блокувань, видалень, показників тіла, профілів, активності та outbox.
+
 import { ForbiddenException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { db } from '../db/db';
