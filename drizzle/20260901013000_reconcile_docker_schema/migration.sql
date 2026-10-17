@@ -1,3 +1,6 @@
+-- EN: Reconciles imported Docker schemas with the application model by adding missing exercise, program, workout, and user fields safely.
+-- UK: Узгоджує імпортовані Docker-схеми з моделлю застосунку, безпечно додаючи відсутні поля вправ, програм, тренувань і користувачів.
+
 ALTER TABLE "exercises"
   ADD COLUMN IF NOT EXISTS "difficulty" integer NOT NULL DEFAULT 1;
 --> statement-breakpoint
