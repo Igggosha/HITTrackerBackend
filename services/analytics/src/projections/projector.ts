@@ -1,3 +1,6 @@
+// EN: Maps validated domain events into idempotent CQRS read-model mutations while preserving per-user event order.
+// UK: Перетворює перевірені доменні події на ідемпотентні зміни CQRS-моделі читання зі збереженням порядку подій користувача.
+
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { KnownEnvelope } from '../events/event-validator';
 import {
@@ -60,6 +63,8 @@ export class Projector {
    */
   apply(envelope: KnownEnvelope, source: EventSource): Promise<ApplyResult> {
     return this.store.transaction(async (tx) => {
+      // EN: Deduplication, privacy tombstone checks, fact writes, and derived aggregates commit or roll back as one projection decision.
+      // UK: Дедуплікація, перевірка позначки видалення приватних даних, записи фактів і похідні агрегати фіксуються або відкочуються як одне рішення проєкції.
       if (!(await tx.markProcessed(envelope, source))) return 'duplicate';
       if (
         envelope.type === 'catalog.program.changed' ||
