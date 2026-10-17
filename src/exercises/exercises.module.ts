@@ -1,3 +1,6 @@
+// EN: Wires exercise HTTP routes to the catalog service, storage, and transactional outbox dependencies.
+// UK: З'єднує HTTP-маршрути вправ із сервісом каталогу, сховищем і залежностями транзакційного outbox.
+
 import { Module } from '@nestjs/common';
 import {
   ExercisesController,
