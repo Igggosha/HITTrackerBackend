@@ -1,3 +1,6 @@
+// EN: Records analytics HTTP volume and latency with bounded route labels after each response completes.
+// UK: Записує кількість і затримку HTTP-запитів аналітики з обмеженими мітками маршрутів після завершення відповіді.
+
 import type { NextFunction, Request, Response } from 'express';
 import type { MetricsService } from '../metrics/metrics.service';
 
