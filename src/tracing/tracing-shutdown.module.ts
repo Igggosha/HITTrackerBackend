@@ -1,3 +1,6 @@
+// EN: Registers the shared tracing shutdown hook for both the API and standalone relay NestJS processes.
+// UK: Реєструє спільний механізм завершення трасування для API та окремого relay-процесу NestJS.
+
 import { Module } from '@nestjs/common';
 import { TracingShutdownHook } from './tracing-shutdown.hook';
 
