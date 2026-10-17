@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Applies daily, weekly, and monthly retention buckets while keeping object-storage backups and metadata together.
+# UK: Застосовує добові, тижневі й місячні правила зберігання, не розділяючи резервні копії та їхні метадані в об’єктному сховищі.
+
 set -eu
 umask 077
 ROOT=${BACKUP_ROOT:-/backups}
