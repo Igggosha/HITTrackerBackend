@@ -1,3 +1,6 @@
+// EN: Defines read-only TypeScript lint rules for the analytics service source and tests.
+// UK: Визначає правила перевірки TypeScript для вихідного коду й тестів сервісу аналітики.
+
 // @ts-check
 // Same rules as the main API. The lint toolchain is not duplicated in this
 // package: run it from the repository root, which resolves these imports
