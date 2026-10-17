@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Generates an isolated, git-ignored load-test environment with fresh disposable secrets and non-default host ports.
+# UK: Створює ізольоване, виключене з Git середовище навантажувального тестування зі свіжими тимчасовими секретами та нестандартними портами хоста.
+
 # Writes load-tests/.env.loadtest (git-ignored by the root `.env.*` rule) from
 # .env.example with fresh throwaway secrets and non-default host ports, so the
 # load-test stack never reads, needs or touches a developer's own `.env`.
