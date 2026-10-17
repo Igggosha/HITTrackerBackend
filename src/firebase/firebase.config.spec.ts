@@ -1,3 +1,6 @@
+// EN: Verifies loading a configured Firebase service-account file without returning or logging its private key in assertions.
+// UK: Перевіряє завантаження налаштованого облікового файла Firebase без повернення чи журналювання приватного ключа у перевірках.
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
