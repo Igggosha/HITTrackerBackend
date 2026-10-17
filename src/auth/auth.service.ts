@@ -1,3 +1,6 @@
+// EN: Implements the authentication domain: verified registration, credentials and Google login, rotating sessions, password reset, MFA, and mobile OAuth exchange.
+// UK: Реалізує домен автентифікації: підтверджену реєстрацію, вхід через пароль і Google, ротацію сесій, скидання пароля, MFA та mobile OAuth-обмін.
+
 import {
   BadRequestException,
   ConflictException,
