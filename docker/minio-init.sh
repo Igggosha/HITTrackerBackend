@@ -1,7 +1,12 @@
 #!/bin/sh
+# EN: Idempotently provisions the private media bucket, service account, access policy, and browser-safe CORS rules.
+# UK: Ідемпотентно створює приватний кошик медіафайлів, службовий обліковий запис, політику доступу та безпечні для браузера правила CORS.
+
 # Provisions the object storage bucket used for user-uploaded media.
 #
 # The bucket is deliberately private: clients never read it directly, they
+# EN: Presigned URLs keep object storage private while granting narrowly timed access to a single object.
+# UK: Підписані URL зберігають сховище приватним і водночас надають обмежений у часі доступ лише до одного об’єкта.
 # follow short-lived presigned URLs issued by the API. The API authenticates
 # with a bucket-scoped service account rather than the MinIO root credentials.
 set -eu
