@@ -1,3 +1,6 @@
+// EN: Exposes authenticated exercise catalog, authoring, liking, bookmarking, image, and public shared-read endpoints.
+// UK: Надає автентифіковані маршрути API каталогу вправ, створення, вподобань, закладок, зображень і публічного спільного перегляду.
+
 import {
   Body,
   Controller,
