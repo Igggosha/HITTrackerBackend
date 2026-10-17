@@ -1,3 +1,6 @@
+// EN: Verifies migration timestamps, conditional baseline records, and schema fingerprints used to avoid replaying pre-applied DDL.
+// UK: Перевіряє часові позначки міграцій, умовні записи початкового стану та відбитки схеми, що запобігають повторному виконанню вже застосованого DDL.
+
 import {
   fingerprintedMigrations,
   migrationTimestamp,
