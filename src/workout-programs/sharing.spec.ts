@@ -1,3 +1,6 @@
+// EN: Verifies personal-program ownership before sharing and removes private creator data from token-based public responses.
+// UK: Перевіряє власність особистої програми перед поширенням і вилучає приватні дані автора з публічних відповідей за токеном.
+
 import { ForbiddenException } from '@nestjs/common';
 import { db } from '../db/db';
 import { WorkoutProgramsService } from './workout-programs.service';
