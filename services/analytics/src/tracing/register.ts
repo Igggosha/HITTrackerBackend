@@ -1,3 +1,6 @@
+// EN: Starts OpenTelemetry before NestJS, PostgreSQL, and Kafka imports so analytics auto-instrumentation can attach correctly.
+// UK: Запускає OpenTelemetry до імпортів NestJS, PostgreSQL і Kafka, щоб автоматичне інструментування аналітики підключилося коректно.
+
 // Thin entry point for the analytics consumer process: this must be the very
 // first import in `services/analytics/src/main.ts`, before Nest, pg, or
 // KafkaJS, so their auto-instrumentation patches modules before those modules
