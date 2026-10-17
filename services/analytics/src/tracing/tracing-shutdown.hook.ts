@@ -1,3 +1,6 @@
+// EN: Flushes analytics traces after other providers finish graceful shutdown work that may emit final spans.
+// UK: Відправляє траси аналітики після завершення роботи інших провайдерів, яка може створити останні інтервали.
+
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { shutdownTracing } from '../../../../packages/tracing/tracing';
 
