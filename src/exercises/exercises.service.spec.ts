@@ -1,3 +1,6 @@
+// EN: Verifies exercise visibility, media cleanup, stable conflicts, and the primary/secondary muscle-role contract.
+// UK: Перевіряє видимість вправ, очищення медіа, стабільні конфлікти та контракт основних і допоміжних ролей м'язів.
+
 import { db } from '../db/db';
 import { ExercisesService } from './exercises.service';
 import type { StorageService } from '../storage/storage.service';
