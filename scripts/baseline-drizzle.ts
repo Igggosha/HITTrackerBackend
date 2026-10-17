@@ -1,3 +1,6 @@
+// EN: Creates Drizzle's migration ledger for an existing initialized database and records only migrations whose effects are already present.
+// UK: Створює журнал міграцій Drizzle для вже ініціалізованої бази даних і фіксує лише міграції, наслідки яких уже наявні.
+
 import { Client } from 'pg';
 import {
   baselineMigrations,
@@ -40,6 +43,8 @@ async function main() {
     }
 
     for (const migration of fingerprintedMigrations) {
+      // EN: A fingerprint must prove the complete schema effect before the migration is marked as applied.
+      // UK: Відбиток має підтвердити повний наслідок для схеми, перш ніж міграцію буде позначено як застосовану.
       if (await migration.isAlreadyApplied(client)) {
         const inserted = await recordMigrationIfMissing(client, migration.name);
         if (inserted) {
