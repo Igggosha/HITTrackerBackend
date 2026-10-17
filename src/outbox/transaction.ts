@@ -1,3 +1,6 @@
+// EN: Exposes the exact Drizzle transaction-handle type shared by domain services and OutboxService.
+// UK: Надає точний тип дескриптора транзакції Drizzle, спільний для доменних сервісів і OutboxService.
+
 import type { db } from '../db/db';
 
 /**
