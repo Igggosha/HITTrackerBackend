@@ -1,3 +1,6 @@
+// EN: Rechecks the current database role and MFA status before allowing a request that declares privileged role metadata.
+// UK: Повторно перевіряє поточну роль у базі даних і стан MFA перед дозволом запиту з метаданими привілейованої ролі.
+
 import {
   CanActivate,
   ExecutionContext,
