@@ -1,3 +1,6 @@
+// EN: Defines reusable one-action request mixes so competing load-test arms exercise comparable user behavior.
+// UK: Визначає повторно використовувані суміші з однієї користувацької дії, щоб порівнювані режими навантаження відтворювали однакову поведінку.
+
 // Request mixes shared by the scenarios. Each function performs ONE logical
 // client action for one reader and records it under its endpoint name.
 import http from 'k6/http';
