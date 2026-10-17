@@ -1,3 +1,6 @@
+// EN: Exposes the bearer-protected Prometheus scrape endpoint without applying normal API throttling.
+// UK: Надає захищений bearer-токеном endpoint збирання Prometheus без застосування звичайного обмеження запитів API.
+
 import {
   Controller,
   Get,
