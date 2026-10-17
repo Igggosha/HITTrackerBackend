@@ -1,3 +1,6 @@
+// EN: Verifies registration, verification lockouts, password reset races, Google linking, login privacy, and refresh-token rotation.
+// UK: Перевіряє реєстрацію, блокування перевірки, конкурентне скидання пароля, прив'язування Google, приватність входу та ротацію refresh-токенів.
+
 import * as bcrypt from 'bcrypt';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
