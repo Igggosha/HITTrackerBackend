@@ -1,3 +1,6 @@
+// EN: Verifies envelope creation, ordered claims, transaction timeouts, publish acknowledgement, retry accounting, and DLQ processing.
+// UK: Перевіряє створення обгортки події, впорядковане захоплення, ліміт часу транзакцій, підтвердження публікації, облік повторів та обробку DLQ.
+
 import { db } from '../db/db';
 import { outboxEvents } from '../db/schema';
 import { performedSetsPayload } from './events';
