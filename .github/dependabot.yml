@@ -1,3 +1,6 @@
+# EN: Schedules weekly dependency-update proposals for the root backend and the analytics service.
+# UK: Планує щотижневі пропозиції оновлення залежностей для основного бекенду та сервісу аналітики.
+
 version: 2
 updates:
   - package-ecosystem: npm
