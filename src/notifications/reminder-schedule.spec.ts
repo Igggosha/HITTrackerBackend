@@ -1,3 +1,6 @@
+// EN: Verifies reminder cadence, per-recipient local-time conversion, DST-gap rejection, and deterministic idempotency keys.
+// UK: Перевіряє періодичність нагадувань, перетворення локального часу кожного одержувача, відхилення DST-проміжків і детерміновані ключі ідемпотентності.
+
 import {
   addCalendarDays,
   getDueReminderKey,
