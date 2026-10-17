@@ -1,3 +1,6 @@
+// EN: Validates partial profile edits while keeping identity-v2 username changes on their dedicated endpoint.
+// UK: Перевіряє часткові зміни профілю, залишаючи зміни username контракту identity-v2 на окремому endpoint.
+
 import { Type } from 'class-transformer';
 import {
   IsEmail,
