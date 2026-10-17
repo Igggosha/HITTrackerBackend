@@ -1,3 +1,6 @@
+// EN: Builds stable versioned event fixtures shared by analytics projection unit tests.
+// UK: Створює стабільні фікстури версіонованих подій для модульних тестів аналітичних проєкцій.
+
 import { randomUUID } from 'node:crypto';
 import type { KnownEnvelope } from '../../events/event-validator';
 
