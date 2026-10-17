@@ -1,3 +1,6 @@
+// EN: Compares on-demand write-model analytics with precomputed CQRS read-model queries under balanced concurrency.
+// UK: Порівнює аналітику, обчислену на вимогу з моделі запису, із запитами до попередньо обчисленої моделі читання CQRS за збалансованої паралельності.
+
 // Measurement B: analytics computed on request (main API over the write
 // model) vs precomputed read models (analytics service via the API proxy).
 // The mix VUs rotate through the six single-request endpoints so each gets
