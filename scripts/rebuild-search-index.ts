@@ -1,3 +1,6 @@
+// EN: Rebuilds versioned Elasticsearch indexes from an authoritative PostgreSQL snapshot, replays concurrent changes, then atomically swaps aliases.
+// UK: Перебудовує версіоновані індекси Elasticsearch з авторитетного знімка PostgreSQL, повторює паралельні зміни та атомарно перемикає псевдоніми.
+
 import 'dotenv/config';
 import { Client } from '@elastic/elasticsearch';
 import { pool } from '../src/db/db';
@@ -56,6 +59,8 @@ async function bulk(
 async function snapshot() {
   const connection = await pool.connect();
   try {
+    // EN: REPEATABLE READ binds documents and the outbox watermark to one consistent PostgreSQL view.
+    // UK: REPEATABLE READ пов’язує документи та контрольну позначку outbox з одним узгодженим станом PostgreSQL.
     await connection.query('begin isolation level repeatable read read only');
     const watermark = await connection.query<Watermark>(
       `select occurred_at as "occurredAt", id
@@ -202,6 +207,8 @@ async function main() {
     client.indices.refresh({ index: exercisesIndex }),
   ]);
   await swapAliases();
+  // EN: A second replay closes the short window between the first catch-up pass and the atomic alias switch.
+  // UK: Друге відтворення закриває короткий проміжок між першим наздоганянням подій і атомарним перемиканням псевдонімів.
   await replay(writer, replayed);
   const [programCount, exerciseCount] = await Promise.all([
     client.count({ index: programsIndex, query: { term: { deleted: false } } }),
