@@ -1,3 +1,6 @@
+// EN: Provides one optional, named Firebase Admin application for notification services and avoids duplicate initialization.
+// UK: Надає один необов'язковий іменований застосунок Firebase Admin для сервісів сповіщень та запобігає повторній ініціалізації.
+
 import { Module } from '@nestjs/common';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { readFirebaseServiceAccount } from './firebase.config';
