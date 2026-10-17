@@ -1,3 +1,6 @@
+// EN: Registers the analytics process hook that closes OpenTelemetry during NestJS shutdown.
+// UK: Реєструє обробник процесу аналітики, який закриває OpenTelemetry під час завершення NestJS.
+
 import { Module } from '@nestjs/common';
 import { TracingShutdownHook } from './tracing-shutdown.hook';
 
