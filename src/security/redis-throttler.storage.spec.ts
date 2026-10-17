@@ -1,3 +1,6 @@
+// EN: Verifies the Redis-backed throttling window, blocking duration, expiration, and safe key namespace.
+// UK: Перевіряє вікно обмеження запитів у Redis, тривалість блокування, завершення строку та безпечний простір ключів.
+
 import {
   RedisThrottlerStorage,
   RedisEvalClient,
