@@ -1,3 +1,6 @@
+// EN: Records privacy-aware administrative activity and paginates merged event streams without exposing sensitive metadata in logs.
+// UK: Записує адміністративну активність з урахуванням приватності та пагінує об'єднані потоки подій без розкриття чутливих даних у журналах.
+
 import { Logger } from '@nestjs/common';
 import { db } from '../db/db';
 import { userActivityEvents, type UserActivityMetadata } from '../db/schema';
