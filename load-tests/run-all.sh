@@ -1,6 +1,11 @@
 #!/bin/sh
+# EN: Executes the complete benchmark matrix in a fixed order and produces the final comparative report.
+# UK: Виконує повну матрицю вимірювань у фіксованому порядку та формує підсумковий порівняльний звіт.
+
 # The whole study: an idle baseline, then three repetitions of every
 # measurement (A arms interleaved so slow drift hits both equally), then
+# EN: Interleaving comparison arms reduces bias from gradual host-temperature or background-load drift.
+# UK: Чергування порівнюваних режимів зменшує похибку від поступової зміни температури вузла або фонового навантаження.
 # the markdown summary. About 25 minutes on the reference laptop.
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
