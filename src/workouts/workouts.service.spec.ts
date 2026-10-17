@@ -1,3 +1,6 @@
+// EN: Verifies atomic workout events, scheduled-source snapshots, muscle-role history, state changes, and replica-aware reads.
+// UK: Перевіряє атомарні події тренувань, знімки запланованого джерела, історію ролей м'язів, зміни стану та читання з урахуванням репліки.
+
 import { NotFoundException } from '@nestjs/common';
 import { db, primaryDb } from '../db/db';
 import { _resetReadConsistencyForTests } from '../db/read-consistency';
