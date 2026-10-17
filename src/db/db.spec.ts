@@ -1,3 +1,6 @@
+// EN: Verifies that replica reads are optional while writes, transactions, and explicit primary reads stay on PostgreSQL primary.
+// UK: Перевіряє, що читання з репліки є необов'язковим, а записи, транзакції та явні основні читання залишаються на primary PostgreSQL.
+
 const pools: Array<{ connectionString: string | undefined }> = [];
 
 jest.mock('pg', () => ({
