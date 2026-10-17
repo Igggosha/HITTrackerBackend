@@ -1,3 +1,6 @@
+-- EN: Creates the core relations between programs, exercises, workouts, muscles, schedules, users, and body metrics.
+-- UK: Створює основні зв’язки між програмами, вправами, тренуваннями, м’язами, розкладом, користувачами та показниками тіла.
+
 CREATE TABLE "exercises_in_programs" (
 	"id" serial PRIMARY KEY,
 	"program_content_id" integer NOT NULL,
