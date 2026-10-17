@@ -1,3 +1,6 @@
+// EN: Verifies optional storage disablement, complete S3 configuration, safe prefixes, URLs, credentials, and numeric limits.
+// UK: Перевіряє необов'язкове вимкнення сховища, повну конфігурацію S3, безпечні префікси, адреси, облікові дані та числові обмеження.
+
 import {
   isStorageConfigured,
   readStorageConfig,
