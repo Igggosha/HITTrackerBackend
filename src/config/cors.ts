@@ -1,3 +1,6 @@
+// EN: Resolves allowed browser origins while permitting native mobile requests that correctly omit the Origin header.
+// UK: Визначає дозволені джерела браузера та пропускає запити мобільних застосунків, які коректно не надсилають заголовок Origin.
+
 const LOCAL_DEVELOPMENT_ORIGIN = 'http://localhost:5173';
 
 export function getAllowedCorsOrigins(environment = process.env): string[] {
