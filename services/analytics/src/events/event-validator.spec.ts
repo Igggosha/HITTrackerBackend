@@ -1,3 +1,6 @@
+// EN: Verifies schema discovery and strict validation of known event types, versions, formats, and required payload fields.
+// UK: Перевіряє пошук схем і строгу валідацію відомих типів, версій, форматів та обов'язкових полів подій.
+
 import { EventValidator, findSchemasDirectory } from './event-validator';
 import { workoutFinished } from '../projections/testing/fixtures';
 
