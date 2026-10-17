@@ -1,3 +1,6 @@
+// EN: Aggregates k6 summaries and infrastructure metadata into the Markdown comparison used as diploma evidence.
+// UK: Узагальнює результати k6 та метадані інфраструктури в порівняльний Markdown-звіт, що слугує доказовою базою дипломного проєкту.
+
 // Turns load-tests/results/*.json (k6 --summary-export) and *.meta.json
 // (run.sh) into load-tests/results/summary.md. Plain Node, no dependencies:
 //
