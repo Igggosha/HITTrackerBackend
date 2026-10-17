@@ -1,3 +1,6 @@
+-- EN: Adds temporary or indefinite account suspension metadata and records which administrator applied it.
+-- UK: Додає дані про тимчасове або безстрокове призупинення облікового запису та адміністратора, який його застосував.
+
 ALTER TABLE "users"
   ADD COLUMN IF NOT EXISTS "suspended_until" timestamp with time zone,
   ADD COLUMN IF NOT EXISTS "suspension_reason" text,
