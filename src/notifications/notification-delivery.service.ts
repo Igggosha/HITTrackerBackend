@@ -1,3 +1,6 @@
+// EN: Claims due push deliveries, decrypts device tokens only for sending, and records retryable or permanent provider outcomes.
+// UK: Захоплює готові push-доставки, розшифровує токени пристроїв лише для надсилання та записує повторювані або остаточні результати провайдера.
+
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { App } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
@@ -175,6 +178,8 @@ export class NotificationDeliveryService {
         ),
       );
 
+    // EN: SKIP LOCKED gives concurrent workers disjoint deliveries; the lease lets another worker recover a row if its owner crashes mid-send.
+    // UK: SKIP LOCKED розподіляє доставки між паралельними процесами без перетину; строк резервування дозволяє іншому процесу відновити рядок після збою власника під час надсилання.
     return primaryDb.transaction(async (tx) => {
       const rows = await tx
         .select({
