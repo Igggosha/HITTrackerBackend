@@ -1,3 +1,6 @@
+// EN: Verifies that one trusted production proxy allows Express to recognize HTTPS and issue secure session cookies.
+// UK: Перевіряє, що один довірений production-проксі дає Express змогу розпізнати HTTPS і встановити захищені сесійні cookie.
+
 import express from 'express';
 import session from 'express-session';
 import request from 'supertest';
