@@ -1,3 +1,6 @@
+// EN: Validates and normalizes the administrative reason and optional expiry used when suspending an account.
+// UK: Перевіряє та нормалізує адміністративну причину й необов'язковий строк завершення блокування облікового запису.
+
 import { Transform } from 'class-transformer';
 import { IsISO8601, IsString, MaxLength, MinLength } from 'class-validator';
 
