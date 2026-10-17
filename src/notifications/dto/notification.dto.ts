@@ -1,3 +1,6 @@
+// EN: Validates all notification API payloads, including preferences, push devices, campaign targeting, media, and UTC or local scheduling.
+// UK: Перевіряє всі дані API сповіщень, включно з налаштуваннями, push-пристроями, одержувачами кампанії, медіа та плануванням у UTC або локальному часі.
+
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
