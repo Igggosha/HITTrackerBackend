@@ -1,4 +1,7 @@
 #!/bin/sh
+# EN: Regularly proves recoverability by restoring the latest backup into an isolated temporary database and running sanity checks.
+# UK: Регулярно підтверджує можливість відновлення, завантажуючи останню копію до ізольованої тимчасової бази та виконуючи перевірки цілісності.
+
 set -eu
 umask 077
 ROOT=${BACKUP_ROOT:-/backups}
