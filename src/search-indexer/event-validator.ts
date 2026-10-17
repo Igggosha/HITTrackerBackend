@@ -1,3 +1,6 @@
+// EN: Loads shared JSON schemas once and validates untrusted Kafka messages before any indexing side effect.
+// UK: Один раз завантажує спільні JSON-схеми та перевіряє недовірені повідомлення Kafka до будь-яких побічних дій індексації.
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
@@ -44,6 +47,8 @@ export class SearchEventValidator {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const { type, version } = raw as { type?: unknown; version?: unknown };
     if (typeof type !== 'string' || !Number.isInteger(version)) return null;
+    // EN: An unknown type/version has no validator and is rejected instead of being interpreted with a newer or older contract.
+    // UK: Невідомий тип або версія не мають валідатора й відхиляються замість тлумачення за новішим чи старішим контрактом.
     const validate = this.validators.get(`${type}@${String(version)}`);
     return validate?.(raw) ? (raw as EventEnvelope) : null;
   }
