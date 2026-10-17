@@ -1,3 +1,6 @@
+// EN: Boots the standalone Kafka search indexer, validates required connections, and enables graceful signal shutdown.
+// UK: Запускає окремий Kafka search indexer, перевіряє потрібні з'єднання та вмикає коректне завершення за сигналом.
+
 import '../tracing/register';
 import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
