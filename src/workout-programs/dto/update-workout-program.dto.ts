@@ -1,3 +1,6 @@
+// EN: Validates partial program metadata and optional complete content replacement for owner-authorized edits.
+// UK: Перевіряє часткові зміни метаданих програми та необов'язкову повну заміну вмісту для дозволених власнику редагувань.
+
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
