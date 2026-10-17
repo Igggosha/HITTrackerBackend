@@ -1,3 +1,6 @@
+// EN: Verifies that analytics backfill rows reproduce live event shapes and stable identifiers across repeated runs.
+// UK: Перевіряє, що рядки історичного наповнення аналітики відтворюють актуальні форми подій і стабільні ідентифікатори під час повторних запусків.
+
 import {
   BACKFILL_NAMESPACE,
   backfillEventId,
