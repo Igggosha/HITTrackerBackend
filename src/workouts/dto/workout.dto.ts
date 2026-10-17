@@ -1,3 +1,6 @@
+// EN: Validates workout start, timing, set, history, statistics, and cancellation request contracts.
+// UK: Перевіряє контракти запитів запуску тренування, часу, підходів, історії, статистики та скасування.
+
 import {
   ArrayMaxSize,
   IsArray,
