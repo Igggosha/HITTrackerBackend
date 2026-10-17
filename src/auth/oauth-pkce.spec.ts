@@ -1,3 +1,6 @@
+// EN: Verifies PKCE verifier binding and irreversible hashing of single-use mobile OAuth authorization codes.
+// UK: Перевіряє прив'язування PKCE verifier і незворотне хешування одноразових кодів авторизації mobile OAuth.
+
 import { createPkceChallenge, hashOAuthCode, verifyPkce } from './oauth-pkce';
 
 describe('OAuth PKCE', () => {
