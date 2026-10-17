@@ -1,3 +1,6 @@
+// EN: Loads and validates optional Firebase Admin credentials from a local service-account JSON file.
+// UK: Завантажує та перевіряє необов'язкові облікові дані Firebase Admin із локального JSON-файла службового облікового запису.
+
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ServiceAccount } from 'firebase-admin/app';
