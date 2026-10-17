@@ -1,3 +1,6 @@
+// EN: Validates analytics secrets, PostgreSQL, Kafka, metrics, consumer, and tracing settings before startup.
+// UK: Перевіряє секрети аналітики, PostgreSQL, Kafka, метрики, налаштування споживача й трасування до запуску.
+
 const SECRET_MINIMUM_LENGTH = 24;
 const PLACEHOLDERS = new Set([
   'change_me',
