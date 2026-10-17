@@ -1,3 +1,6 @@
+// EN: Composes the API's feature modules and global logging, throttling, mail, and exception-handling infrastructure.
+// UK: Об'єднує функціональні модулі API та глобальну інфраструктуру журналювання, обмеження запитів, пошти й обробки помилок.
+
 import { Logger, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
