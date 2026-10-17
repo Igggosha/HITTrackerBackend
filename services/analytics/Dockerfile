@@ -1,3 +1,6 @@
+# EN: Builds the standalone analytics consumer/API image while copying only its approved shared event and tracing packages.
+# UK: Створює образ окремого споживача й API аналітики, копіюючи лише дозволені спільні пакети подій і трасування.
+
 # Build context is the REPOSITORY ROOT (the shared event contracts live in
 # packages/event-contracts, and the Nest-independent tracing bootstrap in
 # packages/tracing), e.g.:
