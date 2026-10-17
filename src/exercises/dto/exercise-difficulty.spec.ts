@@ -1,3 +1,6 @@
+// EN: Verifies that exercise difficulty accepts only the supported normalized catalog values.
+// UK: Перевіряє, що складність вправи приймає лише підтримувані нормалізовані значення каталогу.
+
 import 'reflect-metadata';
 import { validate } from 'class-validator';
 import { CreateExerciseDto } from './create-exercise.dto';
