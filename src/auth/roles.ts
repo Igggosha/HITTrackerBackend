@@ -1,3 +1,6 @@
+// EN: Defines the role hierarchy and the rule that every staff-level role requires MFA verification.
+// UK: Визначає ієрархію ролей і правило, за яким кожна службова роль вимагає підтвердження MFA.
+
 import type { UserRole } from '../db/schema';
 
 export const userRoleRank: Record<UserRole, number> = {
