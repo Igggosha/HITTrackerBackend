@@ -1,3 +1,6 @@
+-- EN: Adds reusable campaign media and links it to notifications without duplicating stored objects.
+-- UK: Додає повторно використовувані медіафайли кампаній і пов’язує їх зі сповіщеннями без дублювання об’єктів у сховищі.
+
 CREATE TABLE "notification_media" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "uploaded_by" integer REFERENCES "public"."users"("id") ON DELETE set null,
