@@ -1,3 +1,6 @@
+// EN: Implements the transactional workout lifecycle, immutable history snapshots, set tracking, schedule completion, statistics, and read consistency.
+// UK: Реалізує транзакційний життєвий цикл тренування, незмінні знімки історії, облік підходів, завершення розкладу, статистику та узгодженість читання.
+
 import {
   BadRequestException,
   Injectable,
@@ -271,6 +274,8 @@ export class WorkoutsService {
       if (exerciseNames.size !== exerciseIds.length)
         throw new NotFoundException('Planned exercise not found');
 
+      // EN: The start-time snapshot freezes program identity, date, exercise names, and targets so later catalog edits cannot rewrite completed history.
+      // UK: Знімок на момент запуску фіксує програму, дату, назви вправ і цілі, тому подальші зміни каталогу не перепишуть завершену історію.
       const historySnapshot: WorkoutHistorySnapshot = {
         programId: source?.programId ?? null,
         programName: source?.programName ?? null,
@@ -569,6 +574,8 @@ export class WorkoutsService {
       }
 
       // recordSet/updateSet hold the same row lock, so this is the final set list.
+      // EN: Muscle roles are expanded into the completion event here, propagating the primary/secondary distinction with performed sets.
+      // UK: Тут ролі м'язів додаються до події завершення, передаючи поділ на основні й допоміжні разом із виконаними підходами.
       const setRows = await tx
         .select({
           set: sets,
@@ -836,6 +843,8 @@ export class WorkoutsService {
       );
     }
     const rpeSets = actualRows.filter(({ set }) => set.rpe !== null);
+    // EN: Snapshot text remains the historical truth, while availability is recalculated from current ownership and visibility before offering navigation.
+    // UK: Текст знімка залишається історичною істиною, а доступність повторно визначається за поточними правами власності й видимістю перед переходом.
     const snapshot = workout.historySnapshot;
     let programSource = snapshot?.programName
       ? { id: snapshot.programId, name: snapshot.programName, available: false }
