@@ -1,3 +1,6 @@
+// EN: Verifies per-user read-your-writes routing, window expiry, extension, isolation, and bounded-memory cleanup.
+// UK: Перевіряє маршрутизацію читання власних записів для кожного користувача, завершення й подовження вікна, ізоляцію та очищення пам'яті.
+
 const REPLICA = { marker: 'replica' };
 const PRIMARY = { marker: 'primary' };
 
