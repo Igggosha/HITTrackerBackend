@@ -1,3 +1,6 @@
+// EN: Verifies deterministic workout-fact calculations for volume, intensity, muscle roles, duration, and personal records.
+// UK: Перевіряє детерміновані обчислення фактів тренувань для обсягу, інтенсивності, ролей м'язів, тривалості та особистих рекордів.
+
 import {
   aggregateWeek,
   computeDayProgress,
