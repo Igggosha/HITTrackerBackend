@@ -1,3 +1,6 @@
+// EN: Encrypts TOTP secrets with versioned AES-GCM keys and creates normalized one-time recovery and challenge hashes.
+// UK: Шифрує секрети TOTP версіонованими ключами AES-GCM і створює нормалізовані одноразові recovery-коди та хеші challenge.
+
 import {
   createCipheriv,
   createDecipheriv,
