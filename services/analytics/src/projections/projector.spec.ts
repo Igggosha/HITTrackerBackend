@@ -1,3 +1,6 @@
+// EN: Verifies event-to-projection routing, duplicate suppression, scheduling facts, muscle-role analytics, and user-data deletion.
+// UK: Перевіряє маршрутизацію подій до проєкцій, придушення дублікатів, факти розкладу, аналітику ролей м'язів і видалення даних користувача.
+
 import { Projector } from './projector';
 import { InMemoryReadModelStore } from './testing/in-memory-store';
 import {
