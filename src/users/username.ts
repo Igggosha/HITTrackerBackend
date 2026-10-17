@@ -1,3 +1,6 @@
+// EN: Centralizes canonical username normalization, syntax validation, and the case-insensitive reserved-name policy.
+// UK: Централізує канонічну нормалізацію username, перевірку синтаксису та незалежну від регістру політику зарезервованих назв.
+
 export const MIN_USERNAME_LENGTH = 3;
 export const MAX_USERNAME_LENGTH = 24;
 
