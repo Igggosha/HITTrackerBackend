@@ -1,3 +1,6 @@
+// EN: Loads shared versioned JSON schemas and validates untrusted Kafka envelopes before CQRS projection.
+// UK: Завантажує спільні версіоновані JSON-схеми та перевіряє недовірені обгортки Kafka до CQRS-проєкції.
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
