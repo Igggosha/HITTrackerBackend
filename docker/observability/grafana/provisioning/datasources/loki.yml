@@ -1,3 +1,6 @@
+# EN: Provisions Loki as Grafana's log datasource and derives trace links from structured trace identifiers.
+# UK: Підключає Loki як джерело журналів Grafana та формує посилання на трасування зі структурованих ідентифікаторів.
+
 apiVersion: 1
 datasources:
   - name: Loki
