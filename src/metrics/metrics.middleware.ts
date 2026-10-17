@@ -1,3 +1,6 @@
+// EN: Measures the full Express request lifecycle with low-cardinality labels, including failures before NestJS controllers run.
+// UK: Вимірює повний життєвий цикл запиту Express з низькокардинальними мітками, включно зі збоями до запуску контролерів NestJS.
+
 import type { NextFunction, Request, Response } from 'express';
 import { MetricsService } from './metrics.service';
 
