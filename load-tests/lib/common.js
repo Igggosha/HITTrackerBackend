@@ -1,3 +1,6 @@
+// EN: Provides shared k6 authentication, request, selection, timing, and custom-metric helpers for all scenarios.
+// UK: Надає спільні для всіх сценаріїв k6 засоби автентифікації, запитів, вибору даних, вимірювання часу та власних метрик.
+
 // Shared helpers for the k6 scenarios (see docs/diploma/load-testing.md).
 import http from 'k6/http';
 import exec from 'k6/execution';
