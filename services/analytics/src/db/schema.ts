@@ -1,3 +1,6 @@
+// EN: Defines the independent analytics read-model schema, projection checkpoints, processed events, and derived workout facts.
+// UK: Визначає незалежну схему моделей читання аналітики, контрольні точки проєкцій, оброблені події та похідні факти тренувань.
+
 import {
   bigint,
   date,
