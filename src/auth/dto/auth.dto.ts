@@ -1,3 +1,6 @@
+// EN: Declares and validates all public authentication payloads for registration, sessions, password reset, OAuth PKCE, and MFA.
+// UK: Описує та перевіряє всі публічні дані автентифікації для реєстрації, сесій, скидання пароля, OAuth PKCE та MFA.
+
 import {
   IsEmail,
   IsIn,
