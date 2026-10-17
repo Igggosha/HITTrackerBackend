@@ -1,3 +1,6 @@
+-- EN: Extends workout programs with ownership, descriptive metadata, and visibility needed for personal libraries.
+-- UK: Розширює програми тренувань власником, описовими даними та видимістю, потрібними для особистих бібліотек.
+
 ALTER TABLE "workout_programs"
   ADD COLUMN IF NOT EXISTS "description" text;
 --> statement-breakpoint
