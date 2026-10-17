@@ -1,3 +1,6 @@
+// EN: Creates the shared Elasticsearch client and exports its NestJS injection token without embedding index-specific behavior.
+// UK: Створює спільний клієнт Elasticsearch і експортує його токен NestJS без логіки, прив'язаної до конкретного індексу.
+
 import { Client } from '@elastic/elasticsearch';
 
 export const SEARCH_CLIENT = Symbol('SEARCH_CLIENT');
