@@ -1,3 +1,6 @@
+// EN: Exposes authenticated read-only analytics endpoints and scopes every query to the JWT user.
+// UK: Надає автентифіковані маршрути API аналітики лише для читання та обмежує кожен запит користувачем із JWT.
+
 import {
   BadRequestException,
   Controller,
