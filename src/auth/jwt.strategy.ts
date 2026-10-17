@@ -1,3 +1,6 @@
+// EN: Validates access-JWT claims against current account suspension and session-revocation state before attaching the principal.
+// UK: Перевіряє claims access JWT за поточним станом блокування облікового запису й відкликання сесій до додавання користувача в запит.
+
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
