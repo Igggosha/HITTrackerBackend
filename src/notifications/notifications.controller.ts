@@ -1,3 +1,6 @@
+// EN: Exposes authenticated notification inbox, unread count, preferences, read state, and push-device registration endpoints.
+// UK: Надає автентифіковані маршрути API скриньки сповіщень, кількості непрочитаних, налаштувань, стану прочитання та реєстрації push-пристроїв.
+
 import {
   Body,
   Controller,
