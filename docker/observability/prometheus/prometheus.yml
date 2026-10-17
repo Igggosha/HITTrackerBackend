@@ -1,3 +1,6 @@
+# EN: Configures Prometheus scrape targets, rule evaluation, and authenticated collection from protected application endpoints.
+# UK: Налаштовує цілі збору Prometheus, оцінювання правил і автентифіковане отримання даних із захищених кінцевих точок застосунку.
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
