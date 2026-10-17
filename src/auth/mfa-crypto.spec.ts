@@ -1,3 +1,6 @@
+// EN: Verifies TOTP secret encryption and key rotation, malformed-input rejection, and secure recovery-code hashing.
+// UK: Перевіряє шифрування секретів TOTP і ротацію ключів, відхилення пошкоджених даних та безпечне хешування recovery-кодів.
+
 import {
   createRecoveryCodes,
   decryptTotpSecret,
