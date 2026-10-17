@@ -1,3 +1,6 @@
+// EN: Starts Google OAuth while preserving the client platform and mobile PKCE challenge in the server-side session.
+// UK: Запускає Google OAuth, зберігаючи платформу клієнта та mobile PKCE challenge у серверній сесії.
+
 import {
   BadRequestException,
   ExecutionContext,
