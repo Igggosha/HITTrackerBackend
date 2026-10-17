@@ -1,3 +1,6 @@
+// EN: Composes the analytics API, Kafka consumer, PostgreSQL read models, auth, logging, metrics, and tracing infrastructure.
+// UK: Об'єднує API аналітики, споживач Kafka, моделі читання PostgreSQL, автентифікацію, журналювання, метрики та трасування.
+
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
