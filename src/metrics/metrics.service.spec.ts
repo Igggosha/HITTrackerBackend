@@ -1,3 +1,6 @@
+// EN: Verifies that only the configured non-placeholder bearer token grants access to operational metrics.
+// UK: Перевіряє, що доступ до операційних метрик надає лише налаштований bearer-токен, який не є шаблонним значенням.
+
 import { MetricsService } from './metrics.service';
 
 describe('MetricsService authorization', () => {
