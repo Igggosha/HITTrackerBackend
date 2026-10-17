@@ -1,3 +1,6 @@
+// EN: Owns the isolated Prometheus registry for HTTP traffic, Kafka processing, retries, DLQ, lag, and projection outcomes.
+// UK: Керує окремим реєстром Prometheus для HTTP-трафіку, обробки Kafka, повторів, DLQ, відставання й результатів проєкцій.
+
 import { Injectable } from '@nestjs/common';
 import {
   Counter,
