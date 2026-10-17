@@ -1,3 +1,6 @@
+-- EN: Replaces single campaign-media links with ordered attachment arrays while preserving existing associations.
+-- UK: Замінює одиничні зв’язки кампаній із медіа впорядкованими масивами вкладень зі збереженням наявних зв’язків.
+
 ALTER TABLE "notification_campaigns"
   ADD COLUMN "media_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN "video_urls" jsonb NOT NULL DEFAULT '[]'::jsonb;
