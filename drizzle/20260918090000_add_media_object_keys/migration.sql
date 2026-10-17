@@ -1,3 +1,6 @@
+-- EN: Adds object-storage keys alongside public URLs so uploaded media can be replaced and deleted reliably.
+-- UK: Додає ключі об’єктного сховища поруч із публічними URL, щоб завантажені медіафайли можна було надійно замінювати й видаляти.
+
 -- Object storage keys for user-uploaded media.
 --
 -- Both columns are nullable: existing rows simply have no image, and the API
