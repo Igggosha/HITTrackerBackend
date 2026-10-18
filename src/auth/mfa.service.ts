@@ -44,6 +44,8 @@ type MfaUser = Pick<
 export class MfaService {
   private readonly keys: TotpEncryptionKey[];
 
+  // EN: Loads the configured TOTP encryption key ring, with a development-only derived fallback.
+  // UK: Завантажує кільце ключів шифрування TOTP із безпечним резервом лише для development.
   constructor(config: ConfigService) {
     let raw = config.get<string>('TOTP_ENCRYPTION_KEYS');
     if (!raw && process.env.NODE_ENV !== 'production') {
@@ -57,6 +59,8 @@ export class MfaService {
     this.keys = parseTotpEncryptionKeys(raw ?? '');
   }
 
+  // EN: Creates a short-lived, hashed login challenge for roles that require MFA and removes stale challenges.
+  // UK: Створює короткоживучий хешований challenge для ролей із обов'язковим MFA та видаляє застарілі challenge.
   async prepareLogin(user: MfaUser) {
     if (!requiresMfa(user.role)) return null;
     const [credential] = await primaryDb
@@ -65,6 +69,8 @@ export class MfaService {
       .where(eq(authTotpCredentials.userId, user.id))
       .limit(1);
     const challengeToken = randomBytes(32).toString('base64url');
+    // EN: Atomically prunes expired/consumed challenges before inserting the new challenge.
+    // UK: Атомарно очищає прострочені/використані challenge перед вставкою нового.
     await db.transaction(async (tx) => {
       await tx
         .delete(authMfaChallenges)
@@ -91,7 +97,11 @@ export class MfaService {
     };
   }
 
+  // EN: Starts enrollment under a locked transaction, creating or re-encrypting the user's pending TOTP secret.
+  // UK: Починає enrollment у транзакції з блокуванням, створюючи або повторно шифруючи незавершений TOTP-секрет.
   async beginEnrollment(challengeToken: string) {
+    // EN: Keeps challenge validation, credential locking, and secret provisioning in one transaction.
+    // UK: Виконує перевірку challenge, блокування credential і підготовку секрету в одній транзакції.
     return db.transaction(async (tx) => {
       const user = await this.getChallengeUser(tx, challengeToken);
       if (!requiresMfa(user.role)) {
@@ -139,7 +149,11 @@ export class MfaService {
     });
   }
 
+  // EN: Confirms enrollment with a valid TOTP, stores replay state, generates recovery codes, and consumes the challenge.
+  // UK: Підтверджує enrollment дійсним TOTP, зберігає стан replay, генерує recovery-коди та споживає challenge.
   async confirmEnrollment(challengeToken: string, code: string) {
+    // EN: Locks all MFA state so verification and one-time challenge consumption cannot race.
+    // UK: Блокує весь MFA-стан, щоб перевірка та одноразове споживання challenge не конкурували.
     return db.transaction(async (tx) => {
       const user = await this.getChallengeUser(tx, challengeToken);
       if (!requiresMfa(user.role)) {
@@ -183,6 +197,8 @@ export class MfaService {
     });
   }
 
+  // EN: Verifies exactly one login factor, advances TOTP replay state or consumes one recovery code, then consumes the challenge.
+  // UK: Перевіряє рівно один фактор входу, оновлює replay-стан TOTP або споживає recovery-код, потім споживає challenge.
   async verifyChallenge(
     challengeToken: string,
     factor: { code?: string; recoveryCode?: string },
@@ -190,6 +206,8 @@ export class MfaService {
     if (Boolean(factor.code) === Boolean(factor.recoveryCode)) {
       throw new UnauthorizedException({ code: 'MFA_FACTOR_REQUIRED' });
     }
+    // EN: Serializes factor verification with credential and challenge locks to enforce one-time use.
+    // UK: Серіалізує перевірку фактора блокуваннями credential і challenge для гарантії одноразового використання.
     return db.transaction(async (tx) => {
       const user = await this.getChallengeUser(tx, challengeToken);
       if (!requiresMfa(user.role)) {
@@ -203,7 +221,11 @@ export class MfaService {
         await this.verifyAndAdvanceTotp(tx, credential, factor.code);
       } else {
         const wanted = hashRecoveryCode(factor.recoveryCode!);
+        // EN: Removes only the matching hashed recovery code; any retained code remains usable.
+        // UK: Видаляє лише відповідний хешований recovery-код; решта кодів залишаються доступними.
         const remaining = credential.recoveryCodeHashes.filter(
+          // EN: Compares hashes so plaintext recovery codes never enter persistence or logs.
+          // UK: Порівнює хеші, щоб відкриті recovery-коди не потрапляли у сховище чи логи.
           (candidate) => candidate !== wanted,
         );
         if (remaining.length === credential.recoveryCodeHashes.length) {
@@ -241,6 +263,8 @@ export class MfaService {
     });
   }
 
+  // EN: Reports current MFA requirement, enrollment state, and remaining recovery-code count from the primary database.
+  // UK: Повертає вимогу MFA, стан enrollment і кількість recovery-кодів із primary-бази.
   async status(userId: number) {
     const [user] = await primaryDb
       .select({ role: users.role })
@@ -263,7 +287,11 @@ export class MfaService {
     };
   }
 
+  // EN: Replaces recovery codes only after a fresh, replay-protected TOTP verification.
+  // UK: Замінює recovery-коди лише після нового, захищеного від replay підтвердження TOTP.
   async regenerateRecoveryCodes(userId: number, code: string) {
+    // EN: Keeps verification and code replacement atomic under the credential row lock.
+    // UK: Виконує перевірку та заміну кодів атомарно під блокуванням рядка credential.
     return db.transaction(async (tx) => {
       const credential = await this.getCredentialForUpdate(tx, userId);
       if (!credential.enabledAt) {
@@ -291,7 +319,11 @@ export class MfaService {
     });
   }
 
+  // EN: Disables MFA only for eligible roles after TOTP verification, deleting credentials and revoking refresh sessions.
+  // UK: Вимикає MFA лише для дозволених ролей після TOTP, видаляючи credential і відкликаючи refresh-сесії.
   async disable(userId: number, code: string) {
+    // EN: Locks the user and MFA credential so role checks and destructive cleanup see one consistent state.
+    // UK: Блокує користувача та MFA credential, щоб перевірка ролі й очищення бачили узгоджений стан.
     return db.transaction(async (tx) => {
       const [user] = await tx
         .select({ role: users.role })
@@ -329,6 +361,8 @@ export class MfaService {
     });
   }
 
+  // EN: Validates and locks an unconsumed, unexpired challenge, then loads and locks its user.
+  // UK: Перевіряє та блокує невикористаний непрострочений challenge, потім завантажує й блокує його користувача.
   private async getChallengeUser(
     tx: DbTransaction,
     challengeToken: string,
@@ -365,6 +399,8 @@ export class MfaService {
     return user;
   }
 
+  // EN: Marks a challenge consumed exactly once; the conditional update is the replay-prevention contract.
+  // UK: Позначає challenge спожитим рівно один раз; умовне оновлення є контрактом захисту від повторного використання.
   private async consumeChallenge(tx: DbTransaction, challengeToken: string) {
     const [consumed] = await tx
       .update(authMfaChallenges)
@@ -381,6 +417,8 @@ export class MfaService {
     }
   }
 
+  // EN: Loads and locks the user's TOTP credential for atomic verification and state updates.
+  // UK: Завантажує та блокує TOTP credential користувача для атомарної перевірки й оновлення стану.
   private async getCredentialForUpdate(tx: DbTransaction, userId: number) {
     const [credential] = await tx
       .select()
@@ -394,6 +432,8 @@ export class MfaService {
     return credential;
   }
 
+  // EN: Verifies TOTP while rejecting reused time steps, then persists the newest step and current encryption key.
+  // UK: Перевіряє TOTP із відхиленням повторного time step, потім зберігає новий step і поточний ключ шифрування.
   private async verifyAndAdvanceTotp(
     tx: DbTransaction,
     credential: typeof authTotpCredentials.$inferSelect,
@@ -425,10 +465,14 @@ export class MfaService {
       .where(eq(authTotpCredentials.userId, credential.userId));
   }
 
+  // EN: Creates the stable machine-readable exception used for invalid MFA factors.
+  // UK: Створює стабільний машинозчитуваний виняток для недійсного MFA-фактора.
   private invalidFactor() {
     return new UnauthorizedException({ code: 'MFA_FACTOR_INVALID' });
   }
 
+  // EN: Extracts the RFC 6238 time step needed to prevent TOTP replay.
+  // UK: Витягує time step RFC 6238, потрібний для захисту від повторного використання TOTP.
   private timeStep(result: { valid: true }): number {
     // `otplib` exposes a combined HOTP/TOTP result type, while the runtime
     // function used here is TOTP and always includes the RFC 6238 time step.
