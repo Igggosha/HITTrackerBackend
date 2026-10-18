@@ -73,6 +73,8 @@ type AuthUser = {
 
 @Injectable()
 export class AuthService {
+  // EN: Receives infrastructure collaborators used for hashing, mail, JWT, MFA, and transactional outbox work.
+  // UK: Приймає залежності для хешування, пошти, JWT, MFA та транзакційної outbox-роботи.
   constructor(
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
@@ -81,6 +83,8 @@ export class AuthService {
     private readonly mfa: MfaService,
   ) {}
 
+  // EN: Normalizes registration input, stores only hashes, and sends a time-limited verification code.
+  // UK: Нормалізує реєстраційні дані, зберігає лише хеші та надсилає обмежений у часі код перевірки.
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
     const displayName =
@@ -175,13 +179,18 @@ export class AuthService {
     return { message: 'A confirmation code has been sent to your email.' };
   }
 
+  // EN: Atomically verifies the code, creates the user, and records registration activity while preserving lockout counters.
+  // UK: Атомарно перевіряє код, створює користувача й записує активність, зберігаючи лічильники блокування.
   async verifyRegistration(dto: VerifyRegistrationDto) {
     const email = dto.email.trim().toLowerCase();
     const now = new Date();
 
     let outcome: VerificationOutcome;
     try {
-      outcome = await db.transaction(async (tx) => {
+      outcome = await db.transaction(
+        /* EN: Keeps verification attempts, lockout, cleanup, and user creation atomic. */
+        /* UK: Робить атомарними спроби перевірки, блокування, очищення та створення користувача. */
+        async (tx) => {
         // The row lock serializes attempts for one email. Without it, parallel
         // guesses all read the same attempt count and the five-attempt
         // lockout could be bypassed by sending many codes at once.
@@ -304,6 +313,8 @@ export class AuthService {
     }
   }
 
+  // EN: Enqueues the durable registration event inside the caller's transaction.
+  // UK: Додає надійну подію реєстрації всередині транзакції виклику.
   private async enqueueUserRegistered(
     tx: DbTransaction,
     user: { id: number; createdAt: Date },
@@ -320,6 +331,8 @@ export class AuthService {
     });
   }
 
+  // EN: Validates password credentials against the primary database and rejects unverified, social-only, or suspended accounts.
+  // UK: Перевіряє пароль у primary-базі та відхиляє непідтверджені, social-only або заблоковані акаунти.
   async validateUser(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
     const [user] = await primaryDb
@@ -366,11 +379,15 @@ export class AuthService {
     return user;
   }
 
+  // EN: Performs password login and delegates MFA/session issuance to the common primary-login path.
+  // UK: Виконує вхід за паролем і передає MFA/створення сесії спільному шляху входу.
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto.email, dto.password);
     return this.completePrimaryLogin('Login successful', user);
   }
 
+  // EN: Resolves an existing Google identity, links a matching email, or creates a new account with a race-safe fallback.
+  // UK: Знаходить Google-ідентичність, пов'язує збіжний email або створює акаунт із безпечним конкурентним fallback.
   async loginWithGoogle(googleUser: GoogleUser) {
     const [userByGoogleId] = await primaryDb
       .select()
@@ -398,7 +415,10 @@ export class AuthService {
     }
 
     try {
-      const newUser = await db.transaction(async (tx) => {
+      const newUser = await db.transaction(
+        /* EN: Makes Google account creation and its outbox event a single durable unit. */
+        /* UK: Робить створення Google-акаунта та outbox-подію єдиною надійною одиницею. */
+        async (tx) => {
         const [created] = await tx
           .insert(users)
           .values({
@@ -454,11 +474,16 @@ export class AuthService {
     }
   }
 
+  // EN: Links a Google identifier transactionally and records the security-relevant account activity.
+  // UK: Транзакційно прив'язує Google-ідентифікатор і записує важливу для безпеки активність акаунта.
   private async linkGoogleAccount(
     userByEmail: typeof users.$inferSelect,
     googleId: string,
   ) {
-    const linkedUser = await db.transaction(async (tx) => {
+    const linkedUser = await db.transaction(
+      /* EN: Prevents a partially linked Google identity or missing activity record. */
+      /* UK: Не допускає часткового linking Google-ідентичності або відсутнього запису активності. */
+      async (tx) => {
       const [linked] = await tx
         .update(users)
         .set({ googleId })
@@ -482,6 +507,8 @@ export class AuthService {
     };
   }
 
+  // EN: Creates a hashed, expiring reset token and always returns an enumeration-resistant response.
+  // UK: Створює хешований токен скидання з терміном дії та завжди повертає відповідь без розкриття існування email.
   async forgotPassword(dto: ForgotPasswordDto) {
     const [user] = await primaryDb
       .select()
@@ -525,6 +552,8 @@ export class AuthService {
     return { message: 'If this email exists, a reset link has been sent.' };
   }
 
+  // EN: Atomically consumes the reset token, changes the password, and revokes prior sessions.
+  // UK: Атомарно використовує токен, змінює пароль і відкликає попередні сесії.
   async resetPassword(dto: ResetPasswordDto) {
     const [user] = await primaryDb
       .select()
@@ -543,7 +572,10 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
 
-    const consumed = await db.transaction(async (tx) => {
+    const consumed = await db.transaction(
+      /* EN: Ensures token consumption, password update, and session revocation commit together. */
+      /* UK: Забезпечує спільний commit використання токена, зміни пароля та відкликання сесій. */
+      async (tx) => {
       // The token is consumed only while it is still the stored, unexpired
       // one: of two concurrent resets with the same link exactly one wins.
       const [updated] = await tx
@@ -593,15 +625,22 @@ export class AuthService {
     return { message: 'Password successfully updated.' };
   }
 
+  // EN: Chooses MFA enrollment or direct session creation after a successful primary credential check.
+  // UK: Після успішної первинної перевірки обирає MFA або безпосереднє створення сесії.
   async completePrimaryLogin(message: string, user: AuthUser) {
     return (
       (await this.mfa.prepareLogin(user)) ?? this.createSession(message, user)
     );
   }
 
+  // EN: Creates a hashed rotating refresh session only after rechecking account state under a row lock.
+  // UK: Створює хешовану refresh-сесію після повторної перевірки акаунта під блокуванням рядка.
   async createSession(message: string, user: AuthUser, mfaVerifiedAt?: Date) {
     const refreshToken = createRefreshToken();
-    const sessionIssuedAt = await db.transaction(async (tx) => {
+    const sessionIssuedAt = await db.transaction(
+      /* EN: Locks the account while issuing the refresh session so suspension cannot race the login. */
+      /* UK: Блокує акаунт під час видачі refresh-сесії, щоб блокування не змагалося з login. */
+      async (tx) => {
       const [account] = await tx
         .select({
           suspendedUntil: users.suspendedUntil,
@@ -630,10 +669,15 @@ export class AuthService {
     );
   }
 
+  // EN: Rotates refresh tokens transactionally and revokes an entire family when reuse is detected.
+  // UK: Транзакційно ротує refresh-токени та відкликає всю сім'ю при виявленні повторного використання.
   async refreshSession(refreshToken: string | undefined) {
     if (!refreshToken) throw this.sessionExpired();
     const now = new Date();
-    const outcome = await db.transaction(async (tx) => {
+    const outcome = await db.transaction(
+      /* EN: Serializes refresh-token rotation and reuse detection for the token family. */
+      /* UK: Серіалізує ротацію refresh-токена та виявлення повторного використання його сім'ї. */
+      async (tx) => {
       const [session] = await tx
         .select()
         .from(authRefreshSessions)
@@ -715,6 +759,8 @@ export class AuthService {
     return outcome.response;
   }
 
+  // EN: Idempotently revokes one refresh session by its hash without logging the raw token.
+  // UK: Ідемпотентно відкликає одну refresh-сесію за хешем, не журналюючи сирий токен.
   async revokeRefreshSession(refreshToken: string | undefined) {
     if (!refreshToken) return;
     await db
@@ -728,6 +774,8 @@ export class AuthService {
       );
   }
 
+  // EN: Builds the public auth payload, signing short-lived access claims and stripping private user fields.
+  // UK: Формує публічну auth-відповідь, підписує короткоживучі access claims і прибирає приватні поля.
   private createAuthResponse(
     message: string,
     user: AuthUser,
@@ -752,10 +800,14 @@ export class AuthService {
     };
   }
 
+  // EN: Starts MFA enrollment through the dedicated MFA service using its challenge token.
+  // UK: Починає підключення MFA через спеціалізований сервіс за challenge-токеном.
   beginMfaEnrollment(challengeToken: string) {
     return this.mfa.beginEnrollment(challengeToken);
   }
 
+  // EN: Confirms MFA enrollment, creates a verified session, and returns one-time recovery codes.
+  // UK: Підтверджує MFA, створює перевірену сесію та повертає одноразові recovery-коди.
   async confirmMfaEnrollment(challengeToken: string, code: string) {
     const result = await this.mfa.confirmEnrollment(challengeToken, code);
     const session = await this.createSession(
@@ -766,6 +818,8 @@ export class AuthService {
     return { ...session, recoveryCodes: result.recoveryCodes };
   }
 
+  // EN: Verifies a TOTP or recovery factor and issues a session carrying the verification timestamp.
+  // UK: Перевіряє TOTP або recovery-фактор і видає сесію з часом перевірки.
   async verifyMfaChallenge(
     challengeToken: string,
     factor: { code?: string; recoveryCode?: string },
@@ -778,20 +832,31 @@ export class AuthService {
     );
   }
 
+  // EN: Returns current MFA enrollment state for an authenticated user.
+  // UK: Повертає поточний стан підключення MFA для автентифікованого користувача.
   getMfaStatus(userId: number) {
     return this.mfa.status(userId);
   }
 
+  // EN: Regenerates MFA recovery codes after the MFA service validates the supplied factor.
+  // UK: Генерує нові MFA recovery-коди після перевірки фактора сервісом MFA.
   regenerateMfaRecoveryCodes(userId: number, code: string) {
     return this.mfa.regenerateRecoveryCodes(userId, code);
   }
 
+  // EN: Disables MFA through the MFA service after code validation.
+  // UK: Вимикає MFA через сервіс MFA після перевірки коду.
   disableMfa(userId: number, code: string) {
     return this.mfa.disable(userId, code);
   }
 
+  // EN: Invalidates the user's session epoch and all active refresh sessions in one transaction.
+  // UK: В одній транзакції інвалідує епоху сесій користувача та всі активні refresh-сесії.
   async revokeAllSessions(userId: number) {
-    await db.transaction(async (tx) => {
+    await db.transaction(
+      /* EN: Commits the session epoch invalidation and row revocations together. */
+      /* UK: Спільно фіксує інвалідацію епохи сесій і відкликання рядків. */
+      async (tx) => {
       const revokedAt = new Date();
       await tx
         .update(users)
@@ -810,6 +875,8 @@ export class AuthService {
     return { message: 'All sessions revoked' };
   }
 
+  // EN: Whitelists fields safe for API clients, excluding password and token material.
+  // UK: Формує білий список полів для API, виключаючи паролі та матеріал токенів.
   private toPublicUser(user: AuthUser): AuthUser {
     return {
       id: user.id,
@@ -821,6 +888,8 @@ export class AuthService {
     };
   }
 
+  // EN: Creates the stable machine-readable exception used for missing or expired sessions.
+  // UK: Створює стабільне машинозчитуване виключення для відсутніх або прострочених сесій.
   private sessionExpired() {
     return new UnauthorizedException({
       message: 'Session expired',
@@ -828,6 +897,8 @@ export class AuthService {
     });
   }
 
+  // EN: Issues a short-lived, hashed mobile OAuth code bound to the PKCE challenge and user.
+  // UK: Видає короткоживучий хешований mobile OAuth-код, пов'язаний із PKCE challenge та користувачем.
   async issueMobileOAuthCode(
     user: { id: number },
     codeChallenge: string,
@@ -842,6 +913,8 @@ export class AuthService {
     return code;
   }
 
+  // EN: Atomically consumes the mobile OAuth code, verifies PKCE, and continues through the primary-login path.
+  // UK: Атомарно використовує mobile OAuth-код, перевіряє PKCE та продовжує спільним шляхом входу.
   async exchangeMobileOAuthCode(dto: ExchangeOAuthCodeDto) {
     const [loginCode] = await db
       .delete(oauthLoginCodes)
