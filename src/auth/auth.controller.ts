@@ -276,7 +276,7 @@ export class AuthController {
         parameters.forEach(
           /* EN: Copies each provider error parameter into custom-scheme URLs, where fragments are unavailable. */
           /* UK: Копіює кожен параметр помилки в URL custom scheme, де fragment недоступний. */
-          (value, key) => url.searchParams.set(key, value)
+          (value, key) => url.searchParams.set(key, value),
         );
       }
       return response.redirect(url.toString());
@@ -415,12 +415,12 @@ export class AuthController {
       .map(
         /* EN: Normalizes cookie segments before selecting the named refresh cookie. */
         /* UK: Нормалізує частини cookie перед вибором потрібного refresh-cookie. */
-        (part) => part.trim()
+        (part) => part.trim(),
       )
       .find(
         /* EN: Selects only the exact cookie name so similarly prefixed cookies cannot be confused. */
         /* UK: Вибирає лише точну назву cookie, щоб не переплутати схожі префікси. */
-        (part) => part.startsWith(`${REFRESH_COOKIE}=`)
+        (part) => part.startsWith(`${REFRESH_COOKIE}=`),
       );
     if (!entry) return undefined;
     try {
