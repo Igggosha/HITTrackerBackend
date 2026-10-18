@@ -9,6 +9,8 @@ import { assertAccountMayAuthenticate } from './account-suspension';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  // EN: Configures Passport to read bearer tokens and verify their signature with the server-only JWT secret.
+  // UK: Налаштовує Passport на читання bearer token і перевірку його підпису серверним JWT secret.
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -17,6 +19,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  // EN: Rechecks mutable account state for every protected request, then exposes only the principal fields used by guards and controllers.
+  // UK: Для кожного захищеного запиту повторно перевіряє змінний стан акаунта й відкриває лише поля principal, потрібні guards і controllers.
   async validate(payload: {
     sub: number;
     email: string;
