@@ -39,10 +39,14 @@ import type { UploadedFile as UploadedImage } from '../storage/upload-validation
 @MinimumRole('user')
 @Controller('workout-programs')
 export class WorkoutProgramsController {
+  // EN: Injects the feature service that enforces library, ownership, and visibility rules.
+  // UK: Впроваджує сервіс функціональності, який забезпечує правила бібліотеки, власності та видимості.
   constructor(
     private readonly workoutProgramsService: WorkoutProgramsService,
   ) {}
 
+  // EN: Lists programs visible to the authenticated user, using a consistency-aware library read.
+  // UK: Повертає програми, доступні автентифікованому користувачу, через узгоджене читання бібліотеки.
   @Get()
   async getAll(@Req() request: Request) {
     return this.workoutProgramsService.getAllPrograms(
@@ -51,11 +55,15 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Reads the user's scheduled programs for the requested calendar range.
+  // UK: Читає заплановані програми користувача для запитаного календарного діапазону.
   @Get('schedule')
   async getSchedule(@Req() request: Request, @Query() query: ListScheduleDto) {
     return this.workoutProgramsService.getCalendar(request.user!.id!, query);
   }
 
+  // EN: Finds a visible program matching the submitted exercise IDs for guided selection.
+  // UK: Знаходить видиму програму за переданими ідентифікаторами вправ для вибору користувачем.
   @Post('match')
   async findMatchingProgram(
     @Req() request: Request,
@@ -67,6 +75,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Returns one program only when its visibility and the caller's access permit the read.
+  // UK: Повертає програму лише якщо її видимість і права виклику дозволяють читання.
   @Get(':id')
   async getById(
     @Req() request: Request,
@@ -79,6 +89,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Creates a personal program owned by the authenticated user.
+  // UK: Створює персональну програму, власником якої є автентифікований користувач.
   @Post()
   async create(@Req() request: Request, @Body() dto: CreateWorkoutProgramDto) {
     return this.workoutProgramsService.createPersonalProgram(
@@ -87,6 +99,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Creates an official program; the moderator role is required by the route guard.
+  // UK: Створює офіційну програму; роль модератора вимагається захистом маршруту.
   @Post('official')
   @MinimumRole('moderator')
   async createOfficial(
@@ -99,6 +113,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Adds a program to the caller's schedule while preserving role-aware access checks.
+  // UK: Додає програму до розкладу викликача, зберігаючи перевірки доступу за роллю.
   @Post('schedule')
   async schedule(@Req() request: Request, @Body() dto: ScheduleProgramDto) {
     return this.workoutProgramsService.scheduleProgram(
@@ -108,6 +124,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Removes one scheduled program belonging to the authenticated user.
+  // UK: Видаляє одну заплановану програму, що належить автентифікованому користувачу.
   @Delete('schedule/:id')
   async removeSchedule(
     @Req() request: Request,
@@ -119,6 +137,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Copies an accessible source program into a new personal program for the caller.
+  // UK: Копіює доступну програму-джерело в нову персональну програму викликача.
   @Post(':id/copy')
   async copy(
     @Req() request: Request,
@@ -133,6 +153,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Creates a share token only for a program the caller may share.
+  // UK: Створює токен поширення лише для програми, яку викликачу дозволено поширювати.
   @Post(':id/share')
   async share(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
     return this.workoutProgramsService.createShareToken(
@@ -142,6 +164,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Toggles the caller's like and returns the resulting reaction state for optimistic UI updates.
+  // UK: Перемикає вподобання викликача й повертає новий стан реакції для оптимістичного інтерфейсу.
   @Post(':id/like')
   async like(@Req() request: Request, @Param('id', ParseIntPipe) id: number) {
     return this.workoutProgramsService.toggleLike(
@@ -151,6 +175,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Updates an owned program through the service's revision/conflict rules.
+  // UK: Оновлює власну програму за правилами сервісу щодо ревізії та конфліктів.
   @Patch(':id')
   async update(
     @Req() request: Request,
@@ -165,6 +191,8 @@ export class WorkoutProgramsController {
     );
   }
 
+  // EN: Replaces official program media after moderator authorization and upload validation.
+  // UK: Замінює медіа офіційної програми після авторизації модератора та перевірки завантаження.
   @Post(':id/image')
   @MinimumRole('moderator')
   @UseInterceptors(
@@ -179,6 +207,8 @@ export class WorkoutProgramsController {
     return this.workoutProgramsService.setImage(id, file);
   }
 
+  // EN: Removes official program media after moderator authorization.
+  // UK: Видаляє медіа офіційної програми після авторизації модератора.
   @Delete(':id/image')
   @MinimumRole('moderator')
   removeImage(@Param('id', ParseIntPipe) id: number) {
@@ -188,15 +218,21 @@ export class WorkoutProgramsController {
 
 @Controller('shared/programs')
 export class SharedWorkoutProgramsController {
+  // EN: Injects the service shared by authenticated and token-based program flows.
+  // UK: Впроваджує сервіс, спільний для автентифікованих потоків і потоків за токеном.
   constructor(
     private readonly workoutProgramsService: WorkoutProgramsService,
   ) {}
 
+  // EN: Reads a shared program by UUID token without requiring authentication.
+  // UK: Читає поширену програму за UUID-токеном без обов'язкової автентифікації.
   @Get(':token')
   getByToken(@Param('token', ParseUUIDPipe) token: string) {
     return this.workoutProgramsService.getSharedProgram(token);
   }
 
+  // EN: Imports the token-resolved program into the authenticated user's personal library.
+  // UK: Імпортує програму, знайдену за токеном, до персональної бібліотеки автентифікованого користувача.
   @Post(':token/import')
   @UseGuards(JwtGuard, RolesGuard)
   @MinimumRole('user')
