@@ -9,6 +9,7 @@ import {
 } from './storage.config';
 import { StorageService } from './storage.service';
 import { STORAGE_CONFIG } from './storage.tokens';
+import { OnboardingController } from './onboarding.controller';
 
 /**
  * Object storage wiring.
@@ -18,6 +19,7 @@ import { STORAGE_CONFIG } from './storage.tokens';
  * or deliberately absent.
  */
 @Module({
+  controllers: [OnboardingController],
   providers: [
     {
       provide: STORAGE_CONFIG,
