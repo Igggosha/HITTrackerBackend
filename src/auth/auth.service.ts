@@ -191,73 +191,74 @@ export class AuthService {
         /* EN: Keeps verification attempts, lockout, cleanup, and user creation atomic. */
         /* UK: Робить атомарними спроби перевірки, блокування, очищення та створення користувача. */
         async (tx) => {
-        // The row lock serializes attempts for one email. Without it, parallel
-        // guesses all read the same attempt count and the five-attempt
-        // lockout could be bypassed by sending many codes at once.
-        const [pending] = await tx
-          .select()
-          .from(pendingRegistrations)
-          .where(eq(pendingRegistrations.email, email))
-          .for('update')
-          .limit(1);
+          // The row lock serializes attempts for one email. Without it, parallel
+          // guesses all read the same attempt count and the five-attempt
+          // lockout could be bypassed by sending many codes at once.
+          const [pending] = await tx
+            .select()
+            .from(pendingRegistrations)
+            .where(eq(pendingRegistrations.email, email))
+            .for('update')
+            .limit(1);
 
-        if (!pending) return { kind: 'not_found' };
+          if (!pending) return { kind: 'not_found' };
 
-        if (pending.lockedUntil && pending.lockedUntil > now) {
-          return { kind: 'locked', lockedUntil: pending.lockedUntil };
-        }
+          if (pending.lockedUntil && pending.lockedUntil > now) {
+            return { kind: 'locked', lockedUntil: pending.lockedUntil };
+          }
 
-        if (pending.lockedUntil || pending.expiresAt <= now) {
+          if (pending.lockedUntil || pending.expiresAt <= now) {
+            await tx
+              .delete(pendingRegistrations)
+              .where(eq(pendingRegistrations.email, email));
+            return { kind: 'expired' };
+          }
+
+          const validCode = await bcrypt.compare(
+            dto.code,
+            pending.verificationCodeHash,
+          );
+          if (!validCode) {
+            const attempts = pending.attempts + 1;
+            if (attempts >= 5) {
+              const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+              await tx
+                .update(pendingRegistrations)
+                .set({ attempts, lockedUntil, verificationCodeHash: '' })
+                .where(eq(pendingRegistrations.email, email));
+              return { kind: 'too_many_attempts' };
+            }
+            await tx
+              .update(pendingRegistrations)
+              .set({ attempts })
+              .where(eq(pendingRegistrations.email, email));
+            return { kind: 'invalid_code', attempts };
+          }
+
+          const [existingUser] = await tx
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
+          if (existingUser) throw new ConflictException('User already exists');
+
+          const [newUser] = await tx
+            .insert(users)
+            .values({
+              email,
+              username: null,
+              displayName: pending.displayName,
+              passwordHash: pending.passwordHash,
+            })
+            .returning();
+
           await tx
             .delete(pendingRegistrations)
             .where(eq(pendingRegistrations.email, email));
-          return { kind: 'expired' };
-        }
-
-        const validCode = await bcrypt.compare(
-          dto.code,
-          pending.verificationCodeHash,
-        );
-        if (!validCode) {
-          const attempts = pending.attempts + 1;
-          if (attempts >= 5) {
-            const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
-            await tx
-              .update(pendingRegistrations)
-              .set({ attempts, lockedUntil, verificationCodeHash: '' })
-              .where(eq(pendingRegistrations.email, email));
-            return { kind: 'too_many_attempts' };
-          }
-          await tx
-            .update(pendingRegistrations)
-            .set({ attempts })
-            .where(eq(pendingRegistrations.email, email));
-          return { kind: 'invalid_code', attempts };
-        }
-
-        const [existingUser] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
-        if (existingUser) throw new ConflictException('User already exists');
-
-        const [newUser] = await tx
-          .insert(users)
-          .values({
-            email,
-            username: null,
-            displayName: pending.displayName,
-            passwordHash: pending.passwordHash,
-          })
-          .returning();
-
-        await tx
-          .delete(pendingRegistrations)
-          .where(eq(pendingRegistrations.email, email));
-        await this.enqueueUserRegistered(tx, newUser, 'email');
-        return { kind: 'registered' };
-      });
+          await this.enqueueUserRegistered(tx, newUser, 'email');
+          return { kind: 'registered' };
+        },
+      );
     } catch (error: unknown) {
       const databaseError = error as { code?: string; constraint?: string };
       if (databaseError.code === '23505') {
@@ -419,18 +420,19 @@ export class AuthService {
         /* EN: Makes Google account creation and its outbox event a single durable unit. */
         /* UK: Робить створення Google-акаунта та outbox-подію єдиною надійною одиницею. */
         async (tx) => {
-        const [created] = await tx
-          .insert(users)
-          .values({
-            email: googleUser.email,
-            username: null,
-            displayName: googleUser.email.split('@', 1)[0],
-            googleId: googleUser.googleId,
-          })
-          .returning();
-        await this.enqueueUserRegistered(tx, created, 'google');
-        return created;
-      });
+          const [created] = await tx
+            .insert(users)
+            .values({
+              email: googleUser.email,
+              username: null,
+              displayName: googleUser.email.split('@', 1)[0],
+              googleId: googleUser.googleId,
+            })
+            .returning();
+          await this.enqueueUserRegistered(tx, created, 'google');
+          return created;
+        },
+      );
 
       return {
         message: 'Google registration successful',
@@ -484,22 +486,23 @@ export class AuthService {
       /* EN: Prevents a partially linked Google identity or missing activity record. */
       /* UK: Не допускає часткового linking Google-ідентичності або відсутнього запису активності. */
       async (tx) => {
-      const [linked] = await tx
-        .update(users)
-        .set({ googleId })
-        .where(eq(users.id, userByEmail.id))
-        .returning();
+        const [linked] = await tx
+          .update(users)
+          .set({ googleId })
+          .where(eq(users.id, userByEmail.id))
+          .returning();
 
-      await recordUserActivity(
-        {
-          userId: userByEmail.id,
-          actorUserId: userByEmail.id,
-          type: 'account.google_linked',
-        },
-        tx,
-      );
-      return linked;
-    });
+        await recordUserActivity(
+          {
+            userId: userByEmail.id,
+            actorUserId: userByEmail.id,
+            type: 'account.google_linked',
+          },
+          tx,
+        );
+        return linked;
+      },
+    );
 
     return {
       message: 'Google account linked successfully',
@@ -576,48 +579,49 @@ export class AuthService {
       /* EN: Ensures token consumption, password update, and session revocation commit together. */
       /* UK: Забезпечує спільний commit використання токена, зміни пароля та відкликання сесій. */
       async (tx) => {
-      // The token is consumed only while it is still the stored, unexpired
-      // one: of two concurrent resets with the same link exactly one wins.
-      const [updated] = await tx
-        .update(users)
-        .set({
-          passwordHash,
-          resetPasswordToken: null,
-          resetPasswordExpires: null,
-          sessionsInvalidBefore: new Date(),
-        })
-        .where(
-          and(
-            eq(users.id, user.id),
-            eq(users.resetPasswordToken, hashPasswordResetToken(dto.token)),
-            gt(users.resetPasswordExpires, new Date()),
-          ),
-        )
-        .returning({ id: users.id });
-      if (!updated) return false;
+        // The token is consumed only while it is still the stored, unexpired
+        // one: of two concurrent resets with the same link exactly one wins.
+        const [updated] = await tx
+          .update(users)
+          .set({
+            passwordHash,
+            resetPasswordToken: null,
+            resetPasswordExpires: null,
+            sessionsInvalidBefore: new Date(),
+          })
+          .where(
+            and(
+              eq(users.id, user.id),
+              eq(users.resetPasswordToken, hashPasswordResetToken(dto.token)),
+              gt(users.resetPasswordExpires, new Date()),
+            ),
+          )
+          .returning({ id: users.id });
+        if (!updated) return false;
 
-      await tx
-        .update(authRefreshSessions)
-        .set({
-          revokedAt: new Date(),
-          revocationReason: 'password_changed',
-        })
-        .where(
-          and(
-            eq(authRefreshSessions.userId, user.id),
-            isNull(authRefreshSessions.revokedAt),
-          ),
+        await tx
+          .update(authRefreshSessions)
+          .set({
+            revokedAt: new Date(),
+            revocationReason: 'password_changed',
+          })
+          .where(
+            and(
+              eq(authRefreshSessions.userId, user.id),
+              isNull(authRefreshSessions.revokedAt),
+            ),
+          );
+        await recordUserActivity(
+          {
+            userId: user.id,
+            actorUserId: user.id,
+            type: 'account.password_changed',
+          },
+          tx,
         );
-      await recordUserActivity(
-        {
-          userId: user.id,
-          actorUserId: user.id,
-          type: 'account.password_changed',
-        },
-        tx,
-      );
-      return true;
-    });
+        return true;
+      },
+    );
     if (!consumed) {
       throw new BadRequestException('Invalid or expired password reset token.');
     }
@@ -641,25 +645,27 @@ export class AuthService {
       /* EN: Locks the account while issuing the refresh session so suspension cannot race the login. */
       /* UK: Блокує акаунт під час видачі refresh-сесії, щоб блокування не змагалося з login. */
       async (tx) => {
-      const [account] = await tx
-        .select({
-          suspendedUntil: users.suspendedUntil,
-          suspensionReason: users.suspensionReason,
-        })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .for('update')
-        .limit(1);
-      if (!account) throw new UnauthorizedException('Account no longer exists');
-      assertNotSuspended(account);
-      await tx.insert(authRefreshSessions).values({
-        userId: user.id,
-        tokenHash: hashRefreshToken(refreshToken),
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-        mfaVerifiedAt,
-      });
-      return Date.now();
-    });
+        const [account] = await tx
+          .select({
+            suspendedUntil: users.suspendedUntil,
+            suspensionReason: users.suspensionReason,
+          })
+          .from(users)
+          .where(eq(users.id, user.id))
+          .for('update')
+          .limit(1);
+        if (!account)
+          throw new UnauthorizedException('Account no longer exists');
+        assertNotSuspended(account);
+        await tx.insert(authRefreshSessions).values({
+          userId: user.id,
+          tokenHash: hashRefreshToken(refreshToken),
+          expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+          mfaVerifiedAt,
+        });
+        return Date.now();
+      },
+    );
     return this.createAuthResponse(
       message,
       user,
@@ -678,77 +684,78 @@ export class AuthService {
       /* EN: Serializes refresh-token rotation and reuse detection for the token family. */
       /* UK: Серіалізує ротацію refresh-токена та виявлення повторного використання його сім'ї. */
       async (tx) => {
-      const [session] = await tx
-        .select()
-        .from(authRefreshSessions)
-        .where(
-          eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
-        )
-        .for('update')
-        .limit(1);
-      if (!session || session.expiresAt <= now)
-        return { kind: 'expired' } as const;
-      if (session.revokedAt || session.usedAt) {
+        const [session] = await tx
+          .select()
+          .from(authRefreshSessions)
+          .where(
+            eq(authRefreshSessions.tokenHash, hashRefreshToken(refreshToken)),
+          )
+          .for('update')
+          .limit(1);
+        if (!session || session.expiresAt <= now)
+          return { kind: 'expired' } as const;
+        if (session.revokedAt || session.usedAt) {
+          await tx
+            .update(authRefreshSessions)
+            .set({ revokedAt: now, revocationReason: 'reuse_detected' })
+            .where(eq(authRefreshSessions.familyId, session.familyId));
+          return { kind: 'reused' } as const;
+        }
+
+        const [user] = await tx
+          .select({
+            id: users.id,
+            email: users.email,
+            username: users.username,
+            displayName: users.displayName,
+            role: users.role,
+            isSystemOwner: users.isSystemOwner,
+            suspendedUntil: users.suspendedUntil,
+            suspensionReason: users.suspensionReason,
+          })
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+        if (!user) return { kind: 'expired' } as const;
+        assertNotSuspended(user);
+        if (requiresMfa(user.role) && !session.mfaVerifiedAt) {
+          await tx
+            .update(authRefreshSessions)
+            .set({ revokedAt: now, revocationReason: 'mfa_required' })
+            .where(eq(authRefreshSessions.familyId, session.familyId));
+          return { kind: 'expired' } as const;
+        }
+
+        const nextRefreshToken = createRefreshToken();
         await tx
           .update(authRefreshSessions)
-          .set({ revokedAt: now, revocationReason: 'reuse_detected' })
-          .where(eq(authRefreshSessions.familyId, session.familyId));
-        return { kind: 'reused' } as const;
-      }
+          .set({
+            usedAt: now,
+            revokedAt: now,
+            revocationReason: 'rotated',
+          })
+          .where(eq(authRefreshSessions.id, session.id));
+        await tx.insert(authRefreshSessions).values({
+          userId: user.id,
+          tokenHash: hashRefreshToken(nextRefreshToken),
+          familyId: session.familyId,
+          parentSessionId: session.id,
+          expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+          mfaVerifiedAt: session.mfaVerifiedAt,
+        });
 
-      const [user] = await tx
-        .select({
-          id: users.id,
-          email: users.email,
-          username: users.username,
-          displayName: users.displayName,
-          role: users.role,
-          isSystemOwner: users.isSystemOwner,
-          suspendedUntil: users.suspendedUntil,
-          suspensionReason: users.suspensionReason,
-        })
-        .from(users)
-        .where(eq(users.id, session.userId))
-        .limit(1);
-      if (!user) return { kind: 'expired' } as const;
-      assertNotSuspended(user);
-      if (requiresMfa(user.role) && !session.mfaVerifiedAt) {
-        await tx
-          .update(authRefreshSessions)
-          .set({ revokedAt: now, revocationReason: 'mfa_required' })
-          .where(eq(authRefreshSessions.familyId, session.familyId));
-        return { kind: 'expired' } as const;
-      }
-
-      const nextRefreshToken = createRefreshToken();
-      await tx
-        .update(authRefreshSessions)
-        .set({
-          usedAt: now,
-          revokedAt: now,
-          revocationReason: 'rotated',
-        })
-        .where(eq(authRefreshSessions.id, session.id));
-      await tx.insert(authRefreshSessions).values({
-        userId: user.id,
-        tokenHash: hashRefreshToken(nextRefreshToken),
-        familyId: session.familyId,
-        parentSessionId: session.id,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-        mfaVerifiedAt: session.mfaVerifiedAt,
-      });
-
-      return {
-        kind: 'refreshed' as const,
-        response: this.createAuthResponse(
-          'Session refreshed',
-          user,
-          nextRefreshToken,
-          Boolean(session.mfaVerifiedAt),
-          Date.now(),
-        ),
-      };
-    });
+        return {
+          kind: 'refreshed' as const,
+          response: this.createAuthResponse(
+            'Session refreshed',
+            user,
+            nextRefreshToken,
+            Boolean(session.mfaVerifiedAt),
+            Date.now(),
+          ),
+        };
+      },
+    );
     if (outcome.kind === 'reused') {
       throw new UnauthorizedException({
         message: 'Session reuse detected',
@@ -857,21 +864,22 @@ export class AuthService {
       /* EN: Commits the session epoch invalidation and row revocations together. */
       /* UK: Спільно фіксує інвалідацію епохи сесій і відкликання рядків. */
       async (tx) => {
-      const revokedAt = new Date();
-      await tx
-        .update(users)
-        .set({ sessionsInvalidBefore: revokedAt })
-        .where(eq(users.id, userId));
-      await tx
-        .update(authRefreshSessions)
-        .set({ revokedAt, revocationReason: 'logout_all' })
-        .where(
-          and(
-            eq(authRefreshSessions.userId, userId),
-            isNull(authRefreshSessions.revokedAt),
-          ),
-        );
-    });
+        const revokedAt = new Date();
+        await tx
+          .update(users)
+          .set({ sessionsInvalidBefore: revokedAt })
+          .where(eq(users.id, userId));
+        await tx
+          .update(authRefreshSessions)
+          .set({ revokedAt, revocationReason: 'logout_all' })
+          .where(
+            and(
+              eq(authRefreshSessions.userId, userId),
+              isNull(authRefreshSessions.revokedAt),
+            ),
+          );
+      },
+    );
     return { message: 'All sessions revoked' };
   }
 
