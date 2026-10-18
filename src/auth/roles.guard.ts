@@ -20,8 +20,12 @@ import { assertNotSuspended } from './account-suspension';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  // EN: Injects Nest's metadata reader so the guard can obtain the minimum role declared on a route or controller.
+  // UK: Отримує Nest metadata reader, щоб guard міг прочитати мінімальну роль, задану для route або controller.
   constructor(private readonly reflector: Reflector) {}
 
+  // EN: Allows public-role routes immediately; privileged routes reload the current role, suspension, and MFA state before granting access.
+  // UK: Одразу дозволяє routes без вимоги ролі; для привілейованих повторно читає актуальні роль, suspension і MFA перед наданням доступу.
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const minimumRole = this.reflector.getAllAndOverride<UserRole>(
       MINIMUM_ROLE_KEY,
