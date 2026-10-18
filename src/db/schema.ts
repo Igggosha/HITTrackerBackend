@@ -154,6 +154,8 @@ export const authRefreshSessions = pgTable(
   ],
 );
 
+// EN: Stores only hashed, expiring, one-use MFA login challenges, separating the first authentication factor from the final session.
+// UK: Зберігає лише хешовані, короткоживучі й одноразові MFA login challenges, відокремлюючи перший фактор від фінальної сесії.
 export const authMfaChallenges = pgTable(
   'auth_mfa_challenges',
   {
@@ -168,9 +170,13 @@ export const authMfaChallenges = pgTable(
       .defaultNow()
       .notNull(),
   },
+  /* EN: Indexes challenge cleanup and lookup by user without making the bearer challenge token searchable in plaintext. */
+  /* UK: Індексує cleanup і пошук challenge за користувачем, не роблячи bearer challenge token доступним у відкритому вигляді. */
   (table) => [index('auth_mfa_challenges_user_id_idx').on(table.userId)],
 );
 
+// EN: Stores the encrypted TOTP secret, enrollment state, replay step, and hashed one-time recovery codes for each user.
+// UK: Зберігає зашифрований TOTP secret, стан enrollment, replay step і хешовані одноразові recovery-коди кожного користувача.
 export const authTotpCredentials = pgTable('auth_totp_credentials', {
   userId: integer('user_id')
     .primaryKey()
