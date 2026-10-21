@@ -94,6 +94,7 @@ export const finishedSets = pgTable(
     exerciseId: integer('exercise_id').notNull(),
     weightKg: doublePrecision('weight_kg').notNull(),
     reps: integer('reps').notNull(),
+    durationSeconds: integer('duration_seconds'),
     finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
   },
   (table) => [

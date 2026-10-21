@@ -119,6 +119,7 @@ class MemoryTx implements ReadModelTx {
           exerciseId: set.exerciseId,
           weightKg: set.weightKg,
           reps: set.reps,
+          durationSeconds: set.durationSeconds,
           finishedAt: fact.finishedAt,
         });
     return Promise.resolve(true);

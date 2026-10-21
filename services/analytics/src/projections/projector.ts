@@ -125,6 +125,7 @@ export class Projector {
         exerciseId: set.exerciseId,
         weightKg: set.weight,
         reps: set.reps,
+        durationSeconds: set.durationSeconds ?? null,
       })),
     });
     if (!inserted) return 'duplicate';

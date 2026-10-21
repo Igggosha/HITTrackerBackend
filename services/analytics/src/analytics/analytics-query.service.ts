@@ -45,6 +45,7 @@ type WorkoutSet = {
   }[];
   weight: number;
   reps: number;
+  durationSeconds?: number;
   rpe: number | null;
   isFailure: boolean;
 };

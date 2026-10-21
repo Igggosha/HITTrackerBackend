@@ -203,6 +203,7 @@ class PgReadModelTx implements ReadModelTx {
         exerciseId: finishedSets.exerciseId,
         weightKg: finishedSets.weightKg,
         reps: finishedSets.reps,
+        durationSeconds: finishedSets.durationSeconds,
         finishedAt: finishedSets.finishedAt,
       })
       .from(finishedSets)

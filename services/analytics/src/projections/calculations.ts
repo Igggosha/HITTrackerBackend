@@ -29,6 +29,7 @@ export type SetFact = {
   exerciseId: number;
   weightKg: number;
   reps: number;
+  durationSeconds?: number | null;
   finishedAt: Date;
 };
 
@@ -163,7 +164,7 @@ export function computePersonalRecord(
 ): PersonalRecord | null {
   let heaviest: SetFact | undefined;
   let bestE1rm: { set: SetFact; value: number } | undefined;
-  for (const set of sets) {
+  for (const set of sets.filter((candidate) => candidate.reps > 0)) {
     if (
       !heaviest ||
       set.weightKg > heaviest.weightKg ||
@@ -197,6 +198,7 @@ export function computePersonalRecord(
 export function computeDayProgress(
   sets: readonly { weightKg: number; reps: number }[],
 ): DayProgress | null {
+  sets = sets.filter((set) => set.reps > 0);
   if (!sets.length) return null;
   let top = sets[0];
   for (const set of sets)

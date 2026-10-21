@@ -34,6 +34,7 @@ export type FinishedWorkoutFact = {
     exerciseId: number;
     weightKg: number;
     reps: number;
+    durationSeconds: number | null;
   }[];
 };
 
