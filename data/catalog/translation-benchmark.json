@@ -1,0 +1,300 @@
+{
+  "version": 1,
+  "status": "English benchmark drafts; terminology hints require reviewer judgment, not exact-match scoring.",
+  "targets": [
+    "uk",
+    "pl"
+  ],
+  "samples": [
+    {
+      "id": "barbell_bench_press",
+      "sourceName": "Жим штанги лежачи",
+      "name": "Barbell bench press",
+      "instructions": "Keep your shoulder blades together and lower the bar under control. Do not bounce the bar off your chest.",
+      "reviewHints": {
+        "uk": [
+          "жим"
+        ],
+        "pl": [
+          "wycisk"
+        ]
+      }
+    },
+    {
+      "id": "incline_dumbbell_press",
+      "sourceName": "Жим гантелей на похилій лаві",
+      "name": "Incline dumbbell press",
+      "instructions": "Keep your wrists stable. Lower both dumbbells evenly; do not raise your shoulders towards your ears.",
+      "reviewHints": {
+        "uk": [
+          "жим"
+        ],
+        "pl": [
+          "wycisk"
+        ]
+      }
+    },
+    {
+      "id": "machine_chest_press",
+      "sourceName": "Жим у тренажері",
+      "name": "Machine chest press",
+      "instructions": "This is a chest exercise, not an overhead shoulder press. Keep your back against the backrest while pressing the handles forward.",
+      "reviewHints": {
+        "uk": [
+          "груд"
+        ],
+        "pl": [
+          "klatk",
+          "piersi"
+        ]
+      }
+    },
+    {
+      "id": "machine_shoulder_press",
+      "sourceName": "Жим у тренажері",
+      "name": "Machine shoulder press",
+      "instructions": "Press the handles overhead without arching your lower back. This is a shoulder exercise, not a chest press.",
+      "reviewHints": {
+        "uk": [
+          "плеч"
+        ],
+        "pl": [
+          "bark"
+        ]
+      }
+    },
+    {
+      "id": "lat_pulldown",
+      "sourceName": "Тяга верхнього блока",
+      "name": "Lat pulldown",
+      "instructions": "Pull the handle towards your upper chest. Do not pull it behind your neck or swing your torso.",
+      "reviewHints": {
+        "uk": [
+          "тяга"
+        ],
+        "pl": [
+          "ściąg",
+          "przyciąg"
+        ]
+      }
+    },
+    {
+      "id": "seated_cable_row",
+      "sourceName": "Тяга горизонтального блока",
+      "name": "Seated cable row",
+      "instructions": "Pull your elbows back and bring your shoulder blades together. Keep your torso stable rather than leaning back.",
+      "reviewHints": {
+        "uk": [
+          "тяга"
+        ],
+        "pl": [
+          "wiosł",
+          "przyciąg"
+        ]
+      }
+    },
+    {
+      "id": "face_pull",
+      "sourceName": "Face Pull",
+      "name": "Face pull",
+      "instructions": "Pull the rope towards your face with a controlled movement. Keep your shoulders down and do not shrug.",
+      "reviewHints": {
+        "uk": [
+          "облич"
+        ],
+        "pl": [
+          "twarz"
+        ]
+      }
+    },
+    {
+      "id": "romanian_deadlift",
+      "sourceName": "Румунська тяга",
+      "name": "Romanian deadlift",
+      "instructions": "Push your hips back with a slight bend in your knees. Keep the bar close to your legs and avoid rounding your lower back.",
+      "reviewHints": {
+        "uk": [
+          "румун"
+        ],
+        "pl": [
+          "rumuń"
+        ]
+      }
+    },
+    {
+      "id": "conventional_deadlift",
+      "sourceName": "Станова тяга",
+      "name": "Conventional deadlift",
+      "instructions": "Start with the bar on the floor and keep it close to your body. Stand up without leaning backwards at the top.",
+      "reviewHints": {
+        "uk": [
+          "тяга"
+        ],
+        "pl": [
+          "martwy ciąg"
+        ]
+      }
+    },
+    {
+      "id": "bulgarian_split_squat",
+      "sourceName": "Болгарські присідання",
+      "name": "Bulgarian split squat",
+      "instructions": "Rest your rear foot on a bench and keep your front foot planted. Lower yourself under control; complete both sides.",
+      "reviewHints": {
+        "uk": [
+          "болгар"
+        ],
+        "pl": [
+          "bułgar"
+        ]
+      }
+    },
+    {
+      "id": "goblet_squat",
+      "sourceName": "Goblet Squat",
+      "name": "Goblet squat",
+      "instructions": "Hold a dumbbell or kettlebell close to your chest. Keep your heels on the floor and let your knees follow the direction of your toes.",
+      "reviewHints": {
+        "uk": [
+          "присід"
+        ],
+        "pl": [
+          "przysiad"
+        ]
+      }
+    },
+    {
+      "id": "hip_thrust",
+      "sourceName": "Hip Thrust",
+      "name": "Barbell hip thrust",
+      "instructions": "Support your upper back on a bench and lift your hips. Pause for 1 second at the top without overextending your lower back.",
+      "reviewHints": {
+        "uk": [
+          "таз",
+          "сіднич"
+        ],
+        "pl": [
+          "biodr"
+        ]
+      }
+    },
+    {
+      "id": "glute_bridge",
+      "sourceName": "Ягодичний міст",
+      "name": "Glute bridge",
+      "instructions": "Lie on your back with your feet on the floor. Raise your hips by contracting your glutes, without arching your lower back.",
+      "reviewHints": {
+        "uk": [
+          "міст"
+        ],
+        "pl": [
+          "most",
+          "biodr"
+        ]
+      }
+    },
+    {
+      "id": "hammer_curl",
+      "sourceName": "Молоткові згинання",
+      "name": "Hammer curl",
+      "instructions": "Keep your palms facing each other throughout the movement. Bend your elbows without swinging your torso.",
+      "reviewHints": {
+        "uk": [
+          "молот"
+        ],
+        "pl": [
+          "młot"
+        ]
+      }
+    },
+    {
+      "id": "reverse_curl",
+      "sourceName": "Зворотні згинання",
+      "name": "Reverse curl",
+      "instructions": "Use a palms-down grip and keep your elbows near your torso. Move smoothly and avoid bending your wrists.",
+      "reviewHints": {
+        "uk": [
+          "згин"
+        ],
+        "pl": [
+          "ugin"
+        ]
+      }
+    },
+    {
+      "id": "rope_triceps_pushdown",
+      "sourceName": "Розгинання з канатом",
+      "name": "Rope triceps pushdown",
+      "instructions": "Keep your upper arms near your sides. Extend your elbows and slightly separate the rope ends at the bottom.",
+      "reviewHints": {
+        "uk": [
+          "трицеп",
+          "розгин"
+        ],
+        "pl": [
+          "triceps",
+          "prostow"
+        ]
+      }
+    },
+    {
+      "id": "front_plank",
+      "sourceName": "Планка",
+      "name": "Forearm plank",
+      "instructions": "Support yourself on your forearms and toes. Keep your body in a straight line for 30 seconds and continue breathing.",
+      "reviewHints": {
+        "uk": [
+          "планк"
+        ],
+        "pl": [
+          "deska",
+          "plank"
+        ]
+      }
+    },
+    {
+      "id": "side_plank",
+      "sourceName": "Бічна планка",
+      "name": "Side plank",
+      "instructions": "Support yourself on one forearm and the side of your foot. Do not let your hips drop. Hold for 20 seconds on each side.",
+      "reviewHints": {
+        "uk": [
+          "біч"
+        ],
+        "pl": [
+          "bok",
+          "bocz"
+        ]
+      }
+    },
+    {
+      "id": "pallof_press",
+      "sourceName": "Pallof Press",
+      "name": "Pallof press",
+      "instructions": "Stand sideways to a cable or resistance band. Press your hands forward without allowing your torso to rotate.",
+      "reviewHints": {
+        "uk": [
+          "палоф",
+          "паллоф"
+        ],
+        "pl": [
+          "pallof"
+        ]
+      }
+    },
+    {
+      "id": "farmer_carry",
+      "sourceName": "Фермерська хода",
+      "name": "Farmer's carry",
+      "instructions": "Carry a dumbbell in each hand for 30 seconds. Stay upright and maintain a firm grip without shrugging your shoulders.",
+      "reviewHints": {
+        "uk": [
+          "фермер"
+        ],
+        "pl": [
+          "farmer"
+        ]
+      }
+    }
+  ]
+}
