@@ -24,6 +24,7 @@ export type DuplicateGroup = {
 export type AuditResult = {
   rowCount: number;
   distinctNameCount: number;
+  normalizedExerciseCount: number;
   programCount: number;
   duplicateGroups: DuplicateGroup[];
   references: {
@@ -37,12 +38,75 @@ export type AuditResult = {
 
 const stableKey = (name: string, nodeId: string) => `${name}:${nodeId}`;
 
+type DuplicateDecision = {
+  records: { key: string; sourceNodeIds: string[] }[];
+};
+
+export const DUPLICATE_DECISIONS: Record<string, DuplicateDecision> = {
+  'Віджимання на брусах': {
+    records: [
+      { key: 'chest_dip', sourceNodeIds: ['3149:8508'] },
+      { key: 'triceps_dip', sourceNodeIds: ['3156:8991'] },
+    ],
+  },
+  'Жим у тренажері': {
+    records: [
+      { key: 'machine_chest_press', sourceNodeIds: ['3149:8529'] },
+      { key: 'machine_shoulder_press', sourceNodeIds: ['3149:8735'] },
+    ],
+  },
+  'Станова тяга': {
+    records: [
+      {
+        key: 'conventional_deadlift',
+        sourceNodeIds: ['3149:8602', '3165:8737'],
+      },
+    ],
+  },
+  'Face Pull': {
+    records: [{ key: 'face_pull', sourceNodeIds: ['3149:8616', '3149:8777'] }],
+  },
+  'Молоткові згинання': {
+    records: [
+      { key: 'hammer_curl', sourceNodeIds: ['3149:8890', '3156:9064'] },
+    ],
+  },
+  'Болгарські присідання': {
+    records: [
+      {
+        key: 'bulgarian_split_squat',
+        sourceNodeIds: ['3165:8591', '3165:8685'],
+      },
+    ],
+  },
+  'Румунська тяга': {
+    records: [
+      {
+        key: 'romanian_deadlift',
+        sourceNodeIds: ['3165:8612', '3165:8730'],
+      },
+    ],
+  },
+  'Step-Up': {
+    records: [{ key: 'step_up', sourceNodeIds: ['3165:8633', '3165:8706'] }],
+  },
+};
+
 // EN: These aliases are deliberately explicit; this audit does not infer translations or exercise identity.
 // UK: Ці псевдоніми навмисно явні; аудит не виводить переклади чи тотожність вправ.
-export const NORMALIZATION_MAP: Record<string, string | string[]> = {
+export const NORMALIZATION_MAP: Record<string, string> = {
   'Farmer Walk': 'Фермерська хода:3156:9071',
-  'Machine Chest Press': 'Жим у тренажері:3149:8529',
-  'Machine Shoulder Press': 'Жим у тренажері:3149:8735',
+  'Machine Chest Press': 'machine_chest_press',
+  'Machine Shoulder Press': 'machine_shoulder_press',
+  'Румунська тяга': 'romanian_deadlift',
+  'Болгарські присідання': 'bulgarian_split_squat',
+  'Face Pull': 'face_pull',
+  'Молоткові згинання': 'hammer_curl',
+  'Підйом гантелей на біцепс': 'Підйом гантелей:3149:8883',
+  'Розгинання рук на блоці': 'Розгинання на верхньому блоці:3156:8956',
+  'Підйом EZ-штанги на біцепс': 'Підйом EZ-штанги:3149:8925',
+  'Розгинання рук з канатом': 'Розгинання з канатом:3156:8963',
+  'Підйом на носки': 'Підйом на носки стоячи:3165:8810',
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -133,13 +197,23 @@ export function auditSource(source: CatalogSource): AuditResult {
           ? ('likely-identical' as const)
           : ('conflicting-variants' as const),
     }));
+  for (const group of duplicateGroups) {
+    const decision = DUPLICATE_DECISIONS[group.name];
+    if (!decision) throw new Error(`Missing duplicate decision: ${group.name}`);
+    const expectedNodes = group.rows.map((row) => row.sourceNodeId).sort();
+    const decidedNodes = decision.records
+      .flatMap((record) => record.sourceNodeIds)
+      .sort();
+    if (JSON.stringify(expectedNodes) !== JSON.stringify(decidedNodes))
+      throw new Error(`Duplicate decision does not cover: ${group.name}`);
+  }
   const exact = new Map(
     [...byName]
       .filter(([, rows]) => rows.length === 1)
       .map(([name, rows]) => [name, stableKey(name, rows[0].sourceNodeId)]),
   );
   for (const [alias, key] of Object.entries(NORMALIZATION_MAP))
-    exact.set(alias, key as string);
+    exact.set(alias, key);
   const parsedPrograms = source.programSource.flatMap((program) =>
     references(program.text),
   );
@@ -164,6 +238,14 @@ export function auditSource(source: CatalogSource): AuditResult {
   return {
     rowCount: source.exerciseRows.length,
     distinctNameCount: byName.size,
+    normalizedExerciseCount:
+      byName.size -
+      duplicateGroups.length +
+      duplicateGroups.reduce(
+        (count, group) =>
+          count + DUPLICATE_DECISIONS[group.name].records.length,
+        0,
+      ),
     programCount,
     duplicateGroups,
     references: refs,

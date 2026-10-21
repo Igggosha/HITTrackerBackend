@@ -19,6 +19,7 @@ async function main() {
         counts: {
           rows: result.rowCount,
           distinctNames: result.distinctNameCount,
+          normalizedExercises: result.normalizedExerciseCount,
           programs: result.programCount,
         },
         duplicateGroups: result.duplicateGroups,
