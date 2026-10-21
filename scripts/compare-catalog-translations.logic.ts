@@ -19,10 +19,10 @@ export const sampleText = (sample: TranslationSample) =>
   `${sample.name}\n${sample.instructions}`;
 
 export function translationChecks(source: string, translated: string) {
-  const numbers = (value: string) =>
-    (value.match(/\d+(?:[.,]\d+)?/g) || [])
-      .map((number) => number.replace(',', '.'))
-      .sort();
+  const numbers = (value: string): string[] => {
+    const matches: string[] = value.match(/\d+(?:[.,]\d+)?/g) ?? [];
+    return matches.map((number) => number.replace(',', '.')).sort();
+  };
   return {
     nonEmpty: translated.trim().length > 0,
     numbersPreserved:
