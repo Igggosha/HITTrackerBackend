@@ -6,6 +6,7 @@ import { db, primaryDb } from '../db/db';
 import { _resetReadConsistencyForTests } from '../db/read-consistency';
 import {
   outboxEvents,
+  exercises,
   sets,
   userProgramSchedule,
   workouts,
@@ -276,6 +277,7 @@ describe('WorkoutsService transactions', () => {
   describe('sets', () => {
     it('locks the open workout before recording a set', async () => {
       fake.returns('select', workouts, [workoutRow()]);
+      fake.returns('select', exercises, [{ measurementType: 'reps' }]);
       fake.returns('insert', sets, [{ id: 11 }]);
       fake.returns('update', workouts, [workoutRow()]);
 
@@ -294,6 +296,25 @@ describe('WorkoutsService transactions', () => {
       expect(fake.queries.indexOf(lock)).toBeLessThan(
         fake.queries.indexOf(fake.find('insert', sets)[0]),
       );
+    });
+
+    it('records duration only for a duration exercise', async () => {
+      fake.returns('select', workouts, [workoutRow()]);
+      fake.returns('select', exercises, [{ measurementType: 'duration' }]);
+      fake.returns('insert', sets, [{ id: 12, durationSeconds: 47 }]);
+      fake.returns('update', workouts, [workoutRow()]);
+
+      await service.recordSet(7, 1, {
+        exerciseId: 4,
+        weight: 0,
+        durationSeconds: 47,
+        rpe: 8,
+      });
+
+      expect(insertedValues(fake, sets)[0]).toMatchObject({
+        durationSeconds: 47,
+        reps: undefined,
+      });
     });
 
     it('refuses a set for a workout finished before the lock was granted', async () => {

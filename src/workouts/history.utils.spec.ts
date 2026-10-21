@@ -31,7 +31,21 @@ describe('workout history helpers', () => {
       { exerciseId: 1, name: 'Press', sets: 3, reps: 10, weight: null },
       { exerciseId: 2, name: 'Row', sets: 3, reps: 10, weight: null },
     ];
-    expect(planCompletion(plan, new Map([[1, 6]]))).toBe(50);
+    expect(planCompletion(plan, new Map([[1, { durationSeconds: 0, reps: 60, sets: 6 }]]))).toBe(50);
     expect(planCompletion([], new Map())).toBeNull();
+  });
+
+  it('uses aggregate seconds while still requiring the planned set count', () => {
+    const plan = [{
+      exerciseId: 1,
+      measurementType: 'duration' as const,
+      name: 'Plank',
+      reps: null,
+      sets: 3,
+      targetDurationSeconds: 45,
+      weight: null,
+    }];
+    expect(planCompletion(plan, new Map([[1, { durationSeconds: 135, reps: 0, sets: 3 }]]))).toBe(100);
+    expect(planCompletion(plan, new Map([[1, { durationSeconds: 135, reps: 0, sets: 1 }]]))).toBe(33);
   });
 });

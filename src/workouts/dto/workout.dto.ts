@@ -32,6 +32,11 @@ export class WorkoutPlanItemDto {
   reps?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  durationSeconds?: number;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   weight?: number;
@@ -73,9 +78,16 @@ export class RecordSetDto {
   @Min(0)
   weight: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
-  reps: number;
+  reps?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(86400)
+  durationSeconds?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -96,9 +108,16 @@ export class UpdateSetDto {
   @Min(0)
   weight: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
-  reps: number;
+  reps?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(86400)
+  durationSeconds?: number;
 
   @IsInt()
   @Min(1)

@@ -40,6 +40,13 @@ export class ProgramExerciseDto {
 
   @IsOptional()
   @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(86400)
+  durationSeconds?: number;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(1000)

@@ -4,8 +4,10 @@
 import { Type } from 'class-transformer';
 import {
   ArrayUnique,
+  ArrayMaxSize,
   IsArray,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -40,6 +42,25 @@ export class UpdateExerciseDto {
   @Min(1)
   @Max(5)
   difficulty?: number;
+
+  @IsOptional()
+  @IsIn(['reps', 'duration'])
+  measurementType?: 'reps' | 'duration';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(86400)
+  recommendedDurationSeconds?: number | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @MaxLength(80, { each: true })
+  equipment?: string[];
 
   @IsOptional()
   @IsArray()

@@ -41,6 +41,7 @@ const fields = {
           exerciseId: integer,
           weight: number,
           reps: number,
+          durationSeconds: number,
           rpe: nullableNum,
           isFailure: { type: 'boolean' },
           isDropSet: { type: 'boolean' },

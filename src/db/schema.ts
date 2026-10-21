@@ -588,18 +588,41 @@ export const muscles = pgTable('muscles', {
   scientificName: text('scientific_name'),
 });
 
-export const exercises = pgTable('exercises', {
-  id: serial('id').primaryKey(),
+export const exercises = pgTable(
+  'exercises',
+  {
+    id: serial('id').primaryKey(),
 
-  name: text('name').notNull().unique(),
+    name: text('name').notNull().unique(),
+    catalogKey: text('catalog_key'),
 
-  description: text('description'),
+    description: text('description'),
+    equipment: text('equipment').array().notNull().default(sql`ARRAY[]::text[]`),
 
-  videoUrl: text('video_url'),
-  // Object storage key of the illustration; see `users.avatar_key`.
-  imageKey: text('image_key'),
-  difficulty: integer('difficulty').default(1).notNull(),
-});
+    videoUrl: text('video_url'),
+    // Object storage key of the illustration; see `users.avatar_key`.
+    imageKey: text('image_key'),
+    difficulty: integer('difficulty').default(1).notNull(),
+    measurementType: text('measurement_type')
+      .$type<'reps' | 'duration'>()
+      .notNull()
+      .default('reps'),
+    recommendedDurationSeconds: integer('recommended_duration_seconds'),
+  },
+  (table) => [
+    uniqueIndex('exercises_catalog_key_unique')
+      .on(table.catalogKey)
+      .where(sql`${table.catalogKey} is not null`),
+    check(
+      'exercises_measurement_type_check',
+      sql`${table.measurementType} in ('reps', 'duration')`,
+    ),
+    check(
+      'exercises_duration_recommendation_check',
+      sql`(${table.measurementType} = 'reps' and ${table.recommendedDurationSeconds} is null) or (${table.measurementType} = 'duration' and (${table.recommendedDurationSeconds} is null or ${table.recommendedDurationSeconds} > 0))`,
+    ),
+  ],
+);
 
 export const exerciseLikes = pgTable(
   'exercise_likes',
@@ -768,6 +791,8 @@ export const exerciseInPrograms = pgTable(
     // Planned starting values
     firstSetRepCount: integer('first_set_rep_count'),
 
+    targetDurationSeconds: integer('target_duration_seconds'),
+
     weight: real('weight'),
 
     // 0 = Monday, 6 = Sunday
@@ -775,6 +800,10 @@ export const exerciseInPrograms = pgTable(
   },
   (table) => [
     index('exercises_in_programs_content_id_idx').on(table.programContentId),
+    check(
+      'exercises_in_programs_measurement_target_check',
+      sql`(${table.firstSetRepCount} is null or ${table.firstSetRepCount} > 0) and (${table.targetDurationSeconds} is null or ${table.targetDurationSeconds} > 0) and not (${table.firstSetRepCount} is not null and ${table.targetDurationSeconds} is not null)`,
+    ),
   ],
 );
 
@@ -854,6 +883,8 @@ export type WorkoutHistoryPlanItem = {
   name: string;
   sets: number;
   reps: number | null;
+  measurementType?: 'reps' | 'duration';
+  targetDurationSeconds?: number | null;
   weight: number | null;
 };
 
@@ -936,7 +967,9 @@ export const sets = pgTable(
 
     weight: real('weight').notNull(),
 
-    reps: integer('reps').notNull(),
+    reps: integer('reps'),
+
+    durationSeconds: integer('duration_seconds'),
 
     isFailure: boolean('is_failure').default(false).notNull(),
 
@@ -947,6 +980,10 @@ export const sets = pgTable(
   (table) => [
     index('sets_workout_id_idx').on(table.workoutId),
     index('sets_exercise_workout_idx').on(table.exerciseId, table.workoutId),
+    check(
+      'sets_measurement_value_check',
+      sql`(${table.reps} is not null and ${table.reps} > 0 and ${table.durationSeconds} is null) or (${table.reps} is null and ${table.durationSeconds} is not null and ${table.durationSeconds} > 0)`,
+    ),
   ],
 );
 

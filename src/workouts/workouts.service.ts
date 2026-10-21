@@ -96,6 +96,29 @@ export class WorkoutsService {
     return workout;
   }
 
+  private async validateSetMeasurement(
+    tx: DbTransaction,
+    exerciseId: number,
+    body: Pick<RecordSetDto | UpdateSetDto, 'reps' | 'durationSeconds'>,
+  ) {
+    const [exercise] = await tx
+      .select({ measurementType: exercises.measurementType })
+      .from(exercises)
+      .where(eq(exercises.id, exerciseId))
+      .limit(1);
+    if (!exercise) throw new NotFoundException('Exercise not found');
+    const hasReps = body.reps !== undefined;
+    const hasDuration = body.durationSeconds !== undefined;
+    if (hasReps === hasDuration) {
+      throw new BadRequestException('Exactly one of reps or durationSeconds is required');
+    }
+    if ((exercise.measurementType === 'reps') !== hasReps) {
+      throw new BadRequestException(
+        `Exercise requires ${exercise.measurementType === 'reps' ? 'reps' : 'durationSeconds'}`,
+      );
+    }
+  }
+
   private async autoPauseIfInactive(
     workout: typeof workouts.$inferSelect,
     now: Date,
@@ -264,7 +287,12 @@ export class WorkoutsService {
       ];
       const exerciseRows = exerciseIds.length
         ? await tx
-            .select({ id: exercises.id, name: exercises.name })
+            .select({
+              id: exercises.id,
+              name: exercises.name,
+              measurementType: exercises.measurementType,
+              recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+            })
             .from(exercises)
             .where(inArray(exercises.id, exerciseIds))
         : [];
@@ -285,6 +313,10 @@ export class WorkoutsService {
           name: exerciseNames.get(item.exerciseId)!,
           sets: item.sets,
           reps: item.reps ?? null,
+          measurementType: exerciseRows.find((exercise) => exercise.id === item.exerciseId)!.measurementType,
+          targetDurationSeconds:
+            item.durationSeconds ??
+            exerciseRows.find((exercise) => exercise.id === item.exerciseId)!.recommendedDurationSeconds,
           weight: item.weight ?? null,
         })),
       };
@@ -390,6 +422,8 @@ export class WorkoutsService {
         .map((r) => ({
           ...r.set,
           exerciseName: r.exercise?.name,
+          measurementType: r.exercise?.measurementType,
+          targetDurationSeconds: r.exercise?.recommendedDurationSeconds,
         }));
 
       return {
@@ -420,6 +454,7 @@ export class WorkoutsService {
         new Date(),
         tx,
       );
+      await this.validateSetMeasurement(tx, body.exerciseId, body);
 
       const [recordedSet] = await tx
         .insert(sets)
@@ -428,6 +463,7 @@ export class WorkoutsService {
           exerciseId: body.exerciseId,
           weight: body.weight,
           reps: body.reps,
+          durationSeconds: body.durationSeconds,
           isFailure: body.isFailure ?? true,
           isDropSet: body.isDropSet ?? false,
           rpe: body.rpe,
@@ -461,7 +497,7 @@ export class WorkoutsService {
       const openWorkout = await this.lockOpenWorkout(tx, workoutId, userId);
       const [ownedSet] = openWorkout
         ? await tx
-            .select({ id: sets.id })
+            .select({ id: sets.id, exerciseId: sets.exerciseId })
             .from(sets)
             .where(and(eq(sets.id, setId), eq(sets.workoutId, workoutId)))
             .limit(1)
@@ -476,12 +512,14 @@ export class WorkoutsService {
         new Date(),
         tx,
       );
+      await this.validateSetMeasurement(tx, ownedSet.exerciseId, body);
 
       const [updatedSet] = await tx
         .update(sets)
         .set({
           weight: body.weight,
           reps: body.reps,
+          durationSeconds: body.durationSeconds,
           rpe: body.rpe,
           isFailure: body.isFailure ?? false,
         })
@@ -797,7 +835,12 @@ export class WorkoutsService {
     if (!workout) throw new NotFoundException('Completed workout not found');
 
     const actualRows = await reader
-      .select({ set: sets, exerciseName: exercises.name })
+      .select({
+        set: sets,
+        exerciseName: exercises.name,
+        measurementType: exercises.measurementType,
+        targetDurationSeconds: exercises.recommendedDurationSeconds,
+      })
       .from(sets)
       .innerJoin(exercises, eq(exercises.id, sets.exerciseId))
       .where(eq(sets.workoutId, workoutId))
@@ -809,7 +852,10 @@ export class WorkoutsService {
         exerciseId: number;
         name: string;
         planned: (typeof plan)[number] | null;
-        actualSets: (typeof actualRows)[number]['set'][];
+        actualSets: Array<(typeof actualRows)[number]['set'] & {
+          measurementType: 'reps' | 'duration';
+          targetDurationSeconds: number | null;
+        }>;
         addedDuringWorkout: boolean;
       }
     >();
@@ -832,15 +878,21 @@ export class WorkoutsService {
           addedDuringWorkout: !!workout.historySnapshot,
         });
       }
-      exerciseMap.get(row.set.exerciseId)!.actualSets.push(row.set);
+      exerciseMap.get(row.set.exerciseId)!.actualSets.push({
+        ...row.set,
+        measurementType: row.measurementType,
+        targetDurationSeconds: row.targetDurationSeconds,
+      });
     }
 
-    const actualSetCounts = new Map<number, number>();
+    const actualByExercise = new Map<number, { durationSeconds: number; reps: number; sets: number }>();
     for (const row of actualRows) {
-      actualSetCounts.set(
-        row.set.exerciseId,
-        (actualSetCounts.get(row.set.exerciseId) || 0) + 1,
-      );
+      const current = actualByExercise.get(row.set.exerciseId) || { durationSeconds: 0, reps: 0, sets: 0 };
+      actualByExercise.set(row.set.exerciseId, {
+        durationSeconds: current.durationSeconds + (row.set.durationSeconds || 0),
+        reps: current.reps + (row.set.reps || 0),
+        sets: current.sets + 1,
+      });
     }
     const rpeSets = actualRows.filter(({ set }) => set.rpe !== null);
     // EN: Snapshot text remains the historical truth, while availability is recalculated from current ownership and visibility before offering navigation.
@@ -905,7 +957,7 @@ export class WorkoutsService {
           .size,
         setCount: actualRows.length,
         volume: actualRows.reduce(
-          (total, { set }) => total + set.weight * set.reps,
+          (total, { set }) => total + set.weight * (set.reps ?? 0),
           0,
         ),
         averageRpe: rpeSets.length
@@ -913,7 +965,7 @@ export class WorkoutsService {
             rpeSets.length
           : null,
         failureSets: actualRows.filter(({ set }) => set.isFailure).length,
-        completionPercent: planCompletion(plan, actualSetCounts),
+        completionPercent: planCompletion(plan, actualByExercise),
       },
       exercises: [...exerciseMap.values()],
       hasPlanSnapshot: !!workout.historySnapshot,

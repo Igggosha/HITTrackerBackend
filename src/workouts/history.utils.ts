@@ -38,15 +38,18 @@ export function decodeHistoryCursor(value?: string): HistoryCursor | null {
 
 export function planCompletion(
   plan: WorkoutHistoryPlanItem[],
-  actualSetsByExercise: Map<number, number>,
+  actualByExercise: Map<number, { durationSeconds: number; reps: number; sets: number }>,
 ) {
   const plannedSets = plan.reduce((total, item) => total + item.sets, 0);
   if (!plannedSets) return null;
-  const completedSets = plan.reduce(
-    (total, item) =>
-      total +
-      Math.min(item.sets, actualSetsByExercise.get(item.exerciseId) || 0),
-    0,
-  );
+  const completedSets = plan.reduce((total, item) => {
+    const actual = actualByExercise.get(item.exerciseId) || { durationSeconds: 0, reps: 0, sets: 0 };
+    const targetPerSet = item.measurementType === 'duration'
+      ? item.targetDurationSeconds || 0
+      : item.reps || 0;
+    const actualMetric = item.measurementType === 'duration' ? actual.durationSeconds : actual.reps;
+    const metricSets = targetPerSet > 0 ? actualMetric / targetPerSet : actual.sets;
+    return total + Math.min(item.sets, actual.sets, metricSets);
+  }, 0);
   return Math.round((completedSets / plannedSets) * 100);
 }

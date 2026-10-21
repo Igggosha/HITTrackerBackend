@@ -82,6 +82,9 @@
               "reps": {
                 "type": "number"
               },
+              "durationSeconds": {
+                "type": "number"
+              },
               "rpe": {
                 "type": ["number", "null"]
               },

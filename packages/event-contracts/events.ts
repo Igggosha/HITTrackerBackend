@@ -26,6 +26,8 @@ export type PerformedSetV1 = {
   exerciseId: number;
   weight: number;
   reps: number;
+  /** Duration-based sets use reps=0 for v1 compatibility. */
+  durationSeconds?: number;
   rpe: number | null;
   isFailure: boolean;
   isDropSet: boolean;
@@ -229,7 +231,8 @@ export function performedSetsPayload(
     id: number;
     exerciseId: number;
     weight: number;
-    reps: number;
+    reps: number | null;
+    durationSeconds?: number | null;
     rpe: number | null;
     isFailure: boolean;
     isDropSet: boolean;
@@ -245,11 +248,12 @@ export function performedSetsPayload(
     setId: row.id,
     exerciseId: row.exerciseId,
     weight: row.weight,
-    reps: row.reps,
+    reps: row.reps ?? 0,
+    ...(row.durationSeconds != null ? { durationSeconds: row.durationSeconds } : {}),
     rpe: row.rpe,
     isFailure: row.isFailure,
     isDropSet: row.isDropSet,
-    volume: row.weight * row.reps,
+    volume: row.weight * (row.reps ?? 0),
     ...(row.exerciseName ? { exerciseName: row.exerciseName } : {}),
     ...(row.muscleGroups ? { muscleGroups: row.muscleGroups } : {}),
   }));

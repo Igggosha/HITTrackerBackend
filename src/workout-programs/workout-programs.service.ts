@@ -780,6 +780,27 @@ export class WorkoutProgramsService {
     programId: number,
     definitions: ProgramExerciseDto[],
   ) {
+    const exerciseIds = [...new Set(definitions.map((item) => item.exerciseId))];
+    const exerciseRows = await tx
+      .select({ id: exercises.id, measurementType: exercises.measurementType })
+      .from(exercises)
+      .where(inArray(exercises.id, exerciseIds));
+    const measurementTypes = new Map(
+      exerciseRows.map((exercise) => [exercise.id, exercise.measurementType]),
+    );
+    for (const item of definitions) {
+      const measurementType = measurementTypes.get(item.exerciseId);
+      if (!measurementType) throw new BadRequestException('Exercise not found');
+      if (item.reps !== undefined && item.durationSeconds !== undefined) {
+        throw new BadRequestException('Program exercise cannot target both reps and duration');
+      }
+      if (item.reps !== undefined && measurementType !== 'reps') {
+        throw new BadRequestException('Duration exercise requires durationSeconds');
+      }
+      if (item.durationSeconds !== undefined && measurementType !== 'duration') {
+        throw new BadRequestException('Repetition exercise requires reps');
+      }
+    }
     await tx
       .delete(programContent)
       .where(eq(programContent.programId, programId));
@@ -799,6 +820,7 @@ export class WorkoutProgramsService {
         exerciseId: item.exerciseId,
         sets: item.sets,
         firstSetRepCount: item.reps ?? null,
+        targetDurationSeconds: item.durationSeconds ?? null,
         weight: item.weight ?? null,
         weekDay: item.weekDay,
       })),
@@ -814,6 +836,7 @@ export class WorkoutProgramsService {
         exerciseId: exerciseInPrograms.exerciseId,
         sets: exerciseInPrograms.sets,
         reps: sql<number | undefined>`${exerciseInPrograms.firstSetRepCount}`,
+        durationSeconds: sql<number | undefined>`${exerciseInPrograms.targetDurationSeconds}`,
         weight: sql<number | undefined>`${exerciseInPrograms.weight}`,
         week: programContent.week,
         weekDay: exerciseInPrograms.weekDay,
@@ -839,11 +862,15 @@ export class WorkoutProgramsService {
         weekDay: exerciseInPrograms.weekDay,
         setsCount: exerciseInPrograms.sets,
         targetReps: exerciseInPrograms.firstSetRepCount,
+        targetDurationSeconds: exerciseInPrograms.targetDurationSeconds,
         plannedWeight: exerciseInPrograms.weight,
         exercise: {
           id: exercises.id,
           name: exercises.name,
           difficulty: exercises.difficulty,
+          measurementType: exercises.measurementType,
+          recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+          equipment: exercises.equipment,
           imageKey: exercises.imageKey,
         },
       })

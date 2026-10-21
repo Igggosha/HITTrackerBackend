@@ -111,6 +111,9 @@ export class ExercisesService {
         videoUrl: exercises.videoUrl,
         imageKey: exercises.imageKey,
         difficulty: exercises.difficulty,
+        measurementType: exercises.measurementType,
+        recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+        equipment: exercises.equipment,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -161,6 +164,9 @@ export class ExercisesService {
       videoUrl: string | null;
       imageKey: string | null;
       difficulty: number;
+      measurementType: 'reps' | 'duration';
+      recommendedDurationSeconds: number | null;
+      equipment: string[];
       likesCount: number;
       isLiked: boolean;
       isBookmarked: boolean;
@@ -183,6 +189,9 @@ export class ExercisesService {
           videoUrl: row.videoUrl,
           imageKey: row.imageKey,
           difficulty: row.difficulty,
+          measurementType: row.measurementType,
+          recommendedDurationSeconds: row.recommendedDurationSeconds,
+          equipment: row.equipment,
           likesCount: likesMap.get(row.id) || 0,
           isLiked: userLikesSet.has(row.id),
           isBookmarked: bookmarks.has(row.id),
@@ -219,6 +228,9 @@ export class ExercisesService {
         videoUrl: exercises.videoUrl,
         imageKey: exercises.imageKey,
         difficulty: exercises.difficulty,
+        measurementType: exercises.measurementType,
+        recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+        equipment: exercises.equipment,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -241,6 +253,9 @@ export class ExercisesService {
       videoUrl: exercise.videoUrl,
       imageKey: exercise.imageKey,
       difficulty: exercise.difficulty,
+      measurementType: exercise.measurementType,
+      recommendedDurationSeconds: exercise.recommendedDurationSeconds,
+      equipment: exercise.equipment,
       muscles: rows.flatMap((row) =>
         row.muscleId === null
           ? []
@@ -274,6 +289,9 @@ export class ExercisesService {
       });
     }
     const trimmedName = data.name.trim();
+    if (data.measurementType !== 'duration' && data.recommendedDurationSeconds !== undefined) {
+      throw new BadRequestException('recommendedDurationSeconds requires duration measurement');
+    }
 
     const existing = await db
       .select({ id: exercises.id })
@@ -298,6 +316,11 @@ export class ExercisesService {
             description: data.description?.trim() || null,
             videoUrl: data.videoUrl?.trim() || null,
             difficulty: data.difficulty || 1,
+            measurementType: data.measurementType ?? 'reps',
+            recommendedDurationSeconds: data.measurementType === 'reps'
+              ? null
+              : data.recommendedDurationSeconds ?? null,
+            equipment: data.equipment ?? [],
           })
           .returning();
 
@@ -375,7 +398,21 @@ export class ExercisesService {
       ...(exercise.difficulty !== undefined
         ? { difficulty: exercise.difficulty }
         : {}),
+      ...(exercise.measurementType !== undefined
+        ? { measurementType: exercise.measurementType }
+        : {}),
+      ...(exercise.recommendedDurationSeconds !== undefined
+        ? { recommendedDurationSeconds: exercise.recommendedDurationSeconds }
+        : {}),
+      ...(exercise.equipment !== undefined ? { equipment: exercise.equipment } : {}),
     };
+    if (
+      exercise.measurementType === 'reps' &&
+      exercise.recommendedDurationSeconds !== undefined &&
+      exercise.recommendedDurationSeconds !== null
+    ) {
+      throw new BadRequestException('recommendedDurationSeconds requires duration measurement');
+    }
 
     try {
       return await db
@@ -395,6 +432,13 @@ export class ExercisesService {
               .limit(1);
           }
           if (!updated) throw new NotFoundException('Exercise not found');
+          if (updated.measurementType === 'reps' && updated.recommendedDurationSeconds !== null) {
+            [updated] = await tx
+              .update(exercises)
+              .set({ recommendedDurationSeconds: null })
+              .where(eq(exercises.id, id))
+              .returning();
+          }
 
           if (changesMuscles) {
             // EN: Delete-and-insert runs in the same transaction, so readers never observe a partially replaced primary/secondary assignment.
