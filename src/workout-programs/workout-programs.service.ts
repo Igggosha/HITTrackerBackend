@@ -780,7 +780,9 @@ export class WorkoutProgramsService {
     programId: number,
     definitions: ProgramExerciseDto[],
   ) {
-    const exerciseIds = [...new Set(definitions.map((item) => item.exerciseId))];
+    const exerciseIds = [
+      ...new Set(definitions.map((item) => item.exerciseId)),
+    ];
     const exerciseRows = await tx
       .select({ id: exercises.id, measurementType: exercises.measurementType })
       .from(exercises)
@@ -792,12 +794,19 @@ export class WorkoutProgramsService {
       const measurementType = measurementTypes.get(item.exerciseId);
       if (!measurementType) throw new BadRequestException('Exercise not found');
       if (item.reps !== undefined && item.durationSeconds !== undefined) {
-        throw new BadRequestException('Program exercise cannot target both reps and duration');
+        throw new BadRequestException(
+          'Program exercise cannot target both reps and duration',
+        );
       }
       if (item.reps !== undefined && measurementType !== 'reps') {
-        throw new BadRequestException('Duration exercise requires durationSeconds');
+        throw new BadRequestException(
+          'Duration exercise requires durationSeconds',
+        );
       }
-      if (item.durationSeconds !== undefined && measurementType !== 'duration') {
+      if (
+        item.durationSeconds !== undefined &&
+        measurementType !== 'duration'
+      ) {
         throw new BadRequestException('Repetition exercise requires reps');
       }
     }
@@ -836,7 +845,9 @@ export class WorkoutProgramsService {
         exerciseId: exerciseInPrograms.exerciseId,
         sets: exerciseInPrograms.sets,
         reps: sql<number | undefined>`${exerciseInPrograms.firstSetRepCount}`,
-        durationSeconds: sql<number | undefined>`${exerciseInPrograms.targetDurationSeconds}`,
+        durationSeconds: sql<
+          number | undefined
+        >`${exerciseInPrograms.targetDurationSeconds}`,
         weight: sql<number | undefined>`${exerciseInPrograms.weight}`,
         week: programContent.week,
         weekDay: exerciseInPrograms.weekDay,

@@ -110,7 +110,9 @@ export class WorkoutsService {
     const hasReps = body.reps !== undefined;
     const hasDuration = body.durationSeconds !== undefined;
     if (hasReps === hasDuration) {
-      throw new BadRequestException('Exactly one of reps or durationSeconds is required');
+      throw new BadRequestException(
+        'Exactly one of reps or durationSeconds is required',
+      );
     }
     if ((exercise.measurementType === 'reps') !== hasReps) {
       throw new BadRequestException(
@@ -313,10 +315,13 @@ export class WorkoutsService {
           name: exerciseNames.get(item.exerciseId)!,
           sets: item.sets,
           reps: item.reps ?? null,
-          measurementType: exerciseRows.find((exercise) => exercise.id === item.exerciseId)!.measurementType,
+          measurementType: exerciseRows.find(
+            (exercise) => exercise.id === item.exerciseId,
+          )!.measurementType,
           targetDurationSeconds:
             item.durationSeconds ??
-            exerciseRows.find((exercise) => exercise.id === item.exerciseId)!.recommendedDurationSeconds,
+            exerciseRows.find((exercise) => exercise.id === item.exerciseId)!
+              .recommendedDurationSeconds,
           weight: item.weight ?? null,
         })),
       };
@@ -852,10 +857,12 @@ export class WorkoutsService {
         exerciseId: number;
         name: string;
         planned: (typeof plan)[number] | null;
-        actualSets: Array<(typeof actualRows)[number]['set'] & {
-          measurementType: 'reps' | 'duration';
-          targetDurationSeconds: number | null;
-        }>;
+        actualSets: Array<
+          (typeof actualRows)[number]['set'] & {
+            measurementType: 'reps' | 'duration';
+            targetDurationSeconds: number | null;
+          }
+        >;
         addedDuringWorkout: boolean;
       }
     >();
@@ -885,11 +892,19 @@ export class WorkoutsService {
       });
     }
 
-    const actualByExercise = new Map<number, { durationSeconds: number; reps: number; sets: number }>();
+    const actualByExercise = new Map<
+      number,
+      { durationSeconds: number; reps: number; sets: number }
+    >();
     for (const row of actualRows) {
-      const current = actualByExercise.get(row.set.exerciseId) || { durationSeconds: 0, reps: 0, sets: 0 };
+      const current = actualByExercise.get(row.set.exerciseId) || {
+        durationSeconds: 0,
+        reps: 0,
+        sets: 0,
+      };
       actualByExercise.set(row.set.exerciseId, {
-        durationSeconds: current.durationSeconds + (row.set.durationSeconds || 0),
+        durationSeconds:
+          current.durationSeconds + (row.set.durationSeconds || 0),
         reps: current.reps + (row.set.reps || 0),
         sets: current.sets + 1,
       });

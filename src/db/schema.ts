@@ -597,7 +597,10 @@ export const exercises = pgTable(
     catalogKey: text('catalog_key'),
 
     description: text('description'),
-    equipment: text('equipment').array().notNull().default(sql`ARRAY[]::text[]`),
+    equipment: text('equipment')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
 
     videoUrl: text('video_url'),
     // Object storage key of the illustration; see `users.avatar_key`.

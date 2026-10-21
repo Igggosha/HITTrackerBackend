@@ -249,7 +249,9 @@ export function performedSetsPayload(
     exerciseId: row.exerciseId,
     weight: row.weight,
     reps: row.reps ?? 0,
-    ...(row.durationSeconds != null ? { durationSeconds: row.durationSeconds } : {}),
+    ...(row.durationSeconds != null
+      ? { durationSeconds: row.durationSeconds }
+      : {}),
     rpe: row.rpe,
     isFailure: row.isFailure,
     isDropSet: row.isDropSet,

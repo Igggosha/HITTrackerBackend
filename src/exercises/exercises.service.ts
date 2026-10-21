@@ -289,8 +289,13 @@ export class ExercisesService {
       });
     }
     const trimmedName = data.name.trim();
-    if (data.measurementType !== 'duration' && data.recommendedDurationSeconds !== undefined) {
-      throw new BadRequestException('recommendedDurationSeconds requires duration measurement');
+    if (
+      data.measurementType !== 'duration' &&
+      data.recommendedDurationSeconds !== undefined
+    ) {
+      throw new BadRequestException(
+        'recommendedDurationSeconds requires duration measurement',
+      );
     }
 
     const existing = await db
@@ -317,9 +322,10 @@ export class ExercisesService {
             videoUrl: data.videoUrl?.trim() || null,
             difficulty: data.difficulty || 1,
             measurementType: data.measurementType ?? 'reps',
-            recommendedDurationSeconds: data.measurementType === 'reps'
-              ? null
-              : data.recommendedDurationSeconds ?? null,
+            recommendedDurationSeconds:
+              data.measurementType === 'reps'
+                ? null
+                : (data.recommendedDurationSeconds ?? null),
             equipment: data.equipment ?? [],
           })
           .returning();
@@ -404,14 +410,18 @@ export class ExercisesService {
       ...(exercise.recommendedDurationSeconds !== undefined
         ? { recommendedDurationSeconds: exercise.recommendedDurationSeconds }
         : {}),
-      ...(exercise.equipment !== undefined ? { equipment: exercise.equipment } : {}),
+      ...(exercise.equipment !== undefined
+        ? { equipment: exercise.equipment }
+        : {}),
     };
     if (
       exercise.measurementType === 'reps' &&
       exercise.recommendedDurationSeconds !== undefined &&
       exercise.recommendedDurationSeconds !== null
     ) {
-      throw new BadRequestException('recommendedDurationSeconds requires duration measurement');
+      throw new BadRequestException(
+        'recommendedDurationSeconds requires duration measurement',
+      );
     }
 
     try {
@@ -432,7 +442,10 @@ export class ExercisesService {
               .limit(1);
           }
           if (!updated) throw new NotFoundException('Exercise not found');
-          if (updated.measurementType === 'reps' && updated.recommendedDurationSeconds !== null) {
+          if (
+            updated.measurementType === 'reps' &&
+            updated.recommendedDurationSeconds !== null
+          ) {
             [updated] = await tx
               .update(exercises)
               .set({ recommendedDurationSeconds: null })
