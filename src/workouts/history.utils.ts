@@ -13,6 +13,28 @@ export const historyKeywords = (query?: string) =>
     .filter(Boolean)
     .slice(0, 10);
 
+const freeWorkoutSearchAliases = new Set([
+  'free',
+  'free workout',
+  'вільне',
+  'вільне тренування',
+]);
+
+/** EN: Recognizes localized free-workout labels without storing localized domain text. UK: Розпізнає локалізовані назви вільного тренування без збереження перекладеного доменного тексту. */
+export const isFreeWorkoutSearch = (query?: string) =>
+  freeWorkoutSearchAliases.has(
+    (query || '').trim().toLocaleLowerCase().replace(/\s+/g, ' '),
+  );
+
+/** EN: Derives semantic free-workout identity from the immutable source snapshot, with a legacy fallback. UK: Визначає семантичний тип вільного тренування зі знімка джерела з fallback для старих записів. */
+export const isFreeWorkoutRecord = (workout: {
+  historySnapshot?: { programId?: number | null } | null;
+  programContentId?: number | null;
+}) =>
+  workout.historySnapshot
+    ? workout.historySnapshot.programId == null
+    : workout.programContentId == null;
+
 export function encodeHistoryCursor(finishedAt: Date, id: number) {
   return Buffer.from(`${finishedAt.toISOString()}|${id}`, 'utf8').toString(
     'base64url',

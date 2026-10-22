@@ -53,6 +53,8 @@ import {
   decodeHistoryCursor,
   encodeHistoryCursor,
   historyKeywords,
+  isFreeWorkoutRecord,
+  isFreeWorkoutSearch,
   planCompletion,
 } from './history.utils';
 import { OutboxService } from '../outbox/outbox.service';
@@ -722,18 +724,33 @@ export class WorkoutsService {
       );
     }
 
-    for (const keyword of historyKeywords(dto.q)) {
-      const pattern = `%${keyword.replace(/[\\%_]/g, '\\$&')}%`;
-      conditions.push(sql<boolean>`(
-        lower(${workouts.type}) like ${pattern}
-        or lower(coalesce(${workouts.historySnapshot}->>'programName', '')) like ${pattern}
-        or exists (
-          select 1 from ${sets}
-          inner join ${exercises} on ${exercises.id} = ${sets.exerciseId}
-          where ${sets.workoutId} = ${workouts.id}
-            and lower(${exercises.name}) like ${pattern}
-        )
-      )`);
+    if (isFreeWorkoutSearch(dto.q)) {
+      conditions.push(
+        or(
+          and(
+            isNotNull(workouts.historySnapshot),
+            sql<boolean>`${workouts.historySnapshot}->>'programId' is null`,
+          ),
+          and(
+            isNull(workouts.historySnapshot),
+            isNull(workouts.programContentId),
+          ),
+        )!,
+      );
+    } else {
+      for (const keyword of historyKeywords(dto.q)) {
+        const pattern = `%${keyword.replace(/[\\%_]/g, '\\$&')}%`;
+        conditions.push(sql<boolean>`(
+          lower(${workouts.type}) like ${pattern}
+          or lower(coalesce(${workouts.historySnapshot}->>'programName', '')) like ${pattern}
+          or exists (
+            select 1 from ${sets}
+            inner join ${exercises} on ${exercises.id} = ${sets.exerciseId}
+            where ${sets.workoutId} = ${workouts.id}
+              and lower(${exercises.name}) like ${pattern}
+          )
+        )`);
+      }
     }
 
     // Pure browsing read: session consistency (readerFor), not always-primary.
@@ -790,6 +807,7 @@ export class WorkoutsService {
         exercisePreview: names.slice(0, 3),
         remainingExerciseCount: Math.max(0, names.length - 3),
         programName: workout.historySnapshot?.programName ?? null,
+        isFreeWorkout: isFreeWorkoutRecord(workout),
       };
     });
     const last = selected.at(-1)!.workout;
@@ -957,6 +975,7 @@ export class WorkoutsService {
         finishedAt: workout.finishedAt,
         notes: workout.notes,
         scheduledFor: snapshot?.scheduledFor ?? null,
+        isFreeWorkout: isFreeWorkoutRecord(workout),
       },
       programSource,
       summary: {

@@ -5,6 +5,8 @@ import {
   decodeHistoryCursor,
   encodeHistoryCursor,
   historyKeywords,
+  isFreeWorkoutRecord,
+  isFreeWorkoutSearch,
   planCompletion,
 } from './history.utils';
 
@@ -24,6 +26,30 @@ describe('workout history helpers', () => {
       'body',
       'press',
     ]);
+  });
+
+  it('recognizes localized free-workout searches and derives the semantic type', () => {
+    expect(isFreeWorkoutSearch(' Free   workout ')).toBe(true);
+    expect(isFreeWorkoutSearch('Вільне тренування')).toBe(true);
+    expect(isFreeWorkoutSearch('Full body')).toBe(false);
+    expect(
+      isFreeWorkoutRecord({
+        historySnapshot: { programId: null },
+        programContentId: 7,
+      }),
+    ).toBe(true);
+    expect(
+      isFreeWorkoutRecord({
+        historySnapshot: { programId: 4 },
+        programContentId: null,
+      }),
+    ).toBe(false);
+    expect(
+      isFreeWorkoutRecord({ historySnapshot: null, programContentId: null }),
+    ).toBe(true);
+    expect(
+      isFreeWorkoutRecord({ historySnapshot: null, programContentId: 9 }),
+    ).toBe(false);
   });
 
   it('does not let extra sets replace a missed exercise', () => {
