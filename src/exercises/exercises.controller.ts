@@ -65,6 +65,13 @@ export class ExercisesController {
     );
   }
 
+  // EN: Returns one catalog exercise with the same complete detail shape used by the authenticated catalog.
+  // UK: Повертає одну вправу каталогу з тією самою повною деталізацією, що й автентифікований каталог.
+  @Get(':id')
+  async getExerciseById(@Param('id', ParseIntPipe) id: number) {
+    return this.exercisesService.getExerciseById(id);
+  }
+
   // EN: Moderators create an exercise from the validated DTO; the service returns the created exercise or a domain error.
   // UK: Модератори створюють вправу з перевіреного DTO; сервіс повертає створену вправу або доменну помилку.
   @Post()

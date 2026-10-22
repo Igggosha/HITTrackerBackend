@@ -273,6 +273,14 @@ export class ExercisesService {
   }
 
   /**
+   * EN: Resolves one complete catalog record for authenticated detail views.
+   * UK: Отримує один повний запис каталогу для автентифікованих екранів деталей.
+   */
+  async getExerciseById(id: number) {
+    return this.getSharedExerciseById(id);
+  }
+
+  /**
    * Створення вправи
    */
   async createExercise(data: CreateExerciseDto) {
