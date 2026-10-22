@@ -15,11 +15,15 @@ describe('WorkoutProgramsService matching', () => {
     );
     const find = jest
       .spyOn(service as any, 'findMatchingProgram')
-      .mockResolvedValue(42);
+      .mockResolvedValue({ id: 42, name: 'Full body', isPersonal: false });
 
     await expect(
       service.findMatchingProgramByExerciseIds(7, [8, 3, 8]),
-    ).resolves.toEqual({ programId: 42 });
+    ).resolves.toEqual({
+      programId: 42,
+      programName: 'Full body',
+      isPersonal: false,
+    });
     expect(find).toHaveBeenCalledWith(
       7,
       [{ exerciseId: 8 }, { exerciseId: 3 }, { exerciseId: 8 }],
@@ -39,6 +43,10 @@ describe('WorkoutProgramsService matching', () => {
 
     await expect(
       service.findMatchingProgramByExerciseIds(7, [3, 8]),
-    ).resolves.toEqual({ programId: null });
+    ).resolves.toEqual({
+      programId: null,
+      programName: null,
+      isPersonal: null,
+    });
   });
 });

@@ -59,12 +59,16 @@ export class WorkoutProgramsService {
     userId: number,
     exerciseIds: number[],
   ) {
-    const programId = await this.findMatchingProgram(
+    const program = await this.findMatchingProgram(
       userId,
       exerciseIds.map((exerciseId) => ({ exerciseId })),
       true,
     );
-    return { programId };
+    return {
+      programId: program?.id ?? null,
+      programName: program?.name ?? null,
+      isPersonal: program?.isPersonal ?? null,
+    };
   }
 
   async copyAsPersonalProgram(
@@ -956,7 +960,12 @@ export class WorkoutProgramsService {
     userId: number,
     sourceExercises: readonly Pick<ProgramExerciseDto, 'exerciseId'>[],
   ) {
-    return this.findMatchingProgram(userId, sourceExercises, false);
+    const program = await this.findMatchingProgram(
+      userId,
+      sourceExercises,
+      false,
+    );
+    return program?.id ?? null;
   }
 
   private async findMatchingProgram(
@@ -965,7 +974,11 @@ export class WorkoutProgramsService {
     includeOfficial: boolean,
   ) {
     const candidates = await db
-      .select({ id: workoutPrograms.id })
+      .select({
+        id: workoutPrograms.id,
+        name: workoutPrograms.name,
+        isPersonal: workoutPrograms.isPersonal,
+      })
       .from(workoutPrograms)
       .where(
         includeOfficial
@@ -974,7 +987,10 @@ export class WorkoutProgramsService {
                 eq(workoutPrograms.isPersonal, true),
                 eq(workoutPrograms.createdById, userId),
               ),
-              eq(workoutPrograms.isPersonal, false),
+              and(
+                eq(workoutPrograms.isPersonal, false),
+                eq(workoutPrograms.isActive, true),
+              ),
             )
           : and(
               eq(workoutPrograms.isPersonal, true),
@@ -1006,7 +1022,7 @@ export class WorkoutProgramsService {
           sourceExercises,
           rows.filter((row) => row.programId === candidate.id),
         ),
-      )?.id ?? null
+      ) ?? null
     );
   }
 
