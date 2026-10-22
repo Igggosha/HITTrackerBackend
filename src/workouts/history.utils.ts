@@ -16,6 +16,8 @@ export const historyKeywords = (query?: string) =>
 const freeWorkoutSearchAliases = new Set([
   'free',
   'free workout',
+  'freestyle',
+  'freestyle workout',
   'вільне',
   'вільне тренування',
 ]);

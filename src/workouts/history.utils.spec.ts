@@ -30,6 +30,7 @@ describe('workout history helpers', () => {
 
   it('recognizes localized free-workout searches and derives the semantic type', () => {
     expect(isFreeWorkoutSearch(' Free   workout ')).toBe(true);
+    expect(isFreeWorkoutSearch('Freestyle workout')).toBe(true);
     expect(isFreeWorkoutSearch('Вільне тренування')).toBe(true);
     expect(isFreeWorkoutSearch('Full body')).toBe(false);
     expect(
