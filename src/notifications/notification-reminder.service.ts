@@ -9,7 +9,8 @@ import {
   userProgramSchedule,
   userProgramScheduleSeries,
 } from '../db/schema';
-import { weeklyDatesInRange } from '../workout-programs/schedule.utils';
+import { materializeWeeklyAssignments } from '../workout-programs/materialize-weekly-assignments';
+import { OutboxService } from '../outbox/outbox.service';
 import { NotificationsService } from './notifications.service';
 import {
   addCalendarDays,
@@ -20,7 +21,37 @@ import {
 
 @Injectable()
 export class NotificationReminderService {
-  constructor(private readonly notifications: NotificationsService) {}
+  constructor(
+    private readonly notifications: NotificationsService,
+    private readonly outbox: OutboxService,
+  ) {}
+
+  // EN: Catch up all retained series at startup, then scan only nearby UTC dates.
+  // UK: Під час запуску надолужує всі збережені серії, а потім перевіряє лише найближчі дати UTC.
+  async materializeDueAssignments(now = new Date(), fullCatchUp = false) {
+    const today = now.toISOString().slice(0, 10);
+    const from = fullCatchUp ? null : addCalendarDays(today, -1);
+    const to = addCalendarDays(today, 1);
+    const series = await primaryDb
+      .select({ userId: userProgramScheduleSeries.userId })
+      .from(userProgramScheduleSeries)
+      .where(
+        and(
+          lte(userProgramScheduleSeries.startsOn, to),
+          from
+            ? or(
+                isNull(userProgramScheduleSeries.endsOn),
+                gte(userProgramScheduleSeries.endsOn, from),
+              )
+            : undefined,
+        ),
+      );
+    for (const userId of new Set(series.map((item) => item.userId))) {
+      await primaryDb.transaction((tx) =>
+        materializeWeeklyAssignments(tx, this.outbox, userId, from, to),
+      );
+    }
+  }
 
   async createDue(now = new Date()) {
     const preferences = await primaryDb
@@ -122,10 +153,14 @@ export class NotificationReminderService {
     if (!due || !local) return 0;
 
     const tomorrow = addCalendarDays(local.date, 1);
-    await this.materializeWeeklyAssignments(
-      preference.userId,
-      local.date,
-      tomorrow,
+    await primaryDb.transaction((tx) =>
+      materializeWeeklyAssignments(
+        tx,
+        this.outbox,
+        preference.userId,
+        local.date,
+        tomorrow,
+      ),
     );
     const rows = await primaryDb
       .select({ scheduledFor: userProgramSchedule.scheduledFor })
@@ -153,43 +188,5 @@ export class NotificationReminderService {
       if (result.notificationId) created += 1;
     }
     return created;
-  }
-
-  private async materializeWeeklyAssignments(
-    userId: number,
-    from: string,
-    to: string,
-  ) {
-    const series = await primaryDb
-      .select()
-      .from(userProgramScheduleSeries)
-      .where(
-        and(
-          eq(userProgramScheduleSeries.userId, userId),
-          lte(userProgramScheduleSeries.startsOn, to),
-          or(
-            isNull(userProgramScheduleSeries.endsOn),
-            gte(userProgramScheduleSeries.endsOn, from),
-          ),
-        ),
-      );
-    const assignments = series.flatMap((item) =>
-      weeklyDatesInRange(
-        item.startsOn,
-        from,
-        item.endsOn && item.endsOn < to ? item.endsOn : to,
-      ).map((scheduledFor) => ({
-        userId,
-        programId: item.programId,
-        scheduledFor,
-        seriesId: item.id,
-      })),
-    );
-    if (assignments.length) {
-      await primaryDb
-        .insert(userProgramSchedule)
-        .values(assignments)
-        .onConflictDoNothing();
-    }
   }
 }

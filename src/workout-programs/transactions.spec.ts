@@ -125,6 +125,42 @@ describe('WorkoutProgramsService transactions', () => {
     });
   });
 
+  it('retains past series slots and only unschedules future uncompleted slots', async () => {
+    fake.returns('select', userProgramSchedule, [{ seriesId: 8 }]);
+    fake.returns('select', userProgramScheduleSeries, [
+      {
+        startsOn: '2026-01-01',
+        endsOn: null,
+      },
+    ]);
+    fake.returns('delete', userProgramSchedule, [{ id: 22 }]);
+
+    await service.removeScheduledProgram(1, 21);
+
+    expect(fake.find('delete', userProgramScheduleSeries)).toHaveLength(0);
+    expect(fake.find('update', userProgramScheduleSeries)).toHaveLength(1);
+    expect(events()[0]).toMatchObject({
+      eventType: 'program.unscheduled',
+      payload: { userId: 1, scheduleIds: [22] },
+    });
+    expect(
+      calledWith(fake.find('delete', userProgramSchedule)[0], 'where'),
+    ).toHaveLength(1);
+  });
+
+  it('detaches completed slots before deleting a series that has not started', async () => {
+    fake.returns('select', userProgramSchedule, [{ seriesId: 8 }]);
+    fake.returns('select', userProgramScheduleSeries, [
+      { startsOn: '2099-01-01', endsOn: null },
+    ]);
+
+    await service.removeScheduledProgram(1, 21);
+
+    expect(fake.find('update', userProgramSchedule)).toHaveLength(1);
+    expect(fake.find('delete', userProgramScheduleSeries)).toHaveLength(1);
+    expect(events()).toHaveLength(0);
+  });
+
   it('refuses a second concurrent revision of the same official program', async () => {
     const program = {
       id: 3,

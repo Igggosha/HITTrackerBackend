@@ -3,11 +3,12 @@
 
 import { Module } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { OutboxModule } from '../outbox/outbox.module';
 import { TracingShutdownModule } from '../tracing/tracing-shutdown.module';
 import { NotificationWorkerService } from './notification-worker.service';
 
 @Module({
-  imports: [NotificationsModule, TracingShutdownModule],
+  imports: [OutboxModule, NotificationsModule, TracingShutdownModule],
   providers: [NotificationWorkerService],
 })
 export class NotificationWorkerModule {}
