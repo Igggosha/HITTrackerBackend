@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workout.deleted v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "const": "workout.deleted"
+    },
+    "version": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateType": {
+      "type": "string"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "workoutId": {
+          "type": "integer"
+        },
+        "userId": {
+          "type": "integer"
+        },
+        "deletedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workoutId",
+        "userId",
+        "deletedAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "aggregateType",
+    "aggregateId",
+    "payload"
+  ],
+  "additionalProperties": false
+}
