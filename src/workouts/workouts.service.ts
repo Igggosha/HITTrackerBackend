@@ -1116,7 +1116,7 @@ export class WorkoutsService {
   async deleteWorkout(workoutId: number, userId: number) {
     await db.transaction(async (tx) => {
       const [workout] = await tx
-        .select({ id: workouts.id })
+        .select({ id: workouts.id, status: workouts.status })
         .from(workouts)
         .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
         .for('update')
@@ -1128,6 +1128,12 @@ export class WorkoutsService {
 
       await tx.delete(sets).where(eq(sets.workoutId, workoutId));
       await tx.delete(workouts).where(eq(workouts.id, workoutId));
+      if (workout.status === 'completed')
+        await this.outbox.enqueue(tx, {
+          type: 'workout.deleted',
+          aggregateId: workoutId,
+          payload: { workoutId, userId, deletedAt: new Date().toISOString() },
+        });
     });
     recordWrite(userId);
 

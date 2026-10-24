@@ -67,6 +67,12 @@ export type WorkoutCancelledV1 = {
   setCount: number;
 };
 
+export type WorkoutDeletedV1 = {
+  workoutId: number;
+  userId: number;
+  deletedAt: string;
+};
+
 export type ProgramScheduledV1 = {
   userId: number;
   programId: number;
@@ -122,6 +128,7 @@ export type OutboxEventPayloads = {
   'workout.started': WorkoutStartedV1;
   'workout.finished': WorkoutFinishedV1;
   'workout.cancelled': WorkoutCancelledV1;
+  'workout.deleted': WorkoutDeletedV1;
   'program.scheduled': ProgramScheduledV1;
   'program.unscheduled': ProgramUnscheduledV1;
   'body_metric.recorded': BodyMetricRecordedV1;
@@ -142,6 +149,7 @@ export const outboxEventDefinitions: {
   'workout.started': { aggregateType: 'workout', version: 1 },
   'workout.finished': { aggregateType: 'workout', version: 1 },
   'workout.cancelled': { aggregateType: 'workout', version: 1 },
+  'workout.deleted': { aggregateType: 'workout', version: 1 },
   'program.scheduled': { aggregateType: 'user', version: 1 },
   'program.unscheduled': { aggregateType: 'user', version: 1 },
   'body_metric.recorded': { aggregateType: 'user', version: 1 },
@@ -180,6 +188,7 @@ export function topicFor(type: OutboxEventType): string {
     case 'workout.started':
     case 'workout.finished':
     case 'workout.cancelled':
+    case 'workout.deleted':
       return 'hit.workout.v1';
     case 'program.scheduled':
     case 'program.unscheduled':

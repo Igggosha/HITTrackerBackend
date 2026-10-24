@@ -122,6 +122,51 @@ class PgReadModelTx implements ReadModelTx {
     return true;
   }
 
+  // EN: Read affected exercises before removing the workout and its sets in this projection transaction.
+  // UK: Зчитуємо зачеплені вправи перед видаленням тренування та його сетів у транзакції проєкції.
+  async deleteFinishedWorkout(workoutId: number, userId: number) {
+    const [workout] = await this.tx
+      .select({ finishedAt: finishedWorkouts.finishedAt })
+      .from(finishedWorkouts)
+      .where(
+        and(
+          eq(finishedWorkouts.workoutId, workoutId),
+          eq(finishedWorkouts.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!workout) return null;
+    const sets = await this.tx
+      .selectDistinct({ exerciseId: finishedSets.exerciseId })
+      .from(finishedSets)
+      .where(
+        and(
+          eq(finishedSets.workoutId, workoutId),
+          eq(finishedSets.userId, userId),
+        ),
+      );
+    await this.tx
+      .delete(finishedSets)
+      .where(
+        and(
+          eq(finishedSets.workoutId, workoutId),
+          eq(finishedSets.userId, userId),
+        ),
+      );
+    await this.tx
+      .delete(finishedWorkouts)
+      .where(
+        and(
+          eq(finishedWorkouts.workoutId, workoutId),
+          eq(finishedWorkouts.userId, userId),
+        ),
+      );
+    return {
+      finishedAt: workout.finishedAt,
+      exerciseIds: sets.map((set) => set.exerciseId),
+    };
+  }
+
   async insertScheduledAssignments(
     facts: readonly import('./read-model-store').ScheduledAssignmentFact[],
   ) {
@@ -170,6 +215,17 @@ class PgReadModelTx implements ReadModelTx {
   }
 
   async saveWeek(userId: number, isoWeekStart: string, week: WeekAggregate) {
+    if (!week.workouts) {
+      await this.tx
+        .delete(weeklyVolume)
+        .where(
+          and(
+            eq(weeklyVolume.userId, userId),
+            eq(weeklyVolume.isoWeekStart, isoWeekStart),
+          ),
+        );
+      return;
+    }
     await this.tx
       .insert(weeklyVolume)
       .values({ userId, isoWeekStart, ...week })
@@ -189,7 +245,13 @@ class PgReadModelTx implements ReadModelTx {
     return rows.map((row) => row.date);
   }
 
-  async saveStreak(userId: number, streak: Streak) {
+  async saveStreak(userId: number, streak: Streak | null) {
+    if (!streak) {
+      await this.tx
+        .delete(trainingStreaks)
+        .where(eq(trainingStreaks.userId, userId));
+      return;
+    }
     await this.tx
       .insert(trainingStreaks)
       .values({ userId, ...streak })
@@ -242,12 +304,38 @@ class PgReadModelTx implements ReadModelTx {
       });
   }
 
+  // EN: Remove records with no surviving performed sets.
+  // UK: Прибираємо рекорди без жодного збереженого виконаного сету.
+  async deletePersonalRecords(userId: number, exerciseIds: readonly number[]) {
+    if (!exerciseIds.length) return;
+    await this.tx
+      .delete(personalRecords)
+      .where(
+        and(
+          eq(personalRecords.userId, userId),
+          inArray(personalRecords.exerciseId, [...exerciseIds]),
+        ),
+      );
+  }
+
   async saveExerciseProgress(
     userId: number,
     exerciseId: number,
     date: string,
-    progress: DayProgress,
+    progress: DayProgress | null,
   ) {
+    if (!progress) {
+      await this.tx
+        .delete(exerciseProgress)
+        .where(
+          and(
+            eq(exerciseProgress.userId, userId),
+            eq(exerciseProgress.exerciseId, exerciseId),
+            eq(exerciseProgress.date, date),
+          ),
+        );
+      return;
+    }
     await this.tx
       .insert(exerciseProgress)
       .values({ userId, exerciseId, date, ...progress })

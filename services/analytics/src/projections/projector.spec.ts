@@ -113,6 +113,69 @@ describe('Projector', () => {
     });
   });
 
+  it('removes a deleted workout and recomputes every affected model from surviving facts', async () => {
+    const actual = setup();
+    const expected = setup();
+    const surviving = workoutFinished({
+      workoutId: 102,
+      finishedAt: '2026-09-23T20:00:00Z',
+      sets: [{ exerciseId: BENCH, weight: 95, reps: 5 }],
+    });
+    await actual.projector.apply(w1(), source('0'));
+    await actual.projector.apply(surviving, source('1'));
+    await expected.projector.apply(surviving, source('1'));
+    const deleted = {
+      id: '00000000-0000-5000-8000-000000000099',
+      type: 'workout.deleted' as const,
+      version: 1 as const,
+      occurredAt: '2026-09-24T12:00:00Z',
+      aggregateType: 'workout',
+      aggregateId: '101',
+      payload: { workoutId: 101, userId: 7, deletedAt: '2026-09-24T12:00:00Z' },
+    };
+    expect(await actual.projector.apply(deleted, source('2'))).toBe('applied');
+    const models = (store: InMemoryReadModelStore) => ({
+      workouts: store.state.workouts,
+      sets: store.state.sets,
+      weeks: store.state.weeks,
+      streaks: store.state.streaks,
+      records: new Map(
+        [...store.state.records].map(
+          ([key, { writes: _writes, ...record }]) => [key, record],
+        ),
+      ),
+      progress: store.state.progress,
+    });
+    expect(models(actual.store)).toEqual(models(expected.store));
+    const snapshot = structuredClone(actual.store.state);
+    expect(await actual.projector.apply(deleted, source('2'))).toBe(
+      'duplicate',
+    );
+    expect(actual.store.state).toEqual(snapshot);
+    expect(
+      await actual.projector.apply(
+        { ...deleted, id: '00000000-0000-5000-8000-000000000100' },
+        source('3'),
+      ),
+    ).toBe('duplicate');
+    expect(models(actual.store)).toEqual(models(expected.store));
+    expect(
+      await actual.projector.apply(
+        {
+          ...deleted,
+          id: '00000000-0000-5000-8000-000000000101',
+          aggregateId: '102',
+          payload: { ...deleted.payload, workoutId: 102 },
+        },
+        source('4'),
+      ),
+    ).toBe('applied');
+    expect(actual.store.state.weeks.size).toBe(0);
+    expect(actual.store.state.streaks.size).toBe(0);
+    expect(actual.store.state.records.size).toBe(0);
+    expect(actual.store.state.progress.size).toBe(0);
+  });
+
   it('is idempotent: the same event twice leaves the same state', async () => {
     const { store, projector } = setup();
     const event = w1();

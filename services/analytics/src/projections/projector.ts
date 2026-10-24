@@ -25,6 +25,7 @@ import type {
   ProgramScheduledV1,
   ProgramUnscheduledV1,
   UserDeletedV1,
+  WorkoutDeletedV1,
   WorkoutFinishedV1,
 } from '../../../../packages/event-contracts/events';
 
@@ -75,6 +76,8 @@ export class Projector {
       switch (envelope.type) {
         case 'workout.finished':
           return this.workoutFinished(tx, envelope.id, envelope.payload);
+        case 'workout.deleted':
+          return this.workoutDeleted(tx, envelope.payload);
         case 'body_metric.recorded':
           return this.bodyMetricRecorded(tx, envelope.payload);
         case 'user.deleted':
@@ -130,8 +133,41 @@ export class Projector {
     });
     if (!inserted) return 'duplicate';
 
-    // Recompute (never increment) every aggregate this workout touches from
-    // the stored facts: the result does not depend on arrival order.
+    await this.recomputeWorkoutAggregates(tx, userId, finishedAt, [
+      ...new Set(payload.sets.map((s) => s.exerciseId)),
+    ]);
+    return 'applied';
+  }
+
+  // EN: Deletion removes stored facts first, then derives every affected model from the remaining facts.
+  // UK: Видалення спершу прибирає збережені факти, а потім обчислює всі зачеплені моделі з решти фактів.
+  private async workoutDeleted(
+    tx: ReadModelTx,
+    payload: WorkoutDeletedV1,
+  ): Promise<ApplyResult> {
+    if (await tx.isErased(payload.userId)) return 'erased_user';
+    const deleted = await tx.deleteFinishedWorkout(
+      payload.workoutId,
+      payload.userId,
+    );
+    if (!deleted) return 'duplicate';
+    await this.recomputeWorkoutAggregates(
+      tx,
+      payload.userId,
+      deleted.finishedAt,
+      deleted.exerciseIds,
+    );
+    return 'applied';
+  }
+
+  // EN: Recompute touched aggregates after either inserting or removing a finished workout.
+  // UK: Повторно обчислюємо зачеплені агрегати після додавання або видалення завершеного тренування.
+  private async recomputeWorkoutAggregates(
+    tx: ReadModelTx,
+    userId: number,
+    finishedAt: Date,
+    exerciseIds: number[],
+  ): Promise<void> {
     const week = isoWeekStart(finishedAt);
     const weekFrom = new Date(`${week}T00:00:00Z`);
     const weekTo = new Date(`${addDays(week, 7)}T00:00:00Z`);
@@ -141,27 +177,26 @@ export class Projector {
       aggregateWeek(await tx.workoutTotalsBetween(userId, weekFrom, weekTo)),
     );
 
-    const streak = computeStreak(await tx.workoutDates(userId));
-    if (streak) await tx.saveStreak(userId, streak);
+    await tx.saveStreak(userId, computeStreak(await tx.workoutDates(userId)));
 
-    const exerciseIds = [...new Set(payload.sets.map((s) => s.exerciseId))];
     if (exerciseIds.length) {
       const sets = await tx.setsFor(userId, exerciseIds);
       const records: PersonalRecord[] = [];
+      const emptyRecords: number[] = [];
       const day = utcDate(finishedAt);
       for (const exerciseId of exerciseIds) {
         const ofExercise = sets.filter((s) => s.exerciseId === exerciseId);
         const record = computePersonalRecord(exerciseId, ofExercise);
         if (record) records.push(record);
+        else emptyRecords.push(exerciseId);
         const progress = computeDayProgress(
           ofExercise.filter((s) => utcDate(s.finishedAt) === day),
         );
-        if (progress)
-          await tx.saveExerciseProgress(userId, exerciseId, day, progress);
+        await tx.saveExerciseProgress(userId, exerciseId, day, progress);
       }
       await tx.savePersonalRecords(userId, records);
+      await tx.deletePersonalRecords(userId, emptyRecords);
     }
-    return 'applied';
   }
 
   private async programScheduled(

@@ -82,6 +82,11 @@ const fields = {
     cancelledAt: string,
     setCount: integer,
   },
+  'workout.deleted': {
+    workoutId: integer,
+    userId: integer,
+    deletedAt: string,
+  },
   'program.scheduled': {
     userId: integer,
     programId: integer,

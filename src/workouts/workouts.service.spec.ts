@@ -274,6 +274,34 @@ describe('WorkoutsService transactions', () => {
     });
   });
 
+  describe('deleteWorkout', () => {
+    it.each(['completed', 'active'] as const)(
+      'deletes a %s workout and emits only for completed history',
+      async (status) => {
+        fake.returns('select', workouts, [workoutRow({ status })]);
+
+        await service.deleteWorkout(7, 1);
+
+        expect(fake.committed('delete', sets)).toHaveLength(1);
+        expect(fake.committed('delete', workouts)).toHaveLength(1);
+        const events = outboxPayloads();
+        expect(events).toHaveLength(status === 'completed' ? 1 : 0);
+        if (status === 'completed') {
+          expect(events[0]).toMatchObject({
+            eventType: 'workout.deleted',
+            aggregateType: 'workout',
+            aggregateId: '7',
+            payload: { workoutId: 7, userId: 1 },
+          });
+          expect(events[0].payload).toHaveProperty('deletedAt');
+          expect(fake.committed('insert', outboxEvents)[0].transactionId).toBe(
+            fake.committed('delete', workouts)[0].transactionId,
+          );
+        }
+      },
+    );
+  });
+
   describe('sets', () => {
     it('locks the open workout before recording a set', async () => {
       fake.returns('select', workouts, [workoutRow()]);
