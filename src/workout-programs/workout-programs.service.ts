@@ -8,7 +8,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/db';
 import {
@@ -33,7 +44,8 @@ import {
   ListScheduleDto,
   ScheduleProgramDto,
 } from './dto/schedule-program.dto';
-import { scheduleStatus, weeklyDatesInRange } from './schedule.utils';
+import { scheduleStatus } from './schedule.utils';
+import { materializeWeeklyAssignments } from './materialize-weekly-assignments';
 import { hasSameExerciseMultiset } from './sharing.utils';
 import { StorageService } from '../storage/storage.service';
 import type { UploadedFile } from '../storage/upload-validation';
@@ -287,7 +299,7 @@ export class WorkoutProgramsService {
     // it reaches the primary too: a plain `db.select` here could hit a
     // lagging replica and miss the rows this request just inserted.
     const assignments = await db.transaction(async (tx: DbTransaction) => {
-      await this.materializeWeeklyAssignments(tx, userId, from, to);
+      await materializeWeeklyAssignments(tx, this.outbox, userId, from, to);
       return tx
         .select({
           id: userProgramSchedule.id,
@@ -333,6 +345,10 @@ export class WorkoutProgramsService {
 
   async removeScheduledProgram(userId: number, id: number) {
     await db.transaction(async (tx: DbTransaction) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000)
+        .toISOString()
+        .slice(0, 10);
       const [assignment] = await tx
         .select({ seriesId: userProgramSchedule.seriesId })
         .from(userProgramSchedule)
@@ -347,27 +363,70 @@ export class WorkoutProgramsService {
       if (!assignment)
         throw new NotFoundException('Scheduled workout not found');
 
-      const removed = assignment.seriesId
-        ? await tx
-            .select({ id: userProgramSchedule.id })
-            .from(userProgramSchedule)
-            .where(eq(userProgramSchedule.seriesId, assignment.seriesId))
-        : [{ id }];
-
+      let removed: { id: number }[];
       if (assignment.seriesId) {
-        await tx
-          .delete(userProgramScheduleSeries)
-          .where(eq(userProgramScheduleSeries.id, assignment.seriesId));
+        // EN: Keep completed slots linked to their workout and retain past plan history.
+        // UK: Зберігає зв’язок завершених записів із тренуванням та історію минулого плану.
+        const [series] = await tx
+          .select({
+            startsOn: userProgramScheduleSeries.startsOn,
+            endsOn: userProgramScheduleSeries.endsOn,
+          })
+          .from(userProgramScheduleSeries)
+          .where(eq(userProgramScheduleSeries.id, assignment.seriesId))
+          .for('update');
+        removed = await tx
+          .delete(userProgramSchedule)
+          .where(
+            and(
+              eq(userProgramSchedule.seriesId, assignment.seriesId),
+              gte(userProgramSchedule.scheduledFor, today),
+              notExists(
+                tx
+                  .select({ id: workouts.id })
+                  .from(workouts)
+                  .where(
+                    and(
+                      eq(workouts.scheduleId, userProgramSchedule.id),
+                      eq(workouts.status, 'completed'),
+                    ),
+                  ),
+              ),
+            ),
+          )
+          .returning({ id: userProgramSchedule.id });
+        if (series.startsOn >= today) {
+          await tx
+            .update(userProgramSchedule)
+            .set({ seriesId: null })
+            .where(eq(userProgramSchedule.seriesId, assignment.seriesId));
+          await tx
+            .delete(userProgramScheduleSeries)
+            .where(eq(userProgramScheduleSeries.id, assignment.seriesId));
+        } else {
+          await tx
+            .update(userProgramScheduleSeries)
+            .set({
+              endsOn:
+                series.endsOn && series.endsOn < yesterday
+                  ? series.endsOn
+                  : yesterday,
+            })
+            .where(eq(userProgramScheduleSeries.id, assignment.seriesId));
+        }
       } else {
         await tx
           .delete(userProgramSchedule)
           .where(eq(userProgramSchedule.id, id));
+        removed = [{ id }];
       }
-      await this.outbox.enqueue(tx, {
-        type: 'program.unscheduled',
-        aggregateId: userId,
-        payload: { userId, scheduleIds: removed.map((item) => item.id) },
-      });
+      if (removed.length) {
+        await this.outbox.enqueue(tx, {
+          type: 'program.unscheduled',
+          aggregateId: userId,
+          payload: { userId, scheduleIds: removed.map((item) => item.id) },
+        });
+      }
     });
   }
 
@@ -1024,70 +1083,5 @@ export class WorkoutProgramsService {
         ),
       ) ?? null
     );
-  }
-
-  private async materializeWeeklyAssignments(
-    tx: DbTransaction,
-    userId: number,
-    from: string,
-    to: string,
-  ) {
-    // FOR SHARE keeps a concurrent series removal from deleting a series
-    // between this read and the insert that references it.
-    const series = await tx
-      .select()
-      .from(userProgramScheduleSeries)
-      .where(
-        and(
-          eq(userProgramScheduleSeries.userId, userId),
-          lte(userProgramScheduleSeries.startsOn, to),
-          or(
-            isNull(userProgramScheduleSeries.endsOn),
-            gte(userProgramScheduleSeries.endsOn, from),
-          ),
-        ),
-      )
-      .for('share');
-    const assignments = series.flatMap(
-      (item: typeof userProgramScheduleSeries.$inferSelect) =>
-        weeklyDatesInRange(
-          item.startsOn,
-          from,
-          item.endsOn && item.endsOn < to ? item.endsOn : to,
-        ).map((scheduledFor) => ({
-          userId,
-          programId: item.programId,
-          scheduledFor,
-          seriesId: item.id,
-        })),
-    );
-    if (assignments.length) {
-      const inserted = await tx
-        .insert(userProgramSchedule)
-        .values(assignments)
-        .onConflictDoNothing()
-        .returning();
-      for (const assignment of inserted) {
-        await this.outbox.enqueue(tx, {
-          type: 'program.scheduled',
-          aggregateId: userId,
-          payload: {
-            userId,
-            programId: assignment.programId,
-            scheduledFor: assignment.scheduledFor,
-            repeat: 'weekly',
-            repeatUntil: null,
-            seriesId: assignment.seriesId,
-            scheduleIds: [assignment.id],
-            assignments: [
-              {
-                scheduleId: assignment.id,
-                scheduledFor: assignment.scheduledFor,
-              },
-            ],
-          },
-        });
-      }
-    }
   }
 }

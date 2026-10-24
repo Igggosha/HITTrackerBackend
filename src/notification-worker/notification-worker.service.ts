@@ -19,6 +19,7 @@ export class NotificationWorkerService
   private loop?: Promise<void>;
   private wake?: () => void;
   private nextReminderScan = 0;
+  private caughtUp = false;
   private readonly interval = Number(
     process.env.NOTIFICATION_POLL_INTERVAL_MS ?? 5_000,
   );
@@ -37,6 +38,11 @@ export class NotificationWorkerService
     while (this.running) {
       try {
         if (Date.now() >= this.nextReminderScan) {
+          await this.reminders.materializeDueAssignments(
+            new Date(),
+            !this.caughtUp,
+          );
+          this.caughtUp = true;
           const reminders = await this.reminders.createDue();
           this.nextReminderScan = Date.now() + 60_000;
           if (reminders.created) {

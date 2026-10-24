@@ -126,7 +126,11 @@ export function scheduleStats(
   today: string,
   timeZone: string,
 ) {
-  const ended = assignments.filter((item) => item.scheduledFor < today);
+  const ended = assignments.filter(
+    (item) =>
+      item.scheduledFor < today ||
+      (item.scheduledFor === today && completions.has(item.scheduleId)),
+  );
   const completedAssignments = ended.filter((item) =>
     completions.has(item.scheduleId),
   ).length;
@@ -453,17 +457,30 @@ export class AnalyticsQueryService {
     );
     const activityByDate = new Map<
       string,
-      { volumeKg: number; completedWorkouts: number; plannedWorkouts: number }
+      {
+        volumeKg: number;
+        completedWorkouts: number;
+        plannedWorkouts: number;
+        missedWorkouts: number;
+      }
     >();
     for (const date of dateKeys(keys.from, keys.to))
       activityByDate.set(date, {
         volumeKg: 0,
         completedWorkouts: 0,
         plannedWorkouts: 0,
+        missedWorkouts: 0,
       });
     for (const assignment of selectedAssignments) {
       const day = activityByDate.get(assignment.scheduledFor);
-      if (day) day.plannedWorkouts += 1;
+      if (day) {
+        day.plannedWorkouts += 1;
+        if (
+          assignment.scheduledFor < today &&
+          !completions.has(assignment.scheduleId)
+        )
+          day.missedWorkouts += 1;
+      }
     }
     const intensityByDate = new Map<string, number[]>();
     for (const workout of workouts) {

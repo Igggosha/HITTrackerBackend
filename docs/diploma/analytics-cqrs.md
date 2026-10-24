@@ -82,6 +82,11 @@ deterministic uuid v5 values, inserted `on conflict (id) do nothing`, so a
 second run inserts 0. Run it with the migration image:
 `docker compose run --rm --no-deps -v "$PWD/packages:/app/packages:ro" -v "$PWD/scripts:/app/scripts:ro" migrate npx tsx scripts/backfill-analytics-events.ts`.
 
+After deploying scheduled-slot materialization, run that command once so
+assignments previously inserted by reminders without outbox events reach
+analytics. It is safe to rerun: deterministic event IDs and `ON CONFLICT DO
+NOTHING` prevent duplicate backfill rows.
+
 **Observability.** `/metrics` (Bearer `METRICS_TOKEN`):
 `analytics_events_processed_total{type,result}`,
 `analytics_event_processing_seconds`, `analytics_consumer_lag{topic,partition}`
