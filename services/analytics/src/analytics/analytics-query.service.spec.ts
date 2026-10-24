@@ -109,12 +109,14 @@ describe('AnalyticsQueryService new read models', () => {
         volumeKg: 900,
         plannedWorkouts: 0,
         completedWorkouts: 1,
+        missedWorkouts: 0,
       },
       {
         date: '2026-08-22',
         volumeKg: 500,
         plannedWorkouts: 0,
         completedWorkouts: 1,
+        missedWorkouts: 0,
       },
     ]);
     expect(result.intensityTrend).toEqual([
@@ -156,6 +158,7 @@ describe('AnalyticsQueryService new read models', () => {
         volumeKg: 0,
         plannedWorkouts: 0,
         completedWorkouts: 0,
+        missedWorkouts: 0,
       },
     ]);
   });
@@ -335,6 +338,49 @@ describe('AnalyticsQueryService new read models', () => {
       adherencePercent: 100,
       currentStreakDays: 2,
       longestStreakDays: 2,
+    });
+  });
+
+  it('counts completed slots today and resets the streak after a missed planned day', () => {
+    const assignments = [20, 21, 22, 23].map((day, index) => ({
+      scheduleId: index + 1,
+      scheduledFor: `2026-08-${day}`,
+    }));
+    const completions = new Map<number, Date>([
+      [1, new Date('2026-08-20T10:00:00Z')],
+      [3, new Date('2026-08-22T10:00:00Z')],
+      [4, new Date('2026-08-23T10:00:00Z')],
+    ]);
+
+    expect(
+      scheduleStats(assignments, completions, '2026-08-23', 'UTC'),
+    ).toEqual({
+      completedAssignments: 3,
+      scheduledAssignments: 4,
+      adherencePercent: 75,
+      currentStreakDays: 2,
+      longestStreakDays: 2,
+    });
+    completions.delete(4);
+    expect(
+      scheduleStats(assignments, completions, '2026-08-23', 'UTC')
+        .currentStreakDays,
+    ).toBe(1);
+  });
+
+  it('counts missed planned slots even when a free workout finished that day', async () => {
+    const { service } = setup(
+      [workout(1, '2026-08-21T10:00:00Z', [])],
+      [[{ scheduleId: 8, scheduledFor: '2026-08-21' }], [], []],
+    );
+    const result = await service.overview(7, {
+      from: '2026-08-21T00:00:00Z',
+      to: '2026-08-21T23:59:59Z',
+    });
+    expect(result.activity[0]).toMatchObject({
+      plannedWorkouts: 1,
+      completedWorkouts: 1,
+      missedWorkouts: 1,
     });
   });
 
