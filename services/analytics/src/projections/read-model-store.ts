@@ -77,6 +77,11 @@ export interface ReadModelTx {
   isErased(userId: number): Promise<boolean>;
   /** Inserts the workout and its sets; `false` if the workout id already exists. */
   insertFinishedWorkout(fact: FinishedWorkoutFact): Promise<boolean>;
+  /** Removes the owned workout and its sets, returning the affected aggregates. */
+  deleteFinishedWorkout(
+    workoutId: number,
+    userId: number,
+  ): Promise<{ finishedAt: Date; exerciseIds: number[] } | null>;
   insertScheduledAssignments(
     facts: readonly ScheduledAssignmentFact[],
   ): Promise<number>;
@@ -96,18 +101,22 @@ export interface ReadModelTx {
   ): Promise<void>;
   /** Distinct UTC dates (`YYYY-MM-DD`) with at least one finished workout. */
   workoutDates(userId: number): Promise<string[]>;
-  saveStreak(userId: number, streak: Streak): Promise<void>;
+  saveStreak(userId: number, streak: Streak | null): Promise<void>;
   setsFor(userId: number, exerciseIds: readonly number[]): Promise<SetFact[]>;
   /** Upserts; a row whose values did not change is left untouched. */
   savePersonalRecords(
     userId: number,
     records: readonly PersonalRecord[],
   ): Promise<void>;
+  deletePersonalRecords(
+    userId: number,
+    exerciseIds: readonly number[],
+  ): Promise<void>;
   saveExerciseProgress(
     userId: number,
     exerciseId: number,
     date: string,
-    progress: DayProgress,
+    progress: DayProgress | null,
   ): Promise<void>;
   /** `false` if the metric id already exists. */
   insertBodyMetric(fact: BodyMetricFact): Promise<boolean>;

@@ -125,6 +125,24 @@ class MemoryTx implements ReadModelTx {
     return Promise.resolve(true);
   }
 
+  // EN: Mirror fact removal in the PostgreSQL transaction.
+  // UK: Повторюємо видалення фактів у транзакції PostgreSQL.
+  deleteFinishedWorkout(workoutId: number, userId: number) {
+    const workout = this.s.workouts.get(workoutId);
+    if (!workout || workout.userId !== userId) return Promise.resolve(null);
+    const exerciseIds = new Set<number>();
+    for (const [setId, set] of this.s.sets)
+      if (set.workoutId === workoutId && set.userId === userId) {
+        exerciseIds.add(set.exerciseId);
+        this.s.sets.delete(setId);
+      }
+    this.s.workouts.delete(workoutId);
+    return Promise.resolve({
+      finishedAt: workout.finishedAt,
+      exerciseIds: [...exerciseIds],
+    });
+  }
+
   insertScheduledAssignments(facts: readonly ScheduledAssignmentFact[]) {
     let inserted = 0;
     for (const fact of facts) {
@@ -163,6 +181,10 @@ class MemoryTx implements ReadModelTx {
   }
 
   saveWeek(userId: number, isoWeekStart: string, week: WeekAggregate) {
+    if (!week.workouts) {
+      this.s.weeks.delete(`${userId}:${isoWeekStart}`);
+      return Promise.resolve();
+    }
     this.s.weeks.set(`${userId}:${isoWeekStart}`, {
       userId,
       isoWeekStart,
@@ -181,8 +203,9 @@ class MemoryTx implements ReadModelTx {
     ]);
   }
 
-  saveStreak(userId: number, streak: Streak) {
-    this.s.streaks.set(userId, streak);
+  saveStreak(userId: number, streak: Streak | null) {
+    if (streak) this.s.streaks.set(userId, streak);
+    else this.s.streaks.delete(userId);
     return Promise.resolve();
   }
 
@@ -220,13 +243,23 @@ class MemoryTx implements ReadModelTx {
     return Promise.resolve();
   }
 
+  // EN: Remove records whose source sets disappeared.
+  // UK: Прибираємо рекорди, вихідні сети яких зникли.
+  deletePersonalRecords(userId: number, exerciseIds: readonly number[]) {
+    for (const exerciseId of exerciseIds)
+      this.s.records.delete(`${userId}:${exerciseId}`);
+    return Promise.resolve();
+  }
+
   saveExerciseProgress(
     userId: number,
     exerciseId: number,
     date: string,
-    progress: DayProgress,
+    progress: DayProgress | null,
   ) {
-    this.s.progress.set(`${userId}:${exerciseId}:${date}`, progress);
+    if (progress)
+      this.s.progress.set(`${userId}:${exerciseId}:${date}`, progress);
+    else this.s.progress.delete(`${userId}:${exerciseId}:${date}`);
     return Promise.resolve();
   }
 
