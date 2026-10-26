@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-26T17:56:01.723Z",
+  "generatedAt": "2026-10-26T18:01:21.615Z",
   "sources": [
     "wger public API; each candidate retains its per-file license metadata",
     "yuhonas/free-exercise-db; repository declares the dataset and images under the Unlicense",
@@ -308,9 +308,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=zgP-UCKGe24",
+          "url": "https://www.youtube.com/watch?v=P8Hx90LdGH4",
           "channel": "Colossus Fitness",
-          "title": "How to PROPERLY Chest Press Machine Press (LEARN FAST)",
+          "title": "How to Use the Chest Press Machine (Proper Form)",
           "matchScore": 1
         },
         "uk": {
@@ -413,17 +413,17 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=UfhT0OSUU0w",
-          "channel": "Calisthenicmovement",
-          "title": "Pull Up vs. Chin Up | Which One Is Better For You?",
+          "url": "https://www.youtube.com/watch?v=e1YSApl-QcM",
+          "channel": "Simonster Strength",
+          "title": "PERFECT CHIN-UPS | The Only Chin-up Tutorial You'll Ever Need (Full Guide)",
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=yVj2SLJ1Cpg",
+          "channel": "Батьки Фізруки",
+          "title": "Підтягування зворотнім хватом. Техніка виконання",
+          "matchScore": 0.667
         }
       }
     },
@@ -594,11 +594,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=EcdSIeMR0OE",
+          "channel": "10 Повторень",
+          "title": "Т-ПОДІБНА ТЯГА З УПОРОМ НА ГРУДИ | Вправи для спини",
+          "matchScore": 0.5
         }
       }
     },
@@ -693,9 +693,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=rep-qVOkqgk",
-          "channel": "ScottHermanFitness",
-          "title": "How To: Face Pull",
+          "url": "https://www.youtube.com/watch?v=wnPX6Fwe-Fg",
+          "channel": "JPS Health & Fitness",
+          "title": "Face Pull Technique 101 (Delt & Back Hypertrophy)",
           "matchScore": 1
         },
         "uk": {
@@ -839,11 +839,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=rLutUcYWU2g",
+          "channel": "Батьки Фізруки",
+          "title": "Вертикальний  жим в тренажері сидячи. Техніка виконання",
+          "matchScore": 0.5
         }
       }
     },
@@ -868,9 +868,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=3VcKaXpzqRo",
-          "channel": "ScottHermanFitness",
-          "title": "How To: Dumbbell Side Lateral Raise",
+          "url": "https://www.youtube.com/watch?v=4hTUCDUQaNA",
+          "channel": "Renaissance Periodization",
+          "title": "The Only Dumbbell Lateral Raise Guide You Need (For Side Delt Growth)",
           "matchScore": 1
         },
         "uk": {
@@ -910,7 +910,7 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=63TK2hPjEJ4",
+          "url": "https://www.youtube.com/watch?v=dCKxz-nj7iI",
           "channel": "Назар Туранський",
           "title": "Підйом гантелей перед собою",
           "matchScore": 1
@@ -1015,9 +1015,9 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=bQLWLac3XE0",
-          "channel": "PROFI FIT - онлайн фітнес тренер",
-          "title": "Тяга штанги до підборіддя стоячи - PROFI FIT (онлайн фітнес тренер)",
+          "url": "https://www.youtube.com/watch?v=v2_i9mZobVM",
+          "channel": "Sport Club DOG",
+          "title": "Тяга сумо штанги до підборіддя",
           "matchScore": 1
         }
       }
@@ -1078,17 +1078,17 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=cBSD6mQIPQk",
-          "channel": "Nuffield Health",
-          "title": "Dumbbell Bicep Curl | Nuffield Health",
+          "url": "https://www.youtube.com/watch?v=ykJmrZ5v0Oo",
+          "channel": "Howcast",
+          "title": "How to Do a Dumbbell Biceps Curl | Arm Workout",
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=63TK2hPjEJ4",
+          "channel": "Назар Туранський",
+          "title": "Підйом гантелей перед собою",
+          "matchScore": 1
         }
       }
     },
@@ -1113,17 +1113,17 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=zC3nLlEvin4",
+          "url": "https://www.youtube.com/watch?v=8XLxfXROrTo",
           "channel": "ScottHermanFitness",
-          "title": "How To: Dumbbell Hammer Curl",
+          "title": "HOW TO: Dumbbell Hammer Curl (BICEPS PEAK BUILDER!) || PERFECT FORM",
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=ombXkLQDmWo",
+          "channel": "Батьки Фізруки",
+          "title": "Згинання передпліч з гантелями.  МОЛОТ. Техніка виконання",
+          "matchScore": 0.5
         }
       }
     },
@@ -1148,9 +1148,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=d_qzG4GMe0M",
-          "channel": "Hayden Steele",
-          "title": "Ultimate Preacher Curl Guide: Perfect Form for Massive Biceps Growth",
+          "url": "https://www.youtube.com/watch?v=Ja6ZlIDONac",
+          "channel": "Renaissance Periodization",
+          "title": "Machine Preacher Curl",
           "matchScore": 1
         },
         "uk": {
@@ -1224,11 +1224,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=wnHsd3N94eE",
+          "channel": "DENIS FIT -- Тренировки для здоровья и красоты",
+          "title": "Згинання рук стоячи, від нижнього блоку кроссовера (підйом на біцепс)",
+          "matchScore": 0.5
         }
       }
     },
@@ -1358,9 +1358,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=HXTXZKxUF68",
-          "channel": "ScottHermanFitness",
-          "title": "3 Dumbest Barbell \"Reverse\" Curl Mistakes (🛑 STOP DOING THESE!)",
+          "url": "https://www.youtube.com/watch?v=ypfd1kaI1AU",
+          "channel": "Buff Dudes Workouts",
+          "title": "Reverse Curl Exercise Tutorial | Fast Track Forearm Growth With One Exercise",
           "matchScore": 1
         },
         "uk": {
@@ -1427,11 +1427,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=-xa-6cQaZKY",
+          "channel": "Renaissance Periodization",
+          "title": "Rope Pushdown",
+          "matchScore": 0.667
         },
         "uk": {
           "status": "ready",
@@ -1504,11 +1504,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=yjcwncSgY2I",
+          "channel": "Fitness Life Kyiv",
+          "title": "Базова вправа на тріцепс. Жим вузьким хватом.",
+          "matchScore": 1
         }
       }
     },
@@ -1532,11 +1532,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=-Vyt2QdsR7E",
+          "channel": "ScottHermanFitness",
+          "title": "How To: Standing Overhead Dumbbell Tricep Extension",
+          "matchScore": 0.75
         },
         "uk": {
           "status": "missing",
@@ -1567,11 +1567,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=6kALZikXxLc",
+          "channel": "Howcast",
+          "title": "How to Do a Tricep Dip | Boot Camp Workout",
+          "matchScore": 0.5
         },
         "uk": {
           "status": "ready",
@@ -1707,11 +1707,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=Xw3MsQTwH_Q",
+          "channel": "Catalyst Athletics",
+          "title": "Reverse-Grip Tricep Pushdown | Olympic Weightlifting Exercise Library",
+          "matchScore": 0.75
         },
         "uk": {
           "status": "missing",
@@ -1749,11 +1749,11 @@
           "matchScore": null
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=mkOPUCXzlB4",
+          "channel": "Fitness Life",
+          "title": "ПРАВИЛЬНА ТЕХНІКА ПРИСЯДАННЯ ЗІ ШТАНГОЮ",
+          "matchScore": 0.5
         }
       }
     },
@@ -1777,11 +1777,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=FW7URAaC-vE",
+          "channel": "ScottHermanFitness",
+          "title": "How To: Reverse Seated Wrist Curl",
+          "matchScore": 0.75
         },
         "uk": {
           "status": "missing",
@@ -1883,9 +1883,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=z7E_YU9P1jU",
-          "channel": "Dr. Carl Baird",
-          "title": "How to Perform the Farmer’s Carry",
+          "url": "https://www.youtube.com/watch?v=vi4X2iSOyiA",
+          "channel": "Rogue Fitness",
+          "title": "How To: Train Farmer's Carry",
           "matchScore": 1
         },
         "uk": {
@@ -1953,16 +1953,16 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=lR6fl7q2C5k",
-          "channel": "Dan's Protocol",
-          "title": "How To Dead Hang The Right Way (Most People Get This Wrong)",
+          "url": "https://www.youtube.com/watch?v=2vspW4N4BMs",
+          "channel": "FIT.nl",
+          "title": "Dead Hang | Proper Form Tutorial for Grip & Shoulder Health",
           "matchScore": 1
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=GWKVbEsBpcE",
-          "channel": "Цікаві уроки фізри та гуртків",
-          "title": "III тур Вис на перекладині",
+          "url": "https://www.youtube.com/watch?v=By6IpEB3-9g",
+          "channel": "Dmitro M",
+          "title": "Вис та підтягування на перекладині",
           "matchScore": 1
         }
       }
@@ -2169,11 +2169,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=y5-VuOR3NaY",
+          "channel": "Спільнота",
+          "title": "Підйом ніг у висі",
+          "matchScore": 0.667
         }
       }
     },
@@ -2449,11 +2449,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=mIbLnOlqG1U",
+          "channel": "OxyFit UA",
+          "title": "Сідничний Міст - Найкраща вправа на сідниці🔥Техніка, Помилки, Варіанти в залі і вдома",
+          "matchScore": 0.5
         }
       }
     },
@@ -2513,9 +2513,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=SkNsa3eBwLA",
-          "channel": "Max Euceda",
-          "title": "How to do the BULGARIAN SPLIT SQUAT! | 2 Minute Tutorial",
+          "url": "https://www.youtube.com/watch?v=2C-uNgKwPLE",
+          "channel": "ScottHermanFitness",
+          "title": "How To: Bulgarian Split Squat",
           "matchScore": 1
         },
         "uk": {
@@ -2618,16 +2618,16 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=3VXmecChYYM",
-          "channel": "Max Euceda",
-          "title": "How to do the ROMANIAN DEADLIFT! | 2 Minute Tutorial",
+          "url": "https://www.youtube.com/watch?v=7j-2w4-P14I",
+          "channel": "Nuffield Health",
+          "title": "Romanian Deadlift | Nuffield Health",
           "matchScore": 1
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=LfAlxVGgFCo",
-          "channel": "Михайло Кочетков",
-          "title": "Анатомія вправи румунська станова тяга",
+          "url": "https://www.youtube.com/watch?v=wXpuEwuWSNo",
+          "channel": "Fitness Life Kyiv",
+          "title": "Румунська тяга. Техніка виконання вправи",
           "matchScore": 1
         }
       }
@@ -2723,9 +2723,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=wfhXnLILqdk",
-          "channel": "Cornerstone Physiotherapy",
-          "title": "Step Up Exercise | Osteoarthritis Physiotherapy",
+          "url": "https://www.youtube.com/watch?v=UL31Y5F4iY0",
+          "channel": "Drugs.com",
+          "title": "Step-up exercise",
           "matchScore": 1
         },
         "uk": {
@@ -2758,9 +2758,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=SW_C1A-rejs",
-          "channel": "ScottHermanFitness",
-          "title": "How To: Deep Barbell Back Squat",
+          "url": "https://www.youtube.com/watch?v=aOzrA4FgnM0",
+          "channel": "Max Euceda",
+          "title": "How to do the BARBELL BACK SQUAT! | 2 Minute Tutorial",
           "matchScore": 1
         },
         "uk": {
@@ -2835,9 +2835,9 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=0qDkWqs1tRs",
-          "channel": "Назар Туранський",
-          "title": "Гак присідання",
+          "url": "https://www.youtube.com/watch?v=OZWyksLB9-c",
+          "channel": "Legenda Sport Lviv",
+          "title": "Присідання у тренажері \"гак-машина\"",
           "matchScore": 1
         }
       }
@@ -2968,9 +2968,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=SXYrUTUwFoc",
-          "channel": "Mind Pump TV",
-          "title": "How To Reverse Lunge",
+          "url": "https://www.youtube.com/watch?v=Ry-wqegeKlE",
+          "channel": "Dr. Carl Baird",
+          "title": "How To Perform The Reverse Lunge",
           "matchScore": 1
         },
         "uk": {
@@ -3003,9 +3003,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=meJSJEG_sT0",
-          "channel": "Testosterone Nation",
-          "title": "Dumbbell Goblet Squat",
+          "url": "https://www.youtube.com/watch?v=9W5KAqHfDe8",
+          "channel": "Fit Father Project - Fitness For Busy Fathers",
+          "title": "The Goblet Squat Exercise Guide - The Proper Form, Sets & Routine Tutorial",
           "matchScore": 1
         },
         "uk": {
@@ -3073,9 +3073,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=Orxowest56U",
-          "channel": "Renaissance Periodization",
-          "title": "Seated Leg Curl",
+          "url": "https://www.youtube.com/watch?v=ELOCsoDSmrg",
+          "channel": "ScottHermanFitness",
+          "title": "How To: Seated Leg Curl (Cybex)",
           "matchScore": 1
         },
         "uk": {
@@ -3185,9 +3185,9 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=K_LfHfm9tdc",
-          "channel": "Батьки Фізруки",
-          "title": "Гіперекстензія у тренажері сидячи. Техніка виконання",
+          "url": "https://www.youtube.com/watch?v=fvXQ5AeAWb8",
+          "channel": "Universal training",
+          "title": "Екстензія і гіперекстензія: правильна техніка та користь для спини і сідниць. ",
           "matchScore": 1
         }
       }
@@ -3458,9 +3458,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=qPd73snQfUs",
-          "channel": "Hospital for Special Surgery",
-          "title": "Single-Leg Calf Raise (HSS)",
+          "url": "https://www.youtube.com/watch?v=ORT4oJ_R8Qs",
+          "channel": "ScottHermanFitness",
+          "title": "How To: Single-Leg Calf Raise",
           "matchScore": 1
         },
         "uk": {
@@ -3598,9 +3598,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=FxZTAJFDfA4",
-          "channel": "Jack Cooper",
-          "title": "How To Do A Smith Machine Calf Raise | Proper Form & Technique",
+          "url": "https://www.youtube.com/watch?v=XjOygMm8QZk",
+          "channel": "Dr. Fitology",
+          "title": "Smith Machine Standing Calf Raise: Proper Form and Common Mistakes to Avoid",
           "matchScore": 1
         },
         "uk": {
@@ -3632,11 +3632,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=JL5vPE6-OaA",
+          "channel": "Holistic Physio Fitness",
+          "title": "Calf raise (on a step)",
+          "matchScore": 1
         },
         "uk": {
           "status": "missing",
@@ -3662,9 +3662,9 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=F1btK2C0ahc",
-          "channel": "Юлія Єгорова | Лагідні тренування українською",
-          "title": "МОБІЛЬНІСТЬ НА ВСЕ ТІЛО",
+          "url": "https://www.youtube.com/watch?v=QVZY4ynZxAc",
+          "channel": "Йога на килимках | Пасічник Ольга",
+          "title": "М'ЯКА ПРАКТИКА НА ВСЕ ТІЛО (30 хвилин) | Йога на килимках | Йога українською | Ольга Пасічник",
           "matchScore": 1
         }
       }
@@ -3677,16 +3677,16 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=3IQVNjWH60A",
+          "url": "https://www.youtube.com/watch?v=928aRhhPP8I",
           "channel": "Jeff Nippard",
-          "title": "The Best Full UPPER BODY Workout For Max Muscle Growth (Science Applied)",
+          "title": "The Upper Body Workout I Followed For My 1 Year Transformation",
           "matchScore": 1
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=lK_b0V_44G8",
+          "url": "https://www.youtube.com/watch?v=4DZfC25j3G8",
           "channel": "Перевтілення | Фітнес Тренування",
-          "title": "ВЕРХ ТІЛА | СПИНА + ПЛЕЧІ | ВДОМА | З ГАНТЕЛЯМИ | 60 ХВИЛИН | СИЛОВЕ ТРЕНУВАННЯ",
+          "title": "ТРЕНУВАННЯ НА ВЕРХ ТІЛА З АКЦЕНТОМ НА РУКИ | ВЛАСНА ВАГА | 30 ХВИЛИН | ВДОМА ТРЕНУВАННЯ",
           "matchScore": 1
         }
       }
@@ -3699,9 +3699,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=WUzdhcwT8uM",
-          "channel": "Caroline Girvan",
-          "title": "DAY 1 of Beginner EPIC | No Equipment Lower Body Workout",
+          "url": "https://www.youtube.com/watch?v=6W5jQgYpq-o",
+          "channel": "TylerPath",
+          "title": "The Best Beginner's Lower Body Workout",
           "matchScore": 1
         },
         "uk": {
@@ -3728,9 +3728,9 @@
         },
         "uk": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=vY4pw-hh_6w",
-          "channel": "Медичний центр кінезіотерапії \"Сила Руху\"",
-          "title": "Мертві сідниці — це не жарт! Вправи на сідничний мʼяз від фізіотерапевта кінезіоцентру Сила Руху.",
+          "url": "https://www.youtube.com/watch?v=41_85NF1CgA",
+          "channel": "fershtei fit",
+          "title": "Як відчути сідниці, а не поперек. Румунська тяга",
           "matchScore": 1
         }
       }
@@ -3743,9 +3743,9 @@
       "videos": {
         "en": {
           "status": "ready",
-          "url": "https://www.youtube.com/watch?v=4ouAeaJ_Xo0",
-          "channel": "Onnit",
-          "title": "Beginner Back and Biceps Workout | Juan Leija",
+          "url": "https://www.youtube.com/watch?v=Zbip3dIgFmM",
+          "channel": "Renaissance Periodization",
+          "title": "Scientific Workout for Building Huge Back and Biceps",
           "matchScore": 1
         },
         "uk": {
@@ -3808,11 +3808,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=B12MXF0bSFo",
+          "channel": "Jeremy Ethier",
+          "title": "The #1 Full Body Routine to Build Muscle & Lose Fat",
+          "matchScore": 0.667
         },
         "uk": {
           "status": "missing",
@@ -3940,11 +3940,11 @@
       },
       "videos": {
         "en": {
-          "status": "ready",
-          "url": "https://www.youtube.com/watch?v=nQkw9BsiFi4",
-          "channel": "Kaleigh Cohen Strength",
-          "title": "30 min. Functional Full Body Strength Training to Build Muscle",
-          "matchScore": 1
+          "status": "missing",
+          "url": null,
+          "channel": null,
+          "title": null,
+          "matchScore": null
         },
         "uk": {
           "status": "ready",
@@ -3962,11 +3962,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=15J-DFW4wf4",
+          "channel": "RESPIRE",
+          "title": "Functional Strength: The Only 5 Exercises You Really Need",
+          "matchScore": 0.5
         },
         "uk": {
           "status": "missing",
@@ -4013,11 +4013,11 @@
           "matchScore": 1
         },
         "uk": {
-          "status": "ready",
-          "url": "https://www.youtube.com/watch?v=cCqX9TGSYZ0",
-          "channel": "Аня Лу - Фітнес для кожного",
-          "title": "ТРЕНУВАННЯ на НОГИ та СІДНИЦІ | Гарна попа та ніжки в домашніх умовах за 15 хвилин",
-          "matchScore": 1
+          "status": "missing",
+          "url": null,
+          "channel": null,
+          "title": null,
+          "matchScore": null
         }
       }
     },
@@ -4050,11 +4050,11 @@
       },
       "videos": {
         "en": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=tmgfpdpQ5sk",
+          "channel": "Jeremy Ethier",
+          "title": "The Best Science-Based Triceps Exercises for Each Head (Work Your Weak Points!)",
+          "matchScore": 0.5
         },
         "uk": {
           "status": "missing",
@@ -4079,11 +4079,11 @@
           "matchScore": null
         },
         "uk": {
-          "status": "missing",
-          "url": null,
-          "channel": null,
-          "title": null,
-          "matchScore": null
+          "status": "ready",
+          "url": "https://www.youtube.com/watch?v=0FC6dxkSjuY",
+          "channel": "Твій Фізрук",
+          "title": "Тренування з гантелями вдома | Акцент на біцепс + Фул баді | Біцуня буде горіти🔥🔥🔥",
+          "matchScore": 1
         }
       }
     }

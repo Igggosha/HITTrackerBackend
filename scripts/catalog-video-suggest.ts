@@ -29,6 +29,29 @@ const preferredEnglishChannels = new Set([
   'ATHLEAN-X™',
   'Jeremy Ethier',
 ]);
+const reviewedPartialMatches = {
+  en: new Set([
+    'rope_triceps_pushdown',
+    'triceps_dip',
+    'overhead_dumbbell_triceps_extension',
+    'reverse_grip_triceps_pushdown',
+    'barbell_reverse_wrist_curl',
+    'hit_full_body',
+    'strength_base',
+    'triceps_focus',
+  ]),
+  uk: new Set([
+    't_bar_row',
+    'chin_up',
+    'hammer_curl',
+    'cable_curl',
+    'glute_bridge',
+    'machine_shoulder_press',
+    'hanging_knee_raise',
+    'barbell_wrist_curl',
+    'biceps_focus',
+  ]),
+};
 let youtubeApiKey = '';
 let youtubeClientVersion = '';
 const emptyVideo = (): VideoCandidate => ({
@@ -118,6 +141,9 @@ async function suggest(item: CatalogItem, locale: 'en' | 'uk') {
       ? `${name} техніка виконання українською`
       : `${name} exercise tutorial proper form`;
   const results = await searchYouTube(query, locale);
+  const minimumScore = reviewedPartialMatches[locale].has(item.catalogKey)
+    ? 0.5
+    : 1;
   const ranked = results
     .filter((video) => video.videoId && titleOf(video) && channelOf(video))
     .map((video) => {
@@ -137,8 +163,8 @@ async function suggest(item: CatalogItem, locale: 'en' | 'uk') {
     })
     .filter((candidate) =>
       locale === 'uk'
-        ? candidate.ukrainian && candidate.nameScore === 1
-        : candidate.nameScore === 1,
+        ? candidate.ukrainian && candidate.nameScore >= minimumScore
+        : candidate.nameScore >= minimumScore,
     )
     .sort((left, right) => right.score - left.score);
   const selected = ranked[0];
