@@ -86,6 +86,10 @@ describe('ExercisesService likes', () => {
               alternatives: [['barbell']],
             },
             demonstrationImageKey: null,
+            demonstrationImageSourceUrl: null,
+            demonstrationImageAuthor: null,
+            demonstrationImageLicense: null,
+            demonstrationImageLicenseUrl: null,
             muscleId: 1,
             muscleRole: 'primary',
             muscleCommonName: 'Chest',
@@ -114,6 +118,10 @@ describe('ExercisesService likes', () => {
       // The object key never reaches the client; only a signed URL does.
       imageUrl: null,
       demonstrationImageUrl: null,
+      demonstrationImageSourceUrl: null,
+      demonstrationImageAuthor: null,
+      demonstrationImageLicense: null,
+      demonstrationImageLicenseUrl: null,
       difficulty: 2,
       measurementType: 'reps',
       recommendedDurationSeconds: null,
@@ -143,6 +151,45 @@ describe('ExercisesService likes', () => {
         },
       ],
     });
+  });
+
+  it('builds localized media credits from exercises with stored images', async () => {
+    jest
+      .mocked(db.select)
+      .mockReturnValueOnce(
+        query([
+          {
+            id: 2,
+            name: 'Push-Up',
+            demonstrationImageKey: 'exercises/2/demo.webp',
+            sourceUrl: 'https://example.test/push-up',
+            author: 'Trainer',
+            license: 'CC BY 4.0',
+            licenseUrl: 'https://example.test/license',
+          },
+        ]),
+      )
+      .mockReturnValueOnce(
+        query([
+          { exerciseId: 2, locale: 'en', name: 'Push-Up' },
+          { exerciseId: 2, locale: 'uk', name: 'Віджимання' },
+        ]),
+      );
+    jest
+      .mocked(storage.getUrl)
+      .mockResolvedValueOnce('https://minio.test/demo');
+
+    await expect(service.getMediaSources('uk')).resolves.toEqual([
+      {
+        id: 2,
+        name: 'Віджимання',
+        sourceUrl: 'https://example.test/push-up',
+        author: 'Trainer',
+        license: 'CC BY 4.0',
+        licenseUrl: 'https://example.test/license',
+        imageUrl: 'https://minio.test/demo',
+      },
+    ]);
   });
 });
 

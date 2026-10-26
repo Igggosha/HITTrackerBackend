@@ -121,6 +121,10 @@ export class ExercisesService {
         equipment: exercises.equipment,
         equipmentStructured: exercises.equipmentStructured,
         demonstrationImageKey: exercises.demonstrationImageKey,
+        demonstrationImageSourceUrl: exercises.demonstrationImageSourceUrl,
+        demonstrationImageAuthor: exercises.demonstrationImageAuthor,
+        demonstrationImageLicense: exercises.demonstrationImageLicense,
+        demonstrationImageLicenseUrl: exercises.demonstrationImageLicenseUrl,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -179,6 +183,10 @@ export class ExercisesService {
       equipment: string[];
       equipmentStructured: { required: string[]; alternatives: string[][] };
       demonstrationImageKey: string | null;
+      demonstrationImageSourceUrl: string | null;
+      demonstrationImageAuthor: string | null;
+      demonstrationImageLicense: string | null;
+      demonstrationImageLicenseUrl: string | null;
       translations: Array<{
         locale: string;
         name: string;
@@ -216,6 +224,10 @@ export class ExercisesService {
           equipment: row.equipment,
           equipmentStructured: row.equipmentStructured,
           demonstrationImageKey: row.demonstrationImageKey,
+          demonstrationImageSourceUrl: row.demonstrationImageSourceUrl,
+          demonstrationImageAuthor: row.demonstrationImageAuthor,
+          demonstrationImageLicense: row.demonstrationImageLicense,
+          demonstrationImageLicenseUrl: row.demonstrationImageLicenseUrl,
           translations: [],
           likesCount: likesMap.get(row.id) || 0,
           isLiked: userLikesSet.has(row.id),
@@ -290,6 +302,10 @@ export class ExercisesService {
         equipment: exercises.equipment,
         equipmentStructured: exercises.equipmentStructured,
         demonstrationImageKey: exercises.demonstrationImageKey,
+        demonstrationImageSourceUrl: exercises.demonstrationImageSourceUrl,
+        demonstrationImageAuthor: exercises.demonstrationImageAuthor,
+        demonstrationImageLicense: exercises.demonstrationImageLicense,
+        demonstrationImageLicenseUrl: exercises.demonstrationImageLicenseUrl,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -330,6 +346,10 @@ export class ExercisesService {
       equipment: exercise.equipment,
       equipmentStructured: exercise.equipmentStructured,
       demonstrationImageKey: exercise.demonstrationImageKey,
+      demonstrationImageSourceUrl: exercise.demonstrationImageSourceUrl,
+      demonstrationImageAuthor: exercise.demonstrationImageAuthor,
+      demonstrationImageLicense: exercise.demonstrationImageLicense,
+      demonstrationImageLicenseUrl: exercise.demonstrationImageLicenseUrl,
       translations,
       muscles: rows.flatMap((row) =>
         row.muscleId === null
@@ -345,6 +365,57 @@ export class ExercisesService {
             ],
       ),
     });
+  }
+
+  async getMediaSources(locale: 'en' | 'uk') {
+    const rows = await db
+      .select({
+        id: exercises.id,
+        name: exercises.name,
+        demonstrationImageKey: exercises.demonstrationImageKey,
+        sourceUrl: exercises.demonstrationImageSourceUrl,
+        author: exercises.demonstrationImageAuthor,
+        license: exercises.demonstrationImageLicense,
+        licenseUrl: exercises.demonstrationImageLicenseUrl,
+      })
+      .from(exercises)
+      .where(
+        and(
+          sql`${exercises.demonstrationImageKey} is not null`,
+          sql`${exercises.demonstrationImageLicense} is not null`,
+        ),
+      );
+    if (!rows.length) return [];
+    const translations = await db
+      .select({
+        exerciseId: exerciseTranslations.exerciseId,
+        locale: exerciseTranslations.locale,
+        name: exerciseTranslations.name,
+      })
+      .from(exerciseTranslations)
+      .where(
+        and(
+          inArray(
+            exerciseTranslations.exerciseId,
+            rows.map(({ id }) => id),
+          ),
+          inArray(exerciseTranslations.locale, [locale, 'en']),
+        ),
+      );
+    const names = new Map<number, string>();
+    for (const translation of translations) {
+      if (translation.locale === locale || !names.has(translation.exerciseId))
+        names.set(translation.exerciseId, translation.name);
+    }
+    return Promise.all(
+      rows.map(async ({ demonstrationImageKey, ...row }) => ({
+        ...row,
+        name: names.get(row.id) ?? row.name,
+        imageUrl: await this.storageService.getUrl(demonstrationImageKey),
+      })),
+    ).then((items) =>
+      items.sort((left, right) => left.name.localeCompare(right.name, locale)),
+    );
   }
 
   /**
@@ -421,6 +492,14 @@ export class ExercisesService {
               required: [],
               alternatives: [],
             },
+            demonstrationImageSourceUrl:
+              data.demonstrationImageSourceUrl?.trim() || null,
+            demonstrationImageAuthor:
+              data.demonstrationImageAuthor?.trim() || null,
+            demonstrationImageLicense:
+              data.demonstrationImageLicense?.trim() || null,
+            demonstrationImageLicenseUrl:
+              data.demonstrationImageLicenseUrl?.trim() || null,
           })
           .returning();
 
@@ -539,6 +618,30 @@ export class ExercisesService {
         : {}),
       ...(exercise.equipment !== undefined
         ? { equipment: exercise.equipment }
+        : {}),
+      ...(exercise.demonstrationImageSourceUrl !== undefined
+        ? {
+            demonstrationImageSourceUrl:
+              exercise.demonstrationImageSourceUrl.trim() || null,
+          }
+        : {}),
+      ...(exercise.demonstrationImageAuthor !== undefined
+        ? {
+            demonstrationImageAuthor:
+              exercise.demonstrationImageAuthor.trim() || null,
+          }
+        : {}),
+      ...(exercise.demonstrationImageLicense !== undefined
+        ? {
+            demonstrationImageLicense:
+              exercise.demonstrationImageLicense.trim() || null,
+          }
+        : {}),
+      ...(exercise.demonstrationImageLicenseUrl !== undefined
+        ? {
+            demonstrationImageLicenseUrl:
+              exercise.demonstrationImageLicenseUrl.trim() || null,
+          }
         : {}),
     };
     if (exercise.measurementType === 'reps') {

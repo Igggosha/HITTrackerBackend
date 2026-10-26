@@ -624,6 +624,10 @@ export const exercises = pgTable(
     // EN: Optional image key is retained for managed object storage.
     // UK: Необов'язковий ключ зображення зберігається для керованого object storage.
     demonstrationImageKey: text('demonstration_image_key'),
+    demonstrationImageSourceUrl: text('demonstration_image_source_url'),
+    demonstrationImageAuthor: text('demonstration_image_author'),
+    demonstrationImageLicense: text('demonstration_image_license'),
+    demonstrationImageLicenseUrl: text('demonstration_image_license_url'),
   },
   (table) => [
     uniqueIndex('exercises_catalog_key_unique')

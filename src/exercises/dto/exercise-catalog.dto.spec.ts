@@ -30,3 +30,21 @@ it('keeps duration and repetition recommendations as separate DTO fields', async
 
   await expect(validate(dto)).resolves.toHaveLength(0);
 });
+
+it('accepts HTTPS media provenance and rejects a non-URL source', async () => {
+  const valid = Object.assign(new CreateExerciseDto(), {
+    name: 'Plank',
+    demonstrationImageSourceUrl: 'https://example.test/plank',
+    demonstrationImageAuthor: 'Example author',
+    demonstrationImageLicense: 'CC BY 4.0',
+    demonstrationImageLicenseUrl: 'https://example.test/license',
+  });
+  await expect(validate(valid)).resolves.toHaveLength(0);
+
+  valid.demonstrationImageSourceUrl = 'not a URL';
+  await expect(validate(valid)).resolves.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ property: 'demonstrationImageSourceUrl' }),
+    ]),
+  );
+});

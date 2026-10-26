@@ -65,6 +65,23 @@ export class CreateExerciseDto {
   videoUrl?: string;
 
   @IsOptional()
+  @IsUrl({ require_tld: true })
+  @MaxLength(2048)
+  demonstrationImageSourceUrl?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  demonstrationImageAuthor?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  demonstrationImageLicense?: string;
+  @IsOptional()
+  @IsUrl({ require_tld: true })
+  @MaxLength(2048)
+  demonstrationImageLicenseUrl?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

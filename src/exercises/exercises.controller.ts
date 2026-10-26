@@ -65,6 +65,11 @@ export class ExercisesController {
     );
   }
 
+  @Get('media-sources')
+  getMediaSources(@Query('locale') locale?: string) {
+    return this.exercisesService.getMediaSources(locale === 'uk' ? 'uk' : 'en');
+  }
+
   // EN: Returns one catalog exercise with the same complete detail shape used by the authenticated catalog.
   // UK: Повертає одну вправу каталогу з тією самою повною деталізацією, що й автентифікований каталог.
   @Get(':id')
