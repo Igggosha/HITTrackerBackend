@@ -38,6 +38,23 @@ const freeExerciseOverrides: Record<string, string> = {
   barbell_back_squat: 'Barbell_Full_Squat',
   back_extension: 'Hyperextensions_Back_Extensions',
   dumbbell_calf_raise: 'Standing_Dumbbell_Calf_Raise',
+  machine_chest_press: 'Leverage_Chest_Press',
+  lat_pulldown: 'Full_Range-Of-Motion_Lat_Pulldown',
+  t_bar_row: 'T-Bar_Row_with_Handle',
+  bent_over_dumbbell_reverse_fly: 'Reverse_Flyes',
+  cable_curl: 'Standing_Biceps_Cable_Curl',
+  cable_triceps_pushdown: 'Triceps_Pushdown',
+  skull_crusher: 'EZ-Bar_Skullcrusher',
+  overhead_dumbbell_triceps_extension: 'Seated_Triceps_Press',
+  single_arm_triceps_extension: 'Dumbbell_One-Arm_Triceps_Extension',
+  crunch: 'Crunches',
+  incline_crunch: 'Decline_Crunch',
+  leg_raise: 'Flat_Bench_Lying_Leg_Raise',
+  side_plank: 'Side_Bridge',
+  bicycle_crunch: 'Air_Bike',
+  bulgarian_split_squat: 'Split_Squat_with_Dumbbells',
+  machine_calf_raise: 'Standing_Calf_Raises',
+  barbell_calf_raise: 'Standing_Barbell_Calf_Raise',
 };
 const equipmentScore=(catalog:CatalogExercise,wger:WgerExercise)=>{
   const available=wger.equipment.map((item)=>normalize(item.name));
