@@ -217,7 +217,7 @@ export class CatalogSearchService {
       `select e.id, e.name, e.description, coalesce(et.name, e.name) as "displayName",
               coalesce(et.description, e.description) as "displayDescription",
               e.video_url as "videoUrl", e.image_key as "imageKey", e.difficulty,
-              (select count(*)::int from exercise_likes el where el.exercise_id = e.id) as "likesCount",
+              greatest(0, (select count(*)::int from exercise_likes el where el.exercise_id = e.id) + e.likes_adjustment) as "likesCount",
               exists(select 1 from exercise_likes el where el.exercise_id = e.id and el.user_id = $2) as "isLiked",
               exists(select 1 from exercise_bookmarks eb where eb.exercise_id = e.id and eb.user_id = $2) as "isBookmarked",
               coalesce(jsonb_agg(distinct jsonb_build_object('id', m.id, 'name', m.common_name,

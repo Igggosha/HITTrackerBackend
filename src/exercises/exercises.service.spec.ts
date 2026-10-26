@@ -2,7 +2,7 @@
 // UK: Перевіряє видимість вправ, очищення медіа, стабільні конфлікти та контракт основних і допоміжних ролей м'язів.
 
 import { db } from '../db/db';
-import { ExercisesService } from './exercises.service';
+import { displayedLikesCount, ExercisesService } from './exercises.service';
 import type { StorageService } from '../storage/storage.service';
 import type { OutboxService } from '../outbox/outbox.service';
 
@@ -43,6 +43,11 @@ describe('ExercisesService likes', () => {
     jest
       .mocked(db.transaction)
       .mockImplementation((callback: any) => callback(db as any));
+  });
+
+  it('applies the admin adjustment without exposing a negative count', () => {
+    expect(displayedLikesCount(7, 33)).toBe(40);
+    expect(displayedLikesCount(2, -5)).toBe(0);
   });
 
   it('adds one exercise like, then removes it on the next click', async () => {

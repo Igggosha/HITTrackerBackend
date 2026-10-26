@@ -133,7 +133,7 @@ export async function exerciseDocuments(
   }>(
     `select e.id, e.name, e.description,
             timestamp '1970-01-01' as "createdAt",
-            (select count(*)::int from exercise_likes el where el.exercise_id = e.id) as "likesCount",
+            greatest(0, (select count(*)::int from exercise_likes el where el.exercise_id = e.id) + e.likes_adjustment) as "likesCount",
             coalesce(array_agg(distinct m.id order by m.id) filter (where m.id is not null), '{}'::int[]) as "muscleIds",
             coalesce(array_agg(distinct m.common_name order by m.common_name) filter (where m.id is not null), '{}'::text[]) as "muscleNames",
             (e.image_key is not null) as "hasImage",

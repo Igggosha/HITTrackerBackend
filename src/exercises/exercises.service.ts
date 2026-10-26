@@ -27,6 +27,9 @@ import type { UploadedFile } from '../storage/upload-validation';
 import type { DbTransaction } from '../outbox/transaction';
 import { OutboxService } from '../outbox/outbox.service';
 
+export const displayedLikesCount = (actual: number, adjustment: number) =>
+  Math.max(0, actual + adjustment);
+
 @Injectable()
 export class ExercisesService {
   constructor(
@@ -125,6 +128,7 @@ export class ExercisesService {
         demonstrationImageAuthor: exercises.demonstrationImageAuthor,
         demonstrationImageLicense: exercises.demonstrationImageLicense,
         demonstrationImageLicenseUrl: exercises.demonstrationImageLicenseUrl,
+        likesAdjustment: exercises.likesAdjustment,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -229,7 +233,10 @@ export class ExercisesService {
           demonstrationImageLicense: row.demonstrationImageLicense,
           demonstrationImageLicenseUrl: row.demonstrationImageLicenseUrl,
           translations: [],
-          likesCount: likesMap.get(row.id) || 0,
+          likesCount: displayedLikesCount(
+            likesMap.get(row.id) || 0,
+            row.likesAdjustment,
+          ),
           isLiked: userLikesSet.has(row.id),
           isBookmarked: bookmarks.has(row.id),
           muscles: [], // Масив об'єктів м'язів, який очікує фронтенд
@@ -495,6 +502,7 @@ export class ExercisesService {
               data.demonstrationImageLicense?.trim() || null,
             demonstrationImageLicenseUrl:
               data.demonstrationImageLicenseUrl?.trim() || null,
+            likesAdjustment: data.displayedLikesCount ?? 0,
           })
           .returning();
 
@@ -565,7 +573,12 @@ export class ExercisesService {
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
     this.validateCatalogData(data);
-    const { primaryMuscleIds, secondaryMuscleIds, ...exercise } = data;
+    const {
+      primaryMuscleIds,
+      secondaryMuscleIds,
+      displayedLikesCount,
+      ...exercise
+    } = data;
     // EN: Omitting both lists preserves existing links; providing either list switches to full replacement and therefore requires both.
     // UK: Відсутність обох списків зберігає наявні зв'язки; передавання хоча б одного вмикає повну заміну, тому потрібні обидва.
     const changesMuscles =
@@ -585,7 +598,7 @@ export class ExercisesService {
         code: 'EXERCISE_MUSCLE_ROLE_CONFLICT',
       });
     }
-    const changes = {
+    const changes: Partial<typeof exercises.$inferInsert> = {
       ...(exercise.name !== undefined ? { name: exercise.name.trim() } : {}),
       ...(exercise.description !== undefined
         ? { description: exercise.description.trim() || null }
@@ -657,6 +670,14 @@ export class ExercisesService {
     try {
       return await db
         .transaction(async (tx: DbTransaction) => {
+          if (displayedLikesCount !== undefined) {
+            const [likes] = await tx
+              .select({ count: sql<number>`count(*)::int` })
+              .from(exerciseLikes)
+              .where(eq(exerciseLikes.exerciseId, id));
+            changes.likesAdjustment =
+              displayedLikesCount - (likes?.count ?? 0);
+          }
           let updated: typeof exercises.$inferSelect | undefined;
           if (Object.keys(changes).length) {
             [updated] = await tx
