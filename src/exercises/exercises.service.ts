@@ -7,10 +7,11 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   exercises,
+  exerciseTranslations,
   muscles,
   exercisesTrainMuscles,
   exerciseInPrograms,
@@ -71,6 +72,7 @@ export class ExercisesService {
     return db
       .select({
         id: exercises.id,
+        catalogKey: exercises.catalogKey,
         name: exercises.name,
         sets: exerciseInPrograms.sets,
         reps: exerciseInPrograms.firstSetRepCount,
@@ -106,6 +108,7 @@ export class ExercisesService {
     const rows = await db
       .select({
         id: exercises.id,
+        catalogKey: exercises.catalogKey,
         name: exercises.name,
         description: exercises.description,
         videoUrl: exercises.videoUrl,
@@ -113,7 +116,11 @@ export class ExercisesService {
         difficulty: exercises.difficulty,
         measurementType: exercises.measurementType,
         recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+        recommendedSets: exercises.recommendedSets,
+        recommendedReps: exercises.recommendedReps,
         equipment: exercises.equipment,
+        equipmentStructured: exercises.equipmentStructured,
+        demonstrationImageKey: exercises.demonstrationImageKey,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -159,6 +166,7 @@ export class ExercisesService {
     // 4. Формуємо фінальний результат з масивом `muscles`
     type ExerciseWithMuscles = {
       id: number;
+      catalogKey: string | null;
       name: string;
       description: string | null;
       videoUrl: string | null;
@@ -166,7 +174,18 @@ export class ExercisesService {
       difficulty: number;
       measurementType: 'reps' | 'duration';
       recommendedDurationSeconds: number | null;
+      recommendedSets: number | null;
+      recommendedReps: number | null;
       equipment: string[];
+      equipmentStructured: { required: string[]; alternatives: string[][] };
+      demonstrationImageKey: string | null;
+      translations: Array<{
+        locale: string;
+        name: string;
+        description: string | null;
+        videoUrl: string | null;
+        aliases: string[];
+      }>;
       likesCount: number;
       isLiked: boolean;
       isBookmarked: boolean;
@@ -184,6 +203,7 @@ export class ExercisesService {
       if (!exercisesMap.has(row.id)) {
         exercisesMap.set(row.id, {
           id: row.id,
+          catalogKey: row.catalogKey,
           name: row.name,
           description: row.description,
           videoUrl: row.videoUrl,
@@ -191,7 +211,12 @@ export class ExercisesService {
           difficulty: row.difficulty,
           measurementType: row.measurementType,
           recommendedDurationSeconds: row.recommendedDurationSeconds,
+          recommendedSets: row.recommendedSets,
+          recommendedReps: row.recommendedReps,
           equipment: row.equipment,
+          equipmentStructured: row.equipmentStructured,
+          demonstrationImageKey: row.demonstrationImageKey,
+          translations: [],
           likesCount: likesMap.get(row.id) || 0,
           isLiked: userLikesSet.has(row.id),
           isBookmarked: bookmarks.has(row.id),
@@ -215,14 +240,44 @@ export class ExercisesService {
       }
     }
 
+    const translations = exercisesMap.size
+      ? await db
+          .select({
+            exerciseId: exerciseTranslations.exerciseId,
+            locale: exerciseTranslations.locale,
+            name: exerciseTranslations.name,
+            description: exerciseTranslations.description,
+            videoUrl: exerciseTranslations.videoUrl,
+            aliases: exerciseTranslations.aliases,
+          })
+          .from(exerciseTranslations)
+          .where(
+            inArray(exerciseTranslations.exerciseId, [...exercisesMap.keys()]),
+          )
+      : [];
+    for (const translation of translations) {
+      exercisesMap.get(translation.exerciseId)?.translations.push({
+        locale: translation.locale,
+        name: translation.name,
+        description: translation.description,
+        videoUrl: translation.videoUrl,
+        aliases: translation.aliases,
+      });
+    }
+
     // Presigning is a local HMAC, so signing a whole page costs no round trips.
-    return this.withImageUrls(Array.from(exercisesMap.values()));
+    return Promise.all(
+      Array.from(exercisesMap.values()).map((exercise) =>
+        this.withMediaUrls(exercise),
+      ),
+    );
   }
 
   async getSharedExerciseById(id: number) {
     const rows = await db
       .select({
         id: exercises.id,
+        catalogKey: exercises.catalogKey,
         name: exercises.name,
         description: exercises.description,
         videoUrl: exercises.videoUrl,
@@ -230,7 +285,11 @@ export class ExercisesService {
         difficulty: exercises.difficulty,
         measurementType: exercises.measurementType,
         recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+        recommendedSets: exercises.recommendedSets,
+        recommendedReps: exercises.recommendedReps,
         equipment: exercises.equipment,
+        equipmentStructured: exercises.equipmentStructured,
+        demonstrationImageKey: exercises.demonstrationImageKey,
         muscleId: muscles.id,
         muscleRole: exercisesTrainMuscles.role,
         muscleCommonName: muscles.commonName,
@@ -246,8 +305,19 @@ export class ExercisesService {
 
     if (!rows.length) throw new NotFoundException('Exercise not found');
     const exercise = rows[0];
-    return this.withImageUrl({
+    const translations = await db
+      .select({
+        locale: exerciseTranslations.locale,
+        name: exerciseTranslations.name,
+        description: exerciseTranslations.description,
+        videoUrl: exerciseTranslations.videoUrl,
+        aliases: exerciseTranslations.aliases,
+      })
+      .from(exerciseTranslations)
+      .where(eq(exerciseTranslations.exerciseId, id));
+    return this.withMediaUrls({
       id: exercise.id,
+      catalogKey: exercise.catalogKey,
       name: exercise.name,
       description: exercise.description,
       videoUrl: exercise.videoUrl,
@@ -255,7 +325,12 @@ export class ExercisesService {
       difficulty: exercise.difficulty,
       measurementType: exercise.measurementType,
       recommendedDurationSeconds: exercise.recommendedDurationSeconds,
+      recommendedSets: exercise.recommendedSets,
+      recommendedReps: exercise.recommendedReps,
       equipment: exercise.equipment,
+      equipmentStructured: exercise.equipmentStructured,
+      demonstrationImageKey: exercise.demonstrationImageKey,
+      translations,
       muscles: rows.flatMap((row) =>
         row.muscleId === null
           ? []
@@ -284,6 +359,7 @@ export class ExercisesService {
    * Створення вправи
    */
   async createExercise(data: CreateExerciseDto) {
+    this.validateCatalogData(data);
     // EN: Omitted role lists keep the legacy creation contract and mean "no muscle links"; supplied IDs are persisted with an explicit role.
     // UK: Відсутні списки ролей зберігають старий контракт створення й означають «без зв'язків із м'язами»; передані ID зберігаються з явною роллю.
     const primaryMuscleIds = data.primaryMuscleIds ?? [];
@@ -326,6 +402,7 @@ export class ExercisesService {
           .insert(exercises)
           .values({
             name: trimmedName,
+            catalogKey: data.catalogKey?.trim() || null,
             description: data.description?.trim() || null,
             videoUrl: data.videoUrl?.trim() || null,
             difficulty: data.difficulty || 1,
@@ -334,7 +411,16 @@ export class ExercisesService {
               data.measurementType === 'reps'
                 ? null
                 : (data.recommendedDurationSeconds ?? null),
+            recommendedSets: data.recommendedSets ?? null,
+            recommendedReps:
+              data.measurementType === 'duration'
+                ? null
+                : (data.recommendedReps ?? null),
             equipment: data.equipment ?? [],
+            equipmentStructured: data.equipmentStructured ?? {
+              required: [],
+              alternatives: [],
+            },
           })
           .returning();
 
@@ -352,6 +438,29 @@ export class ExercisesService {
             })),
           ];
           await tx.insert(exercisesTrainMuscles).values(relations);
+        }
+
+        const translations = data.translations?.length
+          ? data.translations
+          : [
+              {
+                locale: 'en',
+                name: newExercise.name,
+                description: newExercise.description ?? undefined,
+                videoUrl: newExercise.videoUrl ?? undefined,
+              },
+            ];
+        if (translations.length) {
+          await tx.insert(exerciseTranslations).values(
+            translations.map((translation) => ({
+              exerciseId: newExercise.id,
+              locale: translation.locale,
+              name: translation.name.trim(),
+              description: translation.description?.trim() || null,
+              videoUrl: translation.videoUrl?.trim() || null,
+              aliases: (translation.aliases ?? []).map((alias) => alias.trim()),
+            })),
+          );
         }
 
         await this.enqueueSearchChange(tx, newExercise.id);
@@ -381,6 +490,7 @@ export class ExercisesService {
   }
 
   async updateExercise(id: number, data: UpdateExerciseDto) {
+    this.validateCatalogData(data);
     const { primaryMuscleIds, secondaryMuscleIds, ...exercise } = data;
     // EN: Omitting both lists preserves existing links; providing either list switches to full replacement and therefore requires both.
     // UK: Відсутність обох списків зберігає наявні зв'язки; передавання хоча б одного вмикає повну заміну, тому потрібні обидва.
@@ -418,10 +528,24 @@ export class ExercisesService {
       ...(exercise.recommendedDurationSeconds !== undefined
         ? { recommendedDurationSeconds: exercise.recommendedDurationSeconds }
         : {}),
+      ...(exercise.recommendedSets !== undefined
+        ? { recommendedSets: exercise.recommendedSets }
+        : {}),
+      ...(exercise.recommendedReps !== undefined
+        ? { recommendedReps: exercise.recommendedReps }
+        : {}),
+      ...(exercise.equipmentStructured !== undefined
+        ? { equipmentStructured: exercise.equipmentStructured }
+        : {}),
       ...(exercise.equipment !== undefined
         ? { equipment: exercise.equipment }
         : {}),
     };
+    if (exercise.measurementType === 'reps') {
+      changes.recommendedDurationSeconds = null;
+    } else if (exercise.measurementType === 'duration') {
+      changes.recommendedReps = null;
+    }
     if (
       exercise.measurementType === 'reps' &&
       exercise.recommendedDurationSeconds !== undefined &&
@@ -483,6 +607,56 @@ export class ExercisesService {
                 })),
               ]);
             }
+          }
+
+          if (data.translations !== undefined) {
+            const locales = data.translations.map(
+              (translation) => translation.locale,
+            );
+            await tx
+              .delete(exerciseTranslations)
+              .where(eq(exerciseTranslations.exerciseId, id));
+            if (data.translations.length) {
+              await tx.insert(exerciseTranslations).values(
+                data.translations.map((translation) => ({
+                  exerciseId: id,
+                  locale: translation.locale,
+                  name: translation.name.trim(),
+                  description: translation.description?.trim() || null,
+                  videoUrl: translation.videoUrl?.trim() || null,
+                  aliases: (translation.aliases ?? []).map((alias) =>
+                    alias.trim(),
+                  ),
+                })),
+              );
+            }
+            void locales;
+          } else if (
+            data.name !== undefined ||
+            data.description !== undefined ||
+            data.videoUrl !== undefined
+          ) {
+            await tx
+              .insert(exerciseTranslations)
+              .values({
+                exerciseId: id,
+                locale: 'en',
+                name: updated.name,
+                description: updated.description,
+                videoUrl: updated.videoUrl,
+                aliases: [],
+              })
+              .onConflictDoUpdate({
+                target: [
+                  exerciseTranslations.exerciseId,
+                  exerciseTranslations.locale,
+                ],
+                set: {
+                  name: updated.name,
+                  description: updated.description,
+                  videoUrl: updated.videoUrl,
+                },
+              });
           }
 
           await this.enqueueSearchChange(tx, id);
@@ -593,6 +767,20 @@ export class ExercisesService {
     return Promise.all(rows.map((row) => this.withImageUrl(row)));
   }
 
+  private async withMediaUrls<
+    T extends {
+      imageKey?: string | null;
+      demonstrationImageKey?: string | null;
+    },
+  >(row: T) {
+    const { imageKey, demonstrationImageKey, ...rest } = row;
+    const [imageUrl, demonstrationImageUrl] = await Promise.all([
+      this.storageService.getUrl(imageKey),
+      this.storageService.getUrl(demonstrationImageKey),
+    ]);
+    return { ...rest, imageUrl, demonstrationImageUrl };
+  }
+
   async toggleBookmark(userId: number, exerciseId: number) {
     const [exercise] = await db
       .select({ id: exercises.id })
@@ -647,5 +835,52 @@ export class ExercisesService {
       aggregateId: exerciseId,
       payload: { exerciseId, change: 'upsert' },
     });
+  }
+
+  private validateCatalogData(data: CreateExerciseDto | UpdateExerciseDto) {
+    const translations = data.translations;
+    if (translations) {
+      const locales = translations.map((translation) => translation.locale);
+      if (new Set(locales).size !== locales.length) {
+        throw new BadRequestException('Translation locales must be unique.');
+      }
+      if (
+        translations.some(
+          (translation) =>
+            !translation.name.trim() ||
+            (translation.aliases ?? []).some((alias) => !alias.trim()),
+        )
+      ) {
+        throw new BadRequestException(
+          'Translation names and aliases must be non-blank.',
+        );
+      }
+    }
+    const structured = data.equipmentStructured;
+    if (structured) {
+      if (
+        !Array.isArray(structured.required) ||
+        structured.required.some(
+          (item) => typeof item !== 'string' || !item.trim(),
+        )
+      ) {
+        throw new BadRequestException(
+          'Equipment required items must be non-blank strings.',
+        );
+      }
+      if (
+        !Array.isArray(structured.alternatives) ||
+        structured.alternatives.some(
+          (group) =>
+            !Array.isArray(group) ||
+            group.length === 0 ||
+            group.some((item) => typeof item !== 'string' || !item.trim()),
+        )
+      ) {
+        throw new BadRequestException(
+          'Equipment alternatives must be non-empty groups of non-blank strings.',
+        );
+      }
+    }
   }
 }

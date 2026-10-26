@@ -19,17 +19,32 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+export class ProgramTranslationDto {
+  @Matches(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/) locale: string;
+  @IsString() @IsNotEmpty() @MaxLength(100) name: string;
+  @IsOptional() @IsString() @MaxLength(2000) description?: string;
+  @IsOptional()
+  @IsUrl({ require_tld: true })
+  @Matches(/^https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\//i)
+  @MaxLength(2048)
+  videoUrl?: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) aliases?: string[];
+}
+
 export class ProgramExerciseDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
   exerciseId: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(50)
-  sets: number;
+  sets?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) position?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -66,6 +81,14 @@ export class ProgramExerciseDto {
 }
 
 export class CreateWorkoutProgramDto {
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) catalogKey?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => ProgramTranslationDto)
+  translations?: ProgramTranslationDto[];
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

@@ -15,8 +15,15 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ProgramExerciseDto } from './create-workout-program.dto';
+import { ProgramTranslationDto } from './create-workout-program.dto';
 
 export class UpdateWorkoutProgramDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ProgramTranslationDto)
+  translations?: ProgramTranslationDto[];
   @IsOptional()
   @IsString()
   @IsNotEmpty()

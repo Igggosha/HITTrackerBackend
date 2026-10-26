@@ -601,6 +601,14 @@ export const exercises = pgTable(
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
+    // EN: Structured equipment keeps required items separate from alternatives.
+    // UK: Структуроване спорядження відокремлює обов'язкові предмети від альтернатив.
+    equipmentStructured: jsonb('equipment_structured')
+      .$type<{ required: string[]; alternatives: string[][] }>()
+      .notNull()
+      .default(
+        sql`jsonb_build_object('required', jsonb_build_array(), 'alternatives', jsonb_build_array())`,
+      ),
 
     videoUrl: text('video_url'),
     // Object storage key of the illustration; see `users.avatar_key`.
@@ -611,6 +619,11 @@ export const exercises = pgTable(
       .notNull()
       .default('reps'),
     recommendedDurationSeconds: integer('recommended_duration_seconds'),
+    recommendedSets: integer('recommended_sets'),
+    recommendedReps: integer('recommended_reps'),
+    // EN: Optional image key is retained for managed object storage.
+    // UK: Необов'язковий ключ зображення зберігається для керованого object storage.
+    demonstrationImageKey: text('demonstration_image_key'),
   },
   (table) => [
     uniqueIndex('exercises_catalog_key_unique')
@@ -623,6 +636,52 @@ export const exercises = pgTable(
     check(
       'exercises_duration_recommendation_check',
       sql`(${table.measurementType} = 'reps' and ${table.recommendedDurationSeconds} is null) or (${table.measurementType} = 'duration' and (${table.recommendedDurationSeconds} is null or ${table.recommendedDurationSeconds} > 0))`,
+    ),
+    check(
+      'exercises_recommendation_values_check',
+      sql`(${table.recommendedSets} is null or ${table.recommendedSets} > 0) and (${table.recommendedReps} is null or ${table.recommendedReps} > 0) and ((${table.measurementType} = 'reps' and ${table.recommendedDurationSeconds} is null) or (${table.measurementType} = 'duration' and ${table.recommendedReps} is null))`,
+    ),
+    check(
+      'exercises_catalog_key_nonblank_check',
+      sql`${table.catalogKey} is null or btrim(${table.catalogKey}) <> ''`,
+    ),
+    check(
+      'exercises_equipment_structured_shape_check',
+      sql`jsonb_typeof(${table.equipmentStructured}) = 'object' and jsonb_typeof(${table.equipmentStructured}->'required') = 'array' and jsonb_typeof(${table.equipmentStructured}->'alternatives') = 'array'`,
+    ),
+  ],
+);
+
+// EN: Localized catalog names and descriptions; locale is intentionally open-ended for future languages.
+// UK: Локалізовані назви й описи каталогу; locale навмисно не обмежено для майбутніх мов.
+export const exerciseTranslations = pgTable(
+  'exercise_translations',
+  {
+    id: serial('id').primaryKey(),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, { onDelete: 'cascade' }),
+    locale: text('locale').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    videoUrl: text('video_url'),
+    aliases: text('aliases')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+  },
+  (table) => [
+    uniqueIndex('exercise_translations_exercise_locale_unique').on(
+      table.exerciseId,
+      table.locale,
+    ),
+    check(
+      'exercise_translations_locale_format_check',
+      sql`${table.locale} ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$'`,
+    ),
+    check(
+      'exercise_translations_name_nonblank_check',
+      sql`btrim(${table.name}) <> ''`,
     ),
   ],
 );
@@ -686,6 +745,8 @@ export const workoutPrograms = pgTable(
 
     description: text('description'),
 
+    catalogKey: text('catalog_key'),
+
     videoUrl: text('video_url'),
 
     imageKey: text('image_key'),
@@ -716,6 +777,45 @@ export const workoutPrograms = pgTable(
     index('workout_programs_personal_owner_idx').on(
       table.isPersonal,
       table.createdById,
+    ),
+    uniqueIndex('workout_programs_catalog_key_unique')
+      .on(table.catalogKey)
+      .where(sql`${table.catalogKey} is not null`),
+    check(
+      'workout_programs_catalog_key_nonblank_check',
+      sql`${table.catalogKey} is null or btrim(${table.catalogKey}) <> ''`,
+    ),
+  ],
+);
+
+export const workoutProgramTranslations = pgTable(
+  'workout_program_translations',
+  {
+    id: serial('id').primaryKey(),
+    workoutProgramId: integer('workout_program_id')
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: 'cascade' }),
+    locale: text('locale').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    videoUrl: text('video_url'),
+    aliases: text('aliases')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+  },
+  (table) => [
+    uniqueIndex('workout_program_translations_program_locale_unique').on(
+      table.workoutProgramId,
+      table.locale,
+    ),
+    check(
+      'workout_program_translations_locale_format_check',
+      sql`${table.locale} ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$'`,
+    ),
+    check(
+      'workout_program_translations_name_nonblank_check',
+      sql`btrim(${table.name}) <> ''`,
     ),
   ],
 );
@@ -789,7 +889,9 @@ export const exerciseInPrograms = pgTable(
         onDelete: 'cascade',
       }),
 
-    sets: integer('sets').notNull(),
+    sets: integer('sets'),
+
+    position: integer('position').notNull(),
 
     // Planned starting values
     firstSetRepCount: integer('first_set_rep_count'),
@@ -803,6 +905,15 @@ export const exerciseInPrograms = pgTable(
   },
   (table) => [
     index('exercises_in_programs_content_id_idx').on(table.programContentId),
+    uniqueIndex('exercises_in_programs_content_day_position_unique').on(
+      table.programContentId,
+      table.weekDay,
+      table.position,
+    ),
+    check(
+      'exercises_in_programs_optional_plan_check',
+      sql`(${table.sets} is null or ${table.sets} > 0) and ${table.position} > 0`,
+    ),
     check(
       'exercises_in_programs_measurement_target_check',
       sql`(${table.firstSetRepCount} is null or ${table.firstSetRepCount} > 0) and (${table.targetDurationSeconds} is null or ${table.targetDurationSeconds} > 0) and not (${table.firstSetRepCount} is not null and ${table.targetDurationSeconds} is not null)`,

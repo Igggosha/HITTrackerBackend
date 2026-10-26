@@ -96,6 +96,6 @@ describe('CatalogSearchService', () => {
     });
     const [sql, values] = jest.mocked(pool.query).mock.calls[0];
     expect(sql).toContain('p.is_personal = true and p.created_by_id = $2');
-    expect(values).toEqual([[8, 3], 7]);
+    expect(values).toEqual([[8, 3], 7, 'en']);
   });
 });

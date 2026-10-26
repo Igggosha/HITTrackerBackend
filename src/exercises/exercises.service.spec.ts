@@ -64,30 +64,75 @@ describe('ExercisesService likes', () => {
   });
 
   it('returns public exercise details without user reaction data', async () => {
-    jest.mocked(db.select).mockReturnValue(
-      query([
-        {
-          id: 2,
-          name: 'Bench press',
-          description: 'Press safely',
-          videoUrl: null,
-          difficulty: 2,
-          muscleId: 1,
-          muscleRole: 'primary',
-          muscleCommonName: 'Chest',
-          scientificName: null,
-        },
-      ]),
-    );
+    jest
+      .mocked(db.select)
+      .mockReturnValueOnce(
+        query([
+          {
+            id: 2,
+            catalogKey: 'barbell_bench_press',
+            name: 'Bench press',
+            description: 'Press safely',
+            videoUrl: null,
+            imageKey: null,
+            difficulty: 2,
+            measurementType: 'reps',
+            recommendedDurationSeconds: null,
+            recommendedSets: 3,
+            recommendedReps: 10,
+            equipment: ['barbell', 'bench'],
+            equipmentStructured: {
+              required: ['bench'],
+              alternatives: [['barbell']],
+            },
+            demonstrationImageKey: null,
+            muscleId: 1,
+            muscleRole: 'primary',
+            muscleCommonName: 'Chest',
+            scientificName: null,
+          },
+        ]),
+      )
+      .mockReturnValueOnce(
+        query([
+          {
+            locale: 'uk',
+            name: 'Жим штанги лежачи',
+            description: 'Контрольовано опускайте штангу.',
+            videoUrl: 'https://youtube.com/watch?v=uk',
+            aliases: [],
+          },
+        ]),
+      );
 
     await expect(service.getSharedExerciseById(2)).resolves.toEqual({
       id: 2,
+      catalogKey: 'barbell_bench_press',
       name: 'Bench press',
       description: 'Press safely',
       videoUrl: null,
       // The object key never reaches the client; only a signed URL does.
       imageUrl: null,
+      demonstrationImageUrl: null,
       difficulty: 2,
+      measurementType: 'reps',
+      recommendedDurationSeconds: null,
+      recommendedSets: 3,
+      recommendedReps: 10,
+      equipment: ['barbell', 'bench'],
+      equipmentStructured: {
+        required: ['bench'],
+        alternatives: [['barbell']],
+      },
+      translations: [
+        {
+          locale: 'uk',
+          name: 'Жим штанги лежачи',
+          description: 'Контрольовано опускайте штангу.',
+          videoUrl: 'https://youtube.com/watch?v=uk',
+          aliases: [],
+        },
+      ],
       muscles: [
         {
           id: 1,

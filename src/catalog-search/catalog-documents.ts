@@ -53,6 +53,9 @@ export async function programDocuments(
     muscleIds: number[];
     muscleNames: string[];
     hasImage: boolean;
+    translationNames: string[];
+    translationDescriptions: string[];
+    translationAliases: string[];
   }>(
     `select p.id, p.name, p.description,
             p.is_personal as "isPersonal", p.is_active as "isActive",
@@ -74,22 +77,41 @@ export async function programDocuments(
               join exercises_train_muscles etm on etm.exercise_id = eip.exercise_id
               join muscles m on m.id = etm.muscle_id
               where pc.program_id = p.id), '{}'::text[]) as "muscleNames",
-            (p.image_key is not null) as "hasImage"
+            (p.image_key is not null) as "hasImage",
+            coalesce((select array_agg(pt.name) from workout_program_translations pt where pt.workout_program_id = p.id), '{}'::text[]) as "translationNames",
+            coalesce((select array_agg(pt.description) from workout_program_translations pt where pt.workout_program_id = p.id and pt.description is not null), '{}'::text[]) as "translationDescriptions",
+            coalesce((select array_agg(a) from workout_program_translations pt cross join lateral unnest(pt.aliases) a where pt.workout_program_id = p.id), '{}'::text[]) as "translationAliases"
        from workout_programs p
       where ($1::int[] is null or p.id = any($1::int[]))
       order by p.id`,
     [ids ? [...ids] : null],
   );
-  return result.rows.map((row) => ({
-    ...row,
-    aliases: row.isPersonal ? [row.name] : catalogAliases('program', row.name),
-    description: row.description ?? '',
-    createdAt: row.createdAt.toISOString(),
-    muscleNames: row.muscleNames.flatMap((name) =>
-      catalogAliases('muscle', name),
-    ),
-    deleted: false,
-  }));
+  return result.rows.map((row) => {
+    const {
+      translationNames,
+      translationDescriptions,
+      translationAliases,
+      ...document
+    } = row;
+    return {
+      ...document,
+      aliases: row.isPersonal
+        ? [row.name]
+        : [
+            ...catalogAliases('program', row.name),
+            ...translationNames,
+            ...translationAliases,
+          ],
+      description: [row.description ?? '', ...translationDescriptions]
+        .filter(Boolean)
+        .join(' '),
+      createdAt: row.createdAt.toISOString(),
+      muscleNames: row.muscleNames.flatMap((name) =>
+        catalogAliases('muscle', name),
+      ),
+      deleted: false,
+    };
+  });
 }
 
 export async function exerciseDocuments(
@@ -105,13 +127,19 @@ export async function exerciseDocuments(
     muscleIds: number[];
     muscleNames: string[];
     hasImage: boolean;
+    translationNames: string[];
+    translationDescriptions: string[];
+    translationAliases: string[];
   }>(
     `select e.id, e.name, e.description,
             timestamp '1970-01-01' as "createdAt",
             (select count(*)::int from exercise_likes el where el.exercise_id = e.id) as "likesCount",
             coalesce(array_agg(distinct m.id order by m.id) filter (where m.id is not null), '{}'::int[]) as "muscleIds",
             coalesce(array_agg(distinct m.common_name order by m.common_name) filter (where m.id is not null), '{}'::text[]) as "muscleNames",
-            (e.image_key is not null) as "hasImage"
+            (e.image_key is not null) as "hasImage",
+            coalesce((select array_agg(et.name) from exercise_translations et where et.exercise_id = e.id), '{}'::text[]) as "translationNames",
+            coalesce((select array_agg(et.description) from exercise_translations et where et.exercise_id = e.id and et.description is not null), '{}'::text[]) as "translationDescriptions",
+            coalesce((select array_agg(a) from exercise_translations et cross join lateral unnest(et.aliases) a where et.exercise_id = e.id), '{}'::text[]) as "translationAliases"
        from exercises e
        left join exercises_train_muscles etm on etm.exercise_id = e.id
        left join muscles m on m.id = etm.muscle_id
@@ -120,16 +148,30 @@ export async function exerciseDocuments(
       order by e.id`,
     [ids ? [...ids] : null],
   );
-  return result.rows.map((row) => ({
-    ...row,
-    aliases: catalogAliases('exercise', row.name),
-    description: row.description ?? '',
-    createdAt: row.createdAt.toISOString(),
-    muscleNames: row.muscleNames.flatMap((name) =>
-      catalogAliases('muscle', name),
-    ),
-    deleted: false,
-  }));
+  return result.rows.map((row) => {
+    const {
+      translationNames,
+      translationDescriptions,
+      translationAliases,
+      ...document
+    } = row;
+    return {
+      ...document,
+      aliases: [
+        ...catalogAliases('exercise', row.name),
+        ...translationNames,
+        ...translationAliases,
+      ],
+      description: [row.description ?? '', ...translationDescriptions]
+        .filter(Boolean)
+        .join(' '),
+      createdAt: row.createdAt.toISOString(),
+      muscleNames: row.muscleNames.flatMap((name) =>
+        catalogAliases('muscle', name),
+      ),
+      deleted: false,
+    };
+  });
 }
 
 export async function programIdsForExercise(

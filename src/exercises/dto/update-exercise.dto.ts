@@ -16,7 +16,12 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import {
+  EquipmentStructuredDto,
+  ExerciseTranslationDto,
+} from './create-exercise.dto';
 
 export class UpdateExerciseDto {
   @IsOptional()
@@ -53,6 +58,29 @@ export class UpdateExerciseDto {
   @Min(1)
   @Max(86400)
   recommendedDurationSeconds?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  recommendedSets?: number | null;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  recommendedReps?: number | null;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => ExerciseTranslationDto)
+  translations?: ExerciseTranslationDto[];
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EquipmentStructuredDto)
+  equipmentStructured?: EquipmentStructuredDto;
 
   @IsOptional()
   @IsArray()

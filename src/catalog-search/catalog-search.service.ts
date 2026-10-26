@@ -100,8 +100,8 @@ export class CatalogSearchService {
       // UK: Відновлення зберігає порядок Elasticsearch, але відкидає кандидатів, які більше не відповідають поточній видимості в PostgreSQL.
       const items =
         dto.section === 'programs'
-          ? await this.programs(userId, ids)
-          : await this.exercises(userId, ids);
+          ? await this.programs(userId, ids, dto.locale)
+          : await this.exercises(userId, ids, dto.locale);
       const nextCursor =
         response.hits.hits.length > dto.limit
           ? encodeCursor(page.at(-1)?.sort)
@@ -136,12 +136,14 @@ export class CatalogSearchService {
     return result.rows.map(({ id }) => id);
   }
 
-  private async programs(userId: number, ids: number[]) {
+  private async programs(userId: number, ids: number[], locale: 'en' | 'uk') {
     if (!ids.length) return [];
     const result = await pool.query<{
       id: number;
       name: string;
       description: string | null;
+      displayName: string;
+      displayDescription: string | null;
       videoUrl: string | null;
       imageKey: string | null;
       isPersonal: boolean;
@@ -153,7 +155,10 @@ export class CatalogSearchService {
       isScheduled: boolean;
       schedule: Array<Record<string, unknown>>;
     }>(
-      `select p.id, p.name, p.description, p.video_url as "videoUrl", p.image_key as "imageKey",
+      `select p.id, p.name, p.description,
+              case when p.is_personal then p.name else coalesce(pt.name, p.name) end as "displayName",
+              case when p.is_personal then p.description else coalesce(pt.description, p.description) end as "displayDescription",
+              p.video_url as "videoUrl", p.image_key as "imageKey",
               p.is_personal as "isPersonal", p.created_at as "createdAt",
               u.username as "ownerUsername", p.created_by_id as "createdById",
               (select count(*)::int from program_likes pl where pl.program_id = p.id) as "likesCount",
@@ -163,19 +168,27 @@ export class CatalogSearchService {
               coalesce((select jsonb_agg(jsonb_build_object(
                 'programId', pc.program_id, 'week', pc.week_number, 'weekDay', eip.week_day,
                 'setsCount', eip.sets, 'targetReps', eip.first_set_rep_count,
-                'plannedWeight', eip.weight, 'exercise', jsonb_build_object('id', e.id, 'name', e.name))
-                order by pc.week_number, eip.week_day, eip.id)
+                'targetDurationSeconds', eip.target_duration_seconds, 'position', eip.position,
+                'plannedWeight', eip.weight, 'exercise', jsonb_build_object('id', e.id, 'name', e.name,
+                  'displayName', coalesce(et.name, e.name)))
+                order by pc.week_number, eip.week_day, eip.position)
                 from program_content pc
                 join exercises_in_programs eip on eip.program_content_id = pc.id
                 join exercises e on e.id = eip.exercise_id
+                left join lateral (select name from exercise_translations
+                  where exercise_id = e.id and locale in ($3, 'en')
+                  order by (locale = $3) desc, (locale = 'en') desc limit 1) et on true
                 where pc.program_id = p.id), '[]'::jsonb) as schedule
          from workout_programs p
          left join users u on u.id = p.created_by_id
+         left join lateral (select name, description from workout_program_translations
+           where workout_program_id = p.id and locale in ($3, 'en')
+           order by (locale = $3) desc, (locale = 'en') desc limit 1) pt on true
         where p.id = any($1::int[])
           and ((p.is_personal = false and p.is_active = true)
             or (p.is_personal = true and p.created_by_id = $2))
         order by array_position($1::int[], p.id)`,
-      [ids, userId],
+      [ids, userId, locale],
     );
     return Promise.all(
       result.rows.map(async ({ imageKey, ...row }) => ({
@@ -185,12 +198,14 @@ export class CatalogSearchService {
     );
   }
 
-  private async exercises(userId: number, ids: number[]) {
+  private async exercises(userId: number, ids: number[], locale: 'en' | 'uk') {
     if (!ids.length) return [];
     const result = await pool.query<{
       id: number;
       name: string;
       description: string | null;
+      displayName: string;
+      displayDescription: string | null;
       videoUrl: string | null;
       imageKey: string | null;
       difficulty: number;
@@ -199,7 +214,9 @@ export class CatalogSearchService {
       isBookmarked: boolean;
       muscles: Array<Record<string, unknown>>;
     }>(
-      `select e.id, e.name, e.description, e.video_url as "videoUrl", e.image_key as "imageKey", e.difficulty,
+      `select e.id, e.name, e.description, coalesce(et.name, e.name) as "displayName",
+              coalesce(et.description, e.description) as "displayDescription",
+              e.video_url as "videoUrl", e.image_key as "imageKey", e.difficulty,
               (select count(*)::int from exercise_likes el where el.exercise_id = e.id) as "likesCount",
               exists(select 1 from exercise_likes el where el.exercise_id = e.id and el.user_id = $2) as "isLiked",
               exists(select 1 from exercise_bookmarks eb where eb.exercise_id = e.id and eb.user_id = $2) as "isBookmarked",
@@ -207,12 +224,15 @@ export class CatalogSearchService {
                 'commonName', m.common_name, 'scientificName', m.scientific_name, 'role', etm.role))
                 filter (where m.id is not null), '[]'::jsonb) as muscles
          from exercises e
+         left join lateral (select name, description from exercise_translations
+           where exercise_id = e.id and locale in ($3, 'en')
+           order by (locale = $3) desc, (locale = 'en') desc limit 1) et on true
          left join exercises_train_muscles etm on etm.exercise_id = e.id
          left join muscles m on m.id = etm.muscle_id
         where e.id = any($1::int[])
         group by e.id
         order by array_position($1::int[], e.id)`,
-      [ids, userId],
+      [ids, userId, locale],
     );
     return Promise.all(
       result.rows.map(async ({ imageKey, ...row }) => ({

@@ -24,6 +24,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/db';
 import {
   exerciseInPrograms,
+  exerciseTranslations,
   exercises,
   programContent,
   users,
@@ -31,6 +32,7 @@ import {
   userProgramScheduleSeries,
   workouts,
   workoutPrograms,
+  workoutProgramTranslations,
   programLikes,
   type UserRole,
 } from '../db/schema';
@@ -152,8 +154,11 @@ export class WorkoutProgramsService {
     const source = await this.findSharedProgram(token);
     const { createdById, ...program } = source;
     void createdById;
+    const [localizedProgram] = await this.withProgramTranslations([
+      await this.withImageUrl(program),
+    ]);
     return {
-      ...(await this.withImageUrl(program)),
+      ...localizedProgram,
       schedule: await this.getSchedule(source.id),
     };
   }
@@ -559,6 +564,7 @@ export class WorkoutProgramsService {
     const programs = await db
       .select({
         id: workoutPrograms.id,
+        catalogKey: workoutPrograms.catalogKey,
         name: workoutPrograms.name,
         description: workoutPrograms.description,
         videoUrl: workoutPrograms.videoUrl,
@@ -584,8 +590,15 @@ export class WorkoutProgramsService {
         weekDay: exerciseInPrograms.weekDay,
         setsCount: exerciseInPrograms.sets,
         targetReps: exerciseInPrograms.firstSetRepCount,
+        targetDurationSeconds: exerciseInPrograms.targetDurationSeconds,
+        position: exerciseInPrograms.position,
         plannedWeight: exerciseInPrograms.weight,
-        exercise: { id: exercises.id, name: exercises.name },
+        exercise: {
+          id: exercises.id,
+          name: exercises.name,
+          measurementType: exercises.measurementType,
+          recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+        },
       })
       .from(programContent)
       .innerJoin(
@@ -602,14 +615,23 @@ export class WorkoutProgramsService {
       .orderBy(
         asc(programContent.week),
         asc(exerciseInPrograms.weekDay),
-        asc(exerciseInPrograms.id),
+        asc(exerciseInPrograms.position),
       );
     const schedules = new Map<number, typeof rows>();
+    const exerciseTranslationsById = await this.exerciseTranslationsById(
+      rows.map((row) => row.exercise.id),
+    );
     for (const row of rows) {
+      row.exercise = {
+        ...row.exercise,
+        translations: exerciseTranslationsById.get(row.exercise.id) ?? [],
+      } as typeof row.exercise;
       if (!schedules.has(row.programId)) schedules.set(row.programId, []);
       schedules.get(row.programId)!.push(row);
     }
-    const projected = await this.withImageUrls(programs);
+    const projected = await this.withProgramTranslations(
+      await this.withImageUrls(programs),
+    );
     return projected.map((program) => ({
       ...program,
       schedule: schedules.get(program.id) || [],
@@ -673,8 +695,11 @@ export class WorkoutProgramsService {
     const { shareToken, sourceProgramId, ...safeProgram } = program;
     void shareToken;
     void sourceProgramId;
+    const [localizedProgram] = await this.withProgramTranslations([
+      await this.withImageUrl(safeProgram),
+    ]);
     return {
-      ...(await this.withImageUrl(safeProgram)),
+      ...localizedProgram,
       schedule: await this.getSchedule(id),
     };
   }
@@ -685,6 +710,7 @@ export class WorkoutProgramsService {
     dto: CreateWorkoutProgramDto,
     sourceProgramId: number | null = null,
   ) {
+    this.validateDefinitions(dto.exercises);
     return db.transaction(async (tx: DbTransaction) => {
       await this.ensureExercisesExist(tx, dto.exercises);
       const [program] = await tx
@@ -696,8 +722,32 @@ export class WorkoutProgramsService {
           isPersonal,
           createdById: userId,
           sourceProgramId,
+          ...(isPersonal ? {} : { catalogKey: dto.catalogKey?.trim() || null }),
         })
         .returning();
+      if (!isPersonal) {
+        const translations = dto.translations?.length
+          ? dto.translations
+          : [
+              {
+                locale: 'en',
+                name: program.name,
+                description: program.description ?? undefined,
+                videoUrl: program.videoUrl ?? undefined,
+              },
+            ];
+        this.validateTranslations(translations);
+        await tx.insert(workoutProgramTranslations).values(
+          translations.map((translation) => ({
+            workoutProgramId: program.id,
+            locale: translation.locale,
+            name: translation.name.trim(),
+            description: translation.description?.trim() || null,
+            videoUrl: translation.videoUrl?.trim() || null,
+            aliases: (translation.aliases ?? []).map((alias) => alias.trim()),
+          })),
+        );
+      }
       await this.replaceSchedule(tx, program.id, dto.exercises);
       await this.enqueueSearchChange(tx, program, 'upsert');
       return this.withImageUrl(program);
@@ -749,6 +799,7 @@ export class WorkoutProgramsService {
     loaded: typeof workoutPrograms.$inferSelect,
     dto: UpdateWorkoutProgramDto,
   ) {
+    if (dto.exercises) this.validateDefinitions(dto.exercises);
     const result = await db.transaction(async (tx: DbTransaction) => {
       // Two moderators editing the same revision would otherwise both fork it
       // and leave two active copies. The lock serializes them; the second one
@@ -785,8 +836,58 @@ export class WorkoutProgramsService {
           imageKey: dto.videoUrl !== undefined ? null : program.imageKey,
           isPersonal: false,
           createdById: userId,
+          catalogKey: program.catalogKey,
         })
         .returning();
+      const storedTranslations: Array<{
+        locale: string;
+        name: string;
+        description?: string | null;
+        videoUrl?: string | null;
+        aliases?: string[];
+      }> = await tx
+        .select()
+        .from(workoutProgramTranslations)
+        .where(eq(workoutProgramTranslations.workoutProgramId, program.id));
+      const translations =
+        dto.translations ??
+        (storedTranslations.length
+          ? storedTranslations.map((translation) =>
+              translation.locale === 'en'
+                ? {
+                    ...translation,
+                    name: dto.name?.trim() ?? revision.name,
+                    description:
+                      dto.description !== undefined
+                        ? dto.description.trim() || null
+                        : revision.description,
+                    videoUrl:
+                      dto.videoUrl !== undefined
+                        ? dto.videoUrl.trim() || null
+                        : revision.videoUrl,
+                  }
+                : translation,
+            )
+          : [
+              {
+                locale: 'en',
+                name: revision.name,
+                description: revision.description,
+                videoUrl: revision.videoUrl,
+                aliases: [],
+              },
+            ]);
+      this.validateTranslations(translations);
+      await tx.insert(workoutProgramTranslations).values(
+        translations.map((translation) => ({
+          workoutProgramId: revision.id,
+          locale: translation.locale,
+          name: translation.name.trim(),
+          description: translation.description?.trim() || null,
+          videoUrl: translation.videoUrl?.trim() || null,
+          aliases: (translation.aliases ?? []).map((alias) => alias.trim()),
+        })),
+      );
       await this.replaceSchedule(tx, revision.id, definitions);
       const movedImageKey =
         dto.videoUrl === undefined ? program.imageKey : null;
@@ -820,6 +921,42 @@ export class WorkoutProgramsService {
       .where(or(...ids.map((id) => eq(exercises.id, id))));
     if (found.length !== ids.length)
       throw new BadRequestException('One or more exercises do not exist');
+  }
+
+  private validateDefinitions(definitions: ProgramExerciseDto[]) {
+    const positions = new Set<string>();
+    for (const item of definitions) {
+      const key = `${item.week ?? 1}:${item.weekDay}:${item.position}`;
+      if (item.position !== undefined && positions.has(key))
+        throw new BadRequestException(
+          'Duplicate exercise position in week/day.',
+        );
+      if (item.position !== undefined) positions.add(key);
+    }
+  }
+
+  private validateTranslations(
+    translations: Array<{
+      locale: string;
+      name?: string;
+      aliases?: string[];
+    }>,
+  ) {
+    if (
+      new Set(translations.map((translation) => translation.locale)).size !==
+      translations.length
+    )
+      throw new BadRequestException('Translation locales must be unique.');
+    if (
+      translations.some(
+        (translation) =>
+          !translation.name?.trim() ||
+          (translation.aliases ?? []).some((alias) => !alias.trim()),
+      )
+    )
+      throw new BadRequestException(
+        'Translation names and aliases must be non-blank.',
+      );
   }
 
   private enqueueSearchChange(
@@ -886,16 +1023,34 @@ export class WorkoutProgramsService {
         .returning();
       contentByWeek.set(week, content.id);
     }
+    const usedPositions = new Map<string, Set<number>>();
+    for (const item of definitions) {
+      if (item.position === undefined) continue;
+      const key = `${item.week ?? 1}:${item.weekDay}`;
+      const used = usedPositions.get(key) ?? new Set<number>();
+      used.add(item.position);
+      usedPositions.set(key, used);
+    }
     await tx.insert(exerciseInPrograms).values(
-      definitions.map((item) => ({
-        programContentId: contentByWeek.get(item.week ?? 1)!,
-        exerciseId: item.exerciseId,
-        sets: item.sets,
-        firstSetRepCount: item.reps ?? null,
-        targetDurationSeconds: item.durationSeconds ?? null,
-        weight: item.weight ?? null,
-        weekDay: item.weekDay,
-      })),
+      definitions.map((item) => {
+        const key = `${item.week ?? 1}:${item.weekDay}`;
+        const used = usedPositions.get(key) ?? new Set<number>();
+        let next = 1;
+        while (used.has(next)) next += 1;
+        const position = item.position ?? next;
+        used.add(position);
+        usedPositions.set(key, used);
+        return {
+          programContentId: contentByWeek.get(item.week ?? 1)!,
+          exerciseId: item.exerciseId,
+          sets: item.sets ?? null,
+          position,
+          firstSetRepCount: item.reps ?? null,
+          targetDurationSeconds: item.durationSeconds ?? null,
+          weight: item.weight ?? null,
+          weekDay: item.weekDay,
+        };
+      }),
     );
   }
 
@@ -906,7 +1061,7 @@ export class WorkoutProgramsService {
     return tx
       .select({
         exerciseId: exerciseInPrograms.exerciseId,
-        sets: exerciseInPrograms.sets,
+        sets: sql<number | undefined>`${exerciseInPrograms.sets}`,
         reps: sql<number | undefined>`${exerciseInPrograms.firstSetRepCount}`,
         durationSeconds: sql<
           number | undefined
@@ -914,6 +1069,7 @@ export class WorkoutProgramsService {
         weight: sql<number | undefined>`${exerciseInPrograms.weight}`,
         week: programContent.week,
         weekDay: exerciseInPrograms.weekDay,
+        position: exerciseInPrograms.position,
       })
       .from(exerciseInPrograms)
       .innerJoin(
@@ -924,7 +1080,7 @@ export class WorkoutProgramsService {
       .orderBy(
         asc(programContent.week),
         asc(exerciseInPrograms.weekDay),
-        asc(exerciseInPrograms.id),
+        asc(exerciseInPrograms.position),
       );
   }
 
@@ -937,15 +1093,23 @@ export class WorkoutProgramsService {
         setsCount: exerciseInPrograms.sets,
         targetReps: exerciseInPrograms.firstSetRepCount,
         targetDurationSeconds: exerciseInPrograms.targetDurationSeconds,
+        position: exerciseInPrograms.position,
         plannedWeight: exerciseInPrograms.weight,
         exercise: {
           id: exercises.id,
+          catalogKey: exercises.catalogKey,
           name: exercises.name,
+          description: exercises.description,
+          videoUrl: exercises.videoUrl,
           difficulty: exercises.difficulty,
           measurementType: exercises.measurementType,
           recommendedDurationSeconds: exercises.recommendedDurationSeconds,
+          recommendedSets: exercises.recommendedSets,
+          recommendedReps: exercises.recommendedReps,
           equipment: exercises.equipment,
+          equipmentStructured: exercises.equipmentStructured,
           imageKey: exercises.imageKey,
+          demonstrationImageKey: exercises.demonstrationImageKey,
         },
       })
       .from(programContent)
@@ -958,19 +1122,31 @@ export class WorkoutProgramsService {
       .orderBy(
         asc(programContent.week),
         asc(exerciseInPrograms.weekDay),
-        asc(exerciseInPrograms.id),
+        asc(exerciseInPrograms.position),
       );
     const imageUrls = await this.storageService.getUrls(
       rows.map((row) => row.exercise?.imageKey),
     );
+    const demonstrationImageUrls = await this.storageService.getUrls(
+      rows.map((row) => row.exercise?.demonstrationImageKey),
+    );
+    const translationsById = await this.exerciseTranslationsById(
+      rows.flatMap((row) => (row.exercise?.id ? [row.exercise.id] : [])),
+    );
     return rows.map((row, index) => {
       const exercise = row.exercise ? { ...row.exercise } : undefined;
       if (exercise) {
-        const { imageKey, ...safeExercise } = exercise;
+        const { imageKey, demonstrationImageKey, ...safeExercise } = exercise;
         void imageKey;
+        void demonstrationImageKey;
         return {
           ...row,
-          exercise: { ...safeExercise, imageUrl: imageUrls[index] },
+          exercise: {
+            ...safeExercise,
+            imageUrl: imageUrls[index],
+            demonstrationImageUrl: demonstrationImageUrls[index],
+            translations: translationsById.get(exercise.id) ?? [],
+          },
         };
       }
       return {
@@ -1013,6 +1189,66 @@ export class WorkoutProgramsService {
     rows: T[],
   ) {
     return Promise.all(rows.map((row) => this.withImageUrl(row)));
+  }
+
+  private async withProgramTranslations<
+    T extends {
+      id: number;
+      isPersonal: boolean;
+      name: string;
+      description: string | null;
+    },
+  >(rows: T[]) {
+    if (!rows.length) return [];
+    const officialIds = rows
+      .filter((row) => !row.isPersonal)
+      .map((row) => row.id);
+    if (!officialIds.length)
+      return rows.map((row) => ({ ...row, translations: [] }));
+    const translations = await db
+      .select({
+        workoutProgramId: workoutProgramTranslations.workoutProgramId,
+        locale: workoutProgramTranslations.locale,
+        name: workoutProgramTranslations.name,
+        description: workoutProgramTranslations.description,
+        videoUrl: workoutProgramTranslations.videoUrl,
+        aliases: workoutProgramTranslations.aliases,
+      })
+      .from(workoutProgramTranslations)
+      .where(inArray(workoutProgramTranslations.workoutProgramId, officialIds));
+    const byProgram = new Map<number, typeof translations>();
+    for (const translation of translations) {
+      const group = byProgram.get(translation.workoutProgramId) ?? [];
+      group.push(translation);
+      byProgram.set(translation.workoutProgramId, group);
+    }
+    return rows.map((row) => ({
+      ...row,
+      translations: row.isPersonal ? [] : (byProgram.get(row.id) ?? []),
+    }));
+  }
+
+  private async exerciseTranslationsById(exerciseIds: number[]) {
+    const ids = [...new Set(exerciseIds)];
+    if (!ids.length) return new Map<number, never[]>();
+    const translations = await db
+      .select({
+        exerciseId: exerciseTranslations.exerciseId,
+        locale: exerciseTranslations.locale,
+        name: exerciseTranslations.name,
+        description: exerciseTranslations.description,
+        videoUrl: exerciseTranslations.videoUrl,
+        aliases: exerciseTranslations.aliases,
+      })
+      .from(exerciseTranslations)
+      .where(inArray(exerciseTranslations.exerciseId, ids));
+    const byExercise = new Map<number, typeof translations>();
+    for (const translation of translations) {
+      const group = byExercise.get(translation.exerciseId) ?? [];
+      group.push(translation);
+      byExercise.set(translation.exerciseId, group);
+    }
+    return byExercise;
   }
 
   private async findMatchingPersonalProgram(
