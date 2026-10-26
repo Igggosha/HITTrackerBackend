@@ -719,6 +719,33 @@ export class ExercisesService {
     return this.getSharedExerciseById(exerciseId);
   }
 
+  async setDemonstrationImage(
+    exerciseId: number,
+    file: UploadedFile | undefined,
+  ) {
+    const stored = await this.storageService.uploadImage({
+      scope: 'exercises',
+      ownerId: exerciseId,
+      file,
+      maxDimension: this.storageService.limits.exerciseImageMaxDimension,
+    });
+    let replacedKey: string | null;
+    try {
+      replacedKey = await this.setDemonstrationImageKey(exerciseId, stored.key);
+    } catch (error) {
+      await this.storageService.remove(stored.key);
+      throw error;
+    }
+    await this.storageService.remove(replacedKey);
+    return this.getSharedExerciseById(exerciseId);
+  }
+
+  async removeDemonstrationImage(exerciseId: number) {
+    const replacedKey = await this.setDemonstrationImageKey(exerciseId, null);
+    await this.storageService.remove(replacedKey);
+    return this.getSharedExerciseById(exerciseId);
+  }
+
   /**
    * Swaps the stored image key and returns the replaced one so its object can
    * be deleted once no row points at it.
@@ -744,6 +771,29 @@ export class ExercisesService {
       await this.enqueueSearchChange(tx, exerciseId);
 
       return current.imageKey === imageKey ? null : current.imageKey;
+    });
+  }
+
+  private async setDemonstrationImageKey(
+    exerciseId: number,
+    demonstrationImageKey: string | null,
+  ): Promise<string | null> {
+    return db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ demonstrationImageKey: exercises.demonstrationImageKey })
+        .from(exercises)
+        .where(eq(exercises.id, exerciseId))
+        .for('update')
+        .limit(1);
+      if (!current) throw new NotFoundException('Exercise not found');
+      await tx
+        .update(exercises)
+        .set({ demonstrationImageKey })
+        .where(eq(exercises.id, exerciseId));
+      await this.enqueueSearchChange(tx, exerciseId);
+      return current.demonstrationImageKey === demonstrationImageKey
+        ? null
+        : current.demonstrationImageKey;
     });
   }
 

@@ -133,6 +133,28 @@ export class ExercisesController {
   async removeImage(@Param('id', ParseIntPipe) id: number) {
     return this.exercisesService.removeImage(id);
   }
+
+  // EN: Moderators manage the execution photo separately from the legacy anatomy illustration.
+  // UK: Модератори керують фото виконання окремо від наявної анатомічної ілюстрації.
+  @Post(':id/demonstration-image')
+  @MinimumRole('moderator')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES, files: 1, fields: 0 },
+    }),
+  )
+  uploadDemonstrationImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: UploadedImage | undefined,
+  ) {
+    return this.exercisesService.setDemonstrationImage(id, file);
+  }
+
+  @Delete(':id/demonstration-image')
+  @MinimumRole('moderator')
+  removeDemonstrationImage(@Param('id', ParseIntPipe) id: number) {
+    return this.exercisesService.removeDemonstrationImage(id);
+  }
 }
 
 @Controller('shared/exercises')
