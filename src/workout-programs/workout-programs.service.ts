@@ -54,6 +54,9 @@ import type { UploadedFile } from '../storage/upload-validation';
 import { OutboxService } from '../outbox/outbox.service';
 import type { DbTransaction } from '../outbox/transaction';
 
+export const likesAdjustmentForTotal = (desired: number, actual: number) =>
+  desired - actual;
+
 @Injectable()
 export class WorkoutProgramsService {
   constructor(
@@ -573,7 +576,7 @@ export class WorkoutProgramsService {
         createdAt: workoutPrograms.createdAt,
         ownerUsername: users.username,
         createdById: workoutPrograms.createdById,
-        likesCount: sql<number>`(select count(*)::int from program_likes where program_id = ${workoutPrograms.id})`,
+        likesCount: sql<number>`greatest(0, (select count(*)::int from program_likes where program_id = ${workoutPrograms.id}) + ${workoutPrograms.likesAdjustment})`,
         isLiked: sql<boolean>`exists(select 1 from program_likes where program_id = ${workoutPrograms.id} and user_id = ${userId})`,
         isScheduled: sql<boolean>`exists(select 1 from ${userProgramSchedule} where ${userProgramSchedule.userId} = ${userId} and ${userProgramSchedule.programId} = ${workoutPrograms.id}) or exists(select 1 from ${userProgramScheduleSeries} where ${userProgramScheduleSeries.userId} = ${userId} and ${userProgramScheduleSeries.programId} = ${workoutPrograms.id})`,
       })
@@ -710,6 +713,11 @@ export class WorkoutProgramsService {
     dto: CreateWorkoutProgramDto,
     sourceProgramId: number | null = null,
   ) {
+    if (isPersonal && dto.displayedLikesCount !== undefined) {
+      throw new BadRequestException(
+        'Displayed likes can only be managed for official programs',
+      );
+    }
     this.validateDefinitions(dto.exercises);
     return db.transaction(async (tx: DbTransaction) => {
       await this.ensureExercisesExist(tx, dto.exercises);
@@ -722,6 +730,7 @@ export class WorkoutProgramsService {
           isPersonal,
           createdById: userId,
           sourceProgramId,
+          likesAdjustment: isPersonal ? 0 : (dto.displayedLikesCount ?? 0),
           ...(isPersonal ? {} : { catalogKey: dto.catalogKey?.trim() || null }),
         })
         .returning();
@@ -758,6 +767,11 @@ export class WorkoutProgramsService {
     id: number,
     dto: UpdateWorkoutProgramDto,
   ) {
+    if (dto.displayedLikesCount !== undefined) {
+      throw new BadRequestException(
+        'Displayed likes can only be managed for official programs',
+      );
+    }
     const result = await db.transaction(async (tx: DbTransaction) => {
       const [current] = await tx
         .select({ imageKey: workoutPrograms.imageKey })
@@ -821,6 +835,14 @@ export class WorkoutProgramsService {
       const definitions =
         dto.exercises ?? (await this.getScheduleExercises(tx, program.id));
       await this.ensureExercisesExist(tx, definitions);
+      const [likes] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(programLikes)
+        .where(eq(programLikes.programId, program.id));
+      const actualLikesCount = likes?.count ?? 0;
+      const desiredLikesCount =
+        dto.displayedLikesCount ??
+        Math.max(0, actualLikesCount + program.likesAdjustment);
       const [revision] = await tx
         .insert(workoutPrograms)
         .values({
@@ -837,6 +859,10 @@ export class WorkoutProgramsService {
           isPersonal: false,
           createdById: userId,
           catalogKey: program.catalogKey,
+          likesAdjustment: likesAdjustmentForTotal(
+            desiredLikesCount,
+            actualLikesCount,
+          ),
         })
         .returning();
       const storedTranslations: Array<{
@@ -889,6 +915,10 @@ export class WorkoutProgramsService {
         })),
       );
       await this.replaceSchedule(tx, revision.id, definitions);
+      await tx
+        .update(programLikes)
+        .set({ programId: revision.id })
+        .where(eq(programLikes.programId, program.id));
       const movedImageKey =
         dto.videoUrl === undefined ? program.imageKey : null;
       const replacedKey = dto.videoUrl !== undefined ? program.imageKey : null;

@@ -4,7 +4,10 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { db } from '../db/db';
-import { WorkoutProgramsService } from './workout-programs.service';
+import {
+  likesAdjustmentForTotal,
+  WorkoutProgramsService,
+} from './workout-programs.service';
 import { UpdateExerciseDto } from '../exercises/dto/update-exercise.dto';
 
 jest.mock('../db/db', () => ({
@@ -49,6 +52,11 @@ describe('Library access and program cards', () => {
       .mockImplementation((callback: any) => callback(db as any));
   });
   afterEach(() => jest.restoreAllMocks());
+
+  it('stores an adjustment relative to real user likes', () => {
+    expect(likesAdjustmentForTotal(40, 7)).toBe(33);
+    expect(likesAdjustmentForTotal(0, 7)).toBe(-7);
+  });
 
   it.each(['moderator', 'admin', 'super_admin'] as const)(
     'keeps another user personal program read-only for %s',
@@ -116,7 +124,9 @@ describe('Library access and program cards', () => {
         query([{ id: 1, isPersonal: false, isActive: false }]),
       )
       .mockReturnValueOnce(query([{ id: 4 }]))
-      .mockReturnValueOnce(query([{ exercise: { id: 2, name: 'Squat' } }]));
+      .mockReturnValueOnce(query([]))
+      .mockReturnValueOnce(query([{ exercise: { id: 2, name: 'Squat' } }]))
+      .mockReturnValueOnce(query([]));
     await expect(service.getProgramById(1, 7, 'user')).resolves.toMatchObject({
       id: 1,
       schedule: [{ exercise: { id: 2 } }],
@@ -146,16 +156,21 @@ describe('Library access and program cards', () => {
       )
       .mockReturnValueOnce(
         query([{ programId: 2, exercise: { id: 9, name: 'Row' } }]),
-      );
+      )
+      .mockReturnValueOnce(query([]))
+      .mockReturnValueOnce(query([]));
     const programs = await service.getAllPrograms(7, 'user');
     expect(programs[0].schedule).toEqual([]);
     expect(programs[1].schedule).toEqual([
-      { programId: 2, exercise: { id: 9, name: 'Row' } },
+      {
+        programId: 2,
+        exercise: { id: 9, name: 'Row', translations: [] },
+      },
     ]);
     expect(jest.mocked(db.select).mock.calls[0][0]).toHaveProperty(
       'isScheduled',
     );
-    expect(db.select).toHaveBeenCalledTimes(2);
+    expect(db.select).toHaveBeenCalledTimes(4);
   });
 
   it('allows clearing a video link but rejects invalid nonempty URLs', async () => {

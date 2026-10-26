@@ -161,7 +161,7 @@ export class CatalogSearchService {
               p.video_url as "videoUrl", p.image_key as "imageKey",
               p.is_personal as "isPersonal", p.created_at as "createdAt",
               u.username as "ownerUsername", p.created_by_id as "createdById",
-              (select count(*)::int from program_likes pl where pl.program_id = p.id) as "likesCount",
+              greatest(0, (select count(*)::int from program_likes pl where pl.program_id = p.id) + p.likes_adjustment) as "likesCount",
               exists(select 1 from program_likes pl where pl.program_id = p.id and pl.user_id = $2) as "isLiked",
               (exists(select 1 from user_program_schedule s where s.program_id = p.id and s.user_id = $2)
                or exists(select 1 from user_program_schedule_series ss where ss.program_id = p.id and ss.user_id = $2)) as "isScheduled",

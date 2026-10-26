@@ -60,7 +60,7 @@ export async function programDocuments(
     `select p.id, p.name, p.description,
             p.is_personal as "isPersonal", p.is_active as "isActive",
             p.created_by_id as "ownerId", p.created_at as "createdAt",
-            (select count(*)::int from program_likes pl where pl.program_id = p.id) as "likesCount",
+            greatest(0, (select count(*)::int from program_likes pl where pl.program_id = p.id) + p.likes_adjustment) as "likesCount",
             coalesce((select array_agg(distinct e.name order by e.name)
               from program_content pc
               join exercises_in_programs eip on eip.program_content_id = pc.id
