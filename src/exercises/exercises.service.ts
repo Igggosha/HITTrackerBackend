@@ -675,8 +675,7 @@ export class ExercisesService {
               .select({ count: sql<number>`count(*)::int` })
               .from(exerciseLikes)
               .where(eq(exerciseLikes.exerciseId, id));
-            changes.likesAdjustment =
-              displayedLikesCount - (likes?.count ?? 0);
+            changes.likesAdjustment = displayedLikesCount - (likes?.count ?? 0);
           }
           let updated: typeof exercises.$inferSelect | undefined;
           if (Object.keys(changes).length) {
