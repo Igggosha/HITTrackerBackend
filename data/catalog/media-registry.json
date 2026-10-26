@@ -1,0 +1,3234 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-26T12:29:22.417Z",
+  "sources": [
+    "wger public API; each candidate retains its per-file license metadata",
+    "yuhonas/free-exercise-db; repository declares the dataset and images under the Unlicense"
+  ],
+  "entries": [
+    {
+      "catalogKey": "barbell_bench_press",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_bench_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_Bench_Press",
+        "sourceExerciseId": "Dumbbell_Bench_Press",
+        "matchedName": "Dumbbell Bench Press",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "incline_barbell_press",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "incline_dumbbell_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Incline_Dumbbell_Press",
+        "sourceExerciseId": "Incline_Dumbbell_Press",
+        "matchedName": "Incline Dumbbell Press",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "push_up",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png",
+        "sourcePage": "https://wger.de/en/exercise/1551/view",
+        "sourceExerciseId": 1551,
+        "matchedName": "Push-Up",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "Settebello",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "chest_dip",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_fly",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "cable_crossover",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Cable_Crossover",
+        "sourceExerciseId": "Cable_Crossover",
+        "matchedName": "Cable Crossover",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "machine_chest_press",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_pullover",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "pull_up",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "chin_up",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/152/6c1a7459-266d-491a-bd50-7cbaea2bc771.png",
+        "sourcePage": "https://wger.de/en/exercise/152/view",
+        "sourceExerciseId": 152,
+        "matchedName": "Chin Up",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "lat_pulldown",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "seated_cable_row",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1117/2555c4c3-a84d-47db-b83b-cbf721f12e45.png",
+        "sourcePage": "https://wger.de/en/exercise/1117/view",
+        "sourceExerciseId": 1117,
+        "matchedName": "Seated Cable Row",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "Franpol",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_bent_over_row",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bent_Over_Barbell_Row",
+        "sourceExerciseId": "Bent_Over_Barbell_Row",
+        "matchedName": "Bent Over Barbell Row",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "single_arm_dumbbell_row",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "t_bar_row",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "conventional_deadlift",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_shrug",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/150/Barbell-shrugs-1.png",
+        "sourcePage": "https://wger.de/en/exercise/571/view",
+        "sourceExerciseId": 571,
+        "matchedName": "Shrugs, Barbells",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "face_pull",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Face_Pull",
+        "sourceExerciseId": "Face_Pull",
+        "matchedName": "Face Pull",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_shoulder_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png",
+        "sourcePage": "https://wger.de/en/exercise/567/view",
+        "sourceExerciseId": 567,
+        "matchedName": "Shoulder Press, Dumbbells",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_overhead_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1893/7dbad19e-0616-41fd-9d7d-3e21649c0eea.png",
+        "sourcePage": "https://wger.de/en/exercise/1893/view",
+        "sourceExerciseId": 1893,
+        "matchedName": "Overhead Barbell Press",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "nishant0712",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "arnold_press",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "machine_shoulder_press",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_lateral_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_front_raise",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Front_Dumbbell_Raise",
+        "sourceExerciseId": "Front_Dumbbell_Raise",
+        "matchedName": "Front Dumbbell Raise",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "bent_over_dumbbell_reverse_fly",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_pec_deck",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_upright_row",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Upright_Barbell_Row/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Upright_Barbell_Row",
+        "sourceExerciseId": "Upright_Barbell_Row",
+        "matchedName": "Upright Barbell Row",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Curl",
+        "sourceExerciseId": "Barbell_Curl",
+        "matchedName": "Barbell Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "hammer_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/86/Bicep-hammer-curl-1.png",
+        "sourcePage": "https://wger.de/en/exercise/272/view",
+        "sourceExerciseId": 272,
+        "matchedName": "Hammer Curls",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "preacher_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png",
+        "sourcePage": "https://wger.de/en/exercise/465/view",
+        "sourceExerciseId": 465,
+        "matchedName": "Preacher Curls",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "concentration_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Concentration_Curls/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Concentration_Curls",
+        "sourceExerciseId": "Concentration_Curls",
+        "matchedName": "Concentration Curls",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "cable_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "incline_dumbbell_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Incline_Dumbbell_Curl",
+        "sourceExerciseId": "Incline_Dumbbell_Curl",
+        "matchedName": "Incline Dumbbell Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "ez_bar_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/EZ-Bar_Curl",
+        "sourceExerciseId": "EZ-Bar_Curl",
+        "matchedName": "EZ-Bar Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "machine_biceps_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Bicep_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Machine_Bicep_Curl",
+        "sourceExerciseId": "Machine_Bicep_Curl",
+        "matchedName": "Machine Bicep Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "cable_triceps_pushdown",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "rope_triceps_pushdown",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1900/a8243245-8f8f-4e2b-93ca-694d416cb11d.png",
+        "sourcePage": "https://wger.de/en/exercise/1900/view",
+        "sourceExerciseId": 1900,
+        "matchedName": "Tricep Rope Pushdowns",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "nishant0712",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "skull_crusher",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "close_grip_bench_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Close-Grip_Barbell_Bench_Press",
+        "sourceExerciseId": "Close-Grip_Barbell_Bench_Press",
+        "matchedName": "Close-Grip Barbell Bench Press",
+        "nameScore": 0.8,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "overhead_dumbbell_triceps_extension",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "triceps_dip",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "single_arm_triceps_extension",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "machine_triceps_extension",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Triceps_Extension/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Machine_Triceps_Extension",
+        "sourceExerciseId": "Machine_Triceps_Extension",
+        "matchedName": "Machine Triceps Extension",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "bench_dip",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bench_Dips",
+        "sourceExerciseId": "Bench_Dips",
+        "matchedName": "Bench Dips",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_grip_triceps_pushdown",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Grip_Triceps_Pushdown/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Reverse_Grip_Triceps_Pushdown",
+        "sourceExerciseId": "Reverse_Grip_Triceps_Pushdown",
+        "matchedName": "Reverse Grip Triceps Pushdown",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_wrist_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/51/f1730f56-7aca-4566-8338-3e42b1bee6e1.webp",
+        "sourcePage": "https://wger.de/en/exercise/51/view",
+        "sourceExerciseId": 51,
+        "matchedName": "Barbell Wrist Curl",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_reverse_wrist_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_wrist_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_wrist_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "farmers_carry",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_static_hold",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dead_hang",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "cable_wrist_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Wrist_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Cable_Wrist_Curl",
+        "sourceExerciseId": "Cable_Wrist_Curl",
+        "matchedName": "Cable Wrist Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "cable_reverse_wrist_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "crunch",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "incline_crunch",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "leg_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "hanging_knee_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "front_plank",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1307/321d796a-f394-40b8-a1ea-874bbed6ecee.png",
+        "sourcePage": "https://wger.de/en/exercise/1307/view",
+        "sourceExerciseId": 1307,
+        "matchedName": "Front Plank",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "side_plank",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "russian_twist",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1193/70ca5d80-3847-4a8c-8882-c6e9e485e29e.png",
+        "sourcePage": "https://wger.de/en/exercise/1193/view",
+        "sourceExerciseId": 1193,
+        "matchedName": "Russian Twist",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "lion",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "bicycle_crunch",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dead_bug",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dead_Bug/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dead_Bug",
+        "sourceExerciseId": "Dead_Bug",
+        "matchedName": "Dead Bug",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "pallof_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1194/34c03421-0803-4859-a2b0-5710f2bd94cd.png",
+        "sourcePage": "https://wger.de/en/exercise/1194/view",
+        "sourceExerciseId": 1194,
+        "matchedName": "Pallof Press",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "hip_thrust",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "glute_bridge",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/265/7528acb4-b2cc-4b75-b6ae-d514cbd4f78b.png",
+        "sourcePage": "https://wger.de/en/exercise/265/view",
+        "sourceExerciseId": 265,
+        "matchedName": "Glute Bridge",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "bodyweight_squat",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Squat/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bodyweight_Squat",
+        "sourceExerciseId": "Bodyweight_Squat",
+        "matchedName": "Bodyweight Squat",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "bulgarian_split_squat",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "forward_lunge_general",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_lunge_general",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/999/d0931eb3-8db0-4049-bb08-aa4036072056.jfif",
+        "sourcePage": "https://wger.de/en/exercise/999/view",
+        "sourceExerciseId": 999,
+        "matchedName": "Reverse lunges",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "philip",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "romanian_deadlift",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/507/13d526ab-12fc-461e-828a-051dd7c13fb1.png",
+        "sourcePage": "https://wger.de/en/exercise/507/view",
+        "sourceExerciseId": 507,
+        "matchedName": "Romanian Deadlift",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "donkey_kick",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "side_lying_leg_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "step_up",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_back_squat",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "front_squat",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png",
+        "sourcePage": "https://wger.de/en/exercise/257/view",
+        "sourceExerciseId": 257,
+        "matchedName": "Front Squats",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "hack_squat",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hack_Squat/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Hack_Squat",
+        "sourceExerciseId": "Hack_Squat",
+        "matchedName": "Hack Squat",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "leg_press",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp",
+        "sourcePage": "https://wger.de/en/exercise/371/view",
+        "sourceExerciseId": 371,
+        "matchedName": "Leg Press",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "leg_extension",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/369/78c915d1-e46d-4d30-8124-65d68664c3ef.png",
+        "sourcePage": "https://wger.de/en/exercise/369/view",
+        "sourceExerciseId": 369,
+        "matchedName": "Leg Extension",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "Franpol",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "forward_lunge",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "reverse_lunge",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/999/d0931eb3-8db0-4049-bb08-aa4036072056.jfif",
+        "sourcePage": "https://wger.de/en/exercise/999/view",
+        "sourceExerciseId": 999,
+        "matchedName": "Reverse lunges",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "philip",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "goblet_squat",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Goblet_Squat",
+        "sourceExerciseId": "Goblet_Squat",
+        "matchedName": "Goblet Squat",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "lying_leg_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Lying_Leg_Curls",
+        "sourceExerciseId": "Lying_Leg_Curls",
+        "matchedName": "Lying Leg Curls",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "seated_leg_curl",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Seated_Leg_Curl",
+        "sourceExerciseId": "Seated_Leg_Curl",
+        "matchedName": "Seated Leg Curl",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "nordic_hamstring_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "good_morning",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/1392/a02c9c7d-f42d-43e0-9946-1b99b014daee.png",
+        "sourcePage": "https://wger.de/en/exercise/1392/view",
+        "sourceExerciseId": 1392,
+        "matchedName": "Good Morning",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 3",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/deed.en",
+        "attribution": "Everkinetic",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "back_extension",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "single_leg_romanian_deadlift",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "kettlebell_swing",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/960/da4d0560-da89-4bb5-b91f-746458fb04ad.png",
+        "sourcePage": "https://wger.de/en/exercise/960/view",
+        "sourceExerciseId": 960,
+        "matchedName": "Kettlebell Swing",
+        "nameScore": 1,
+        "equipmentScore": 1,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "band_leg_curl",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "standing_calf_raise",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg",
+        "sourcePage": "https://wger.de/en/exercise/622/view",
+        "sourceExerciseId": 622,
+        "matchedName": "Standing Calf Raises",
+        "nameScore": 1,
+        "equipmentScore": 0,
+        "license": "CC-BY-SA 4",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+        "attribution": "clafal",
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "seated_calf_raise",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Seated_Calf_Raise",
+        "sourceExerciseId": "Seated_Calf_Raise",
+        "matchedName": "Seated Calf Raise",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "machine_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "leg_press_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "single_leg_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "barbell_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "dumbbell_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "farmer_calf_walk",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "smith_machine_calf_raise",
+      "image": {
+        "status": "candidate",
+        "localFile": null,
+        "objectKey": null,
+        "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Calf_Raise/0.jpg",
+        "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Smith_Machine_Calf_Raise",
+        "sourceExerciseId": "Smith_Machine_Calf_Raise",
+        "matchedName": "Smith Machine Calf Raise",
+        "nameScore": 1,
+        "equipmentScore": null,
+        "license": "Unlicense",
+        "licenseUrl": "https://unlicense.org/",
+        "attribution": "yuhonas/free-exercise-db contributors",
+        "attributionUrl": "https://github.com/yuhonas/free-exercise-db",
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    },
+    {
+      "catalogKey": "step_calf_raise",
+      "image": {
+        "status": "missing",
+        "localFile": null,
+        "objectKey": null,
+        "source": null,
+        "sourcePage": null,
+        "sourceExerciseId": null,
+        "matchedName": null,
+        "nameScore": null,
+        "equipmentScore": null,
+        "license": null,
+        "licenseUrl": null,
+        "attribution": null,
+        "attributionUrl": null,
+        "licenseObjectUrl": null
+      },
+      "videos": {
+        "en": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        },
+        "uk": {
+          "status": "missing",
+          "url": null,
+          "channel": null
+        }
+      }
+    }
+  ]
+}
