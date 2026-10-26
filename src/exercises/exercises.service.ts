@@ -379,12 +379,7 @@ export class ExercisesService {
         licenseUrl: exercises.demonstrationImageLicenseUrl,
       })
       .from(exercises)
-      .where(
-        and(
-          sql`${exercises.demonstrationImageKey} is not null`,
-          sql`${exercises.demonstrationImageLicense} is not null`,
-        ),
-      );
+      .where(sql`${exercises.demonstrationImageKey} is not null`);
     if (!rows.length) return [];
     const translations = await db
       .select({
