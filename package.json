@@ -26,7 +26,9 @@
     "search:rebuild": "tsx scripts/rebuild-search-index.ts",
     "catalog:import": "tsx scripts/catalog-import.ts",
     "catalog:media:suggest": "tsx scripts/catalog-media-suggest.ts",
-    "catalog:media:upload": "tsx scripts/catalog-media-upload.ts"
+    "catalog:media:upload": "tsx scripts/catalog-media-upload.ts",
+    "catalog:video:suggest": "tsx scripts/catalog-video-suggest.ts",
+    "catalog:media:report": "tsx scripts/catalog-media-report.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
