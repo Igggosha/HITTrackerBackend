@@ -8,6 +8,7 @@ import {
   initialLikesAdjustment,
   parseCatalogImportArgs,
   preservedLikesAdjustment,
+  readyVideoUrl,
   sameCatalogShape,
 } from './catalog-import.logic';
 
@@ -59,6 +60,10 @@ type MediaRegistryEntry = {
     attribution: string | null;
     license: string | null;
     licenseUrl: string | null;
+  };
+  videos: {
+    en: { status: string; url: string | null };
+    uk: { status: string; url: string | null };
   };
 };
 type Counts = {
@@ -148,7 +153,7 @@ async function run() {
     await readFile('data/catalog/media-registry.json', 'utf8'),
   ) as { entries: MediaRegistryEntry[] };
   const mediaByCatalogKey = new Map(
-    mediaRegistry.entries.map((entry) => [entry.catalogKey, entry.image]),
+    mediaRegistry.entries.map((entry) => [entry.catalogKey, entry]),
   );
   validateCatalog(source, catalog);
   const missingMedia = assertMediaReady(
@@ -221,7 +226,16 @@ async function run() {
 
     const exerciseIds = new Map<string, number>();
     for (const item of catalog.exercises) {
-      const image = mediaByCatalogKey.get(item.catalogKey);
+      const media = mediaByCatalogKey.get(item.catalogKey);
+      const image = media?.image;
+      const englishVideo = readyVideoUrl(
+        media?.videos.en,
+        item.media.videos.en,
+      );
+      const ukrainianVideo = readyVideoUrl(
+        media?.videos.uk,
+        item.media.videos.uk,
+      );
       let current = await queryOne<any>(
         client,
         'select * from exercises where catalog_key=$1 for update',
@@ -264,7 +278,7 @@ async function run() {
         item.description.en,
         legacyEquipment,
         item.equipment,
-        item.media.videos.en,
+        englishVideo,
         item.difficulty,
         item.measurementType,
         item.recommendations.duration,
@@ -323,14 +337,14 @@ async function run() {
           locale: 'en',
           name: item.name.en,
           description: item.description.en,
-          videoUrl: item.media.videos.en,
+          videoUrl: englishVideo,
           aliases: item.aliases.en,
         },
         {
           locale: 'uk',
           name: item.name.uk,
           description: item.description.uk,
-          videoUrl: item.media.videos.uk,
+          videoUrl: ukrainianVideo,
           aliases: item.aliases.uk,
         },
       ];
@@ -375,7 +389,7 @@ async function run() {
             description: item.description.en,
             aliases: item.aliases.en,
           },
-          item.media.videos.en,
+          englishVideo,
         );
         await upsertTranslation(
           client,
@@ -388,7 +402,7 @@ async function run() {
             description: item.description.uk,
             aliases: item.aliases.uk,
           },
-          item.media.videos.uk,
+          ukrainianVideo,
         );
         await client.query(
           'delete from exercises_train_muscles where exercise_id=$1',
@@ -418,6 +432,15 @@ async function run() {
     }
 
     for (const item of catalog.programs) {
+      const media = mediaByCatalogKey.get(item.catalogKey);
+      const englishVideo = readyVideoUrl(
+        media?.videos.en,
+        item.media.videos.en,
+      );
+      const ukrainianVideo = readyVideoUrl(
+        media?.videos.uk,
+        item.media.videos.uk,
+      );
       const current = await queryOne<any>(
         client,
         'select * from workout_programs where catalog_key=$1 and is_active=true for update',
@@ -428,14 +451,14 @@ async function run() {
           locale: 'en',
           name: item.name.en,
           description: item.description.en,
-          videoUrl: item.media.videos.en,
+          videoUrl: englishVideo,
           aliases: [],
         },
         {
           locale: 'uk',
           name: item.name.uk,
           description: item.description.uk,
-          videoUrl: item.media.videos.uk,
+          videoUrl: ukrainianVideo,
           aliases: [],
         },
       ];
@@ -464,7 +487,7 @@ async function run() {
             record: {
               name: item.name.en,
               description: item.description.en,
-              videoUrl: item.media.videos.en,
+              videoUrl: englishVideo,
             },
             translations: desiredTranslations,
             exercises: desiredExercises,
@@ -504,7 +527,7 @@ async function run() {
           item.name.en,
           item.description.en,
           item.catalogKey,
-          item.media.videos.en,
+          englishVideo,
           current?.id ?? null,
           likesAdjustment,
         ],
@@ -522,7 +545,7 @@ async function run() {
         program.id,
         'en',
         { name: item.name.en, description: item.description.en, aliases: [] },
-        item.media.videos.en,
+        englishVideo,
       );
       await upsertTranslation(
         client,
@@ -531,7 +554,7 @@ async function run() {
         program.id,
         'uk',
         { name: item.name.uk, description: item.description.uk, aliases: [] },
-        item.media.videos.uk,
+        ukrainianVideo,
       );
       const content = (await queryOne<{ id: number }>(
         client,

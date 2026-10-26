@@ -1,4 +1,4 @@
-import { assertMediaReady, initialLikesAdjustment, parseCatalogImportArgs, preservedLikesAdjustment, sameCatalogShape } from './catalog-import.logic';
+import { assertMediaReady, initialLikesAdjustment, parseCatalogImportArgs, preservedLikesAdjustment, readyVideoUrl, sameCatalogShape } from './catalog-import.logic';
 
 describe('catalog import safety',()=>{
   it('defaults to dry-run and rejects unknown flags',()=>{
@@ -22,5 +22,10 @@ describe('catalog import safety',()=>{
     expect(initialLikesAdjustment(40, 7)).toBe(33);
     expect(preservedLikesAdjustment(7, 33)).toBe(33);
     expect(preservedLikesAdjustment(2, -5)).toBe(-2);
+  });
+
+  it('imports only verified direct video candidates',()=>{
+    expect(readyVideoUrl({status:'ready',url:'https://youtube.test/video'},null)).toBe('https://youtube.test/video');
+    expect(readyVideoUrl({status:'candidate',url:'https://youtube.test/unverified'},null)).toBeNull();
   });
 });

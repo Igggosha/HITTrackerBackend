@@ -18,3 +18,8 @@ export const initialLikesAdjustment = (initial: number, actual: number) => initi
 
 export const preservedLikesAdjustment = (actual: number, adjustment: number) =>
   Math.max(0, actual + adjustment) - actual;
+
+export const readyVideoUrl = (
+  video: { status: string; url: string | null } | undefined,
+  fallback: string | null,
+) => (video?.status === 'ready' ? video.url : fallback);
