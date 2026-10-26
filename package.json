@@ -23,7 +23,8 @@
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:seed": "docker compose run --rm seed",
     "db:studio": "drizzle-kit studio",
-    "search:rebuild": "tsx scripts/rebuild-search-index.ts"
+    "search:rebuild": "tsx scripts/rebuild-search-index.ts",
+    "catalog:import": "tsx scripts/catalog-import.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
