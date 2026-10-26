@@ -55,6 +55,13 @@ export class CreateExerciseDto {
   name: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1000000000)
+  displayedLikesCount?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
   description?: string;

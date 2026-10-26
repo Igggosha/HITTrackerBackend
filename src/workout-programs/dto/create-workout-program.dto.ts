@@ -84,6 +84,13 @@ export class CreateWorkoutProgramDto {
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) catalogKey?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1000000000)
+  displayedLikesCount?: number;
+
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(100)
   @ValidateNested({ each: true })

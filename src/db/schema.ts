@@ -628,6 +628,7 @@ export const exercises = pgTable(
     demonstrationImageAuthor: text('demonstration_image_author'),
     demonstrationImageLicense: text('demonstration_image_license'),
     demonstrationImageLicenseUrl: text('demonstration_image_license_url'),
+    likesAdjustment: integer('likes_adjustment').notNull().default(0),
   },
   (table) => [
     uniqueIndex('exercises_catalog_key_unique')
@@ -766,6 +767,8 @@ export const workoutPrograms = pgTable(
     shareToken: text('share_token').unique(),
 
     sourceProgramId: integer('source_program_id'),
+
+    likesAdjustment: integer('likes_adjustment').notNull().default(0),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

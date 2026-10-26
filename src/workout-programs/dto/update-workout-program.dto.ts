@@ -5,12 +5,15 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
+  Max,
   MaxLength,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -18,6 +21,13 @@ import { ProgramExerciseDto } from './create-workout-program.dto';
 import { ProgramTranslationDto } from './create-workout-program.dto';
 
 export class UpdateWorkoutProgramDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1000000000)
+  displayedLikesCount?: number;
+
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)

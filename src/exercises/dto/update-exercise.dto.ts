@@ -25,6 +25,13 @@ import {
 
 export class UpdateExerciseDto {
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1000000000)
+  displayedLikesCount?: number;
+
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
