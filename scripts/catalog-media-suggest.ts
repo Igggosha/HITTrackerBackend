@@ -55,6 +55,12 @@ const freeExerciseOverrides: Record<string, string> = {
   bulgarian_split_squat: 'Split_Squat_with_Dumbbells',
   machine_calf_raise: 'Standing_Calf_Raises',
   barbell_calf_raise: 'Standing_Barbell_Calf_Raise',
+  side_lying_leg_raise: 'Side_Leg_Raises',
+  forward_lunge_general: 'Bodyweight_Walking_Lunge',
+  forward_lunge: 'Dumbbell_Lunges',
+  step_up: 'Step-up_with_Knee_Raise',
+  hanging_knee_raise: 'Hanging_Leg_Raise',
+  leg_press_calf_raise: 'Calf_Press_On_The_Leg_Press_Machine',
 };
 const equipmentScore=(catalog:CatalogExercise,wger:WgerExercise)=>{
   const available=wger.equipment.map((item)=>normalize(item.name));
