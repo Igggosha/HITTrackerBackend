@@ -1,4 +1,4 @@
-import { assertMediaReady, parseCatalogImportArgs, sameCatalogShape } from './catalog-import.logic';
+import { assertMediaReady, initialLikesAdjustment, parseCatalogImportArgs, preservedLikesAdjustment, sameCatalogShape } from './catalog-import.logic';
 
 describe('catalog import safety',()=>{
   it('defaults to dry-run and rejects unknown flags',()=>{
@@ -16,5 +16,11 @@ describe('catalog import safety',()=>{
   it('detects a real canonical content change',()=>{
     expect(sameCatalogShape({items:[1,2]},{items:[1,2]})).toBe(true);
     expect(sameCatalogShape({items:[1,2]},{items:[2,1]})).toBe(false);
+  });
+
+  it('seeds a desired total and preserves it across program revisions',()=>{
+    expect(initialLikesAdjustment(40, 7)).toBe(33);
+    expect(preservedLikesAdjustment(7, 33)).toBe(33);
+    expect(preservedLikesAdjustment(2, -5)).toBe(-2);
   });
 });

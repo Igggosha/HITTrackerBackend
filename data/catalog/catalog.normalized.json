@@ -66,6 +66,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 39,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -147,6 +148,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 31,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -228,6 +230,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -309,6 +312,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -395,6 +399,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 38,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -475,6 +480,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -548,6 +554,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -620,6 +627,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -700,6 +708,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -781,6 +790,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -869,6 +879,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 36,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -949,6 +960,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1029,6 +1041,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 34,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1101,6 +1114,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 27,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1189,6 +1203,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1270,6 +1285,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1342,6 +1358,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1431,6 +1448,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 37,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1506,6 +1524,7 @@
         ]
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1588,6 +1607,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1660,6 +1680,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 28,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1732,6 +1753,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1804,6 +1826,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1884,6 +1907,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -1956,6 +1980,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 25,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2028,6 +2053,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2108,6 +2134,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2188,6 +2215,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2260,6 +2288,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2340,6 +2369,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 30,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2420,6 +2450,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2501,6 +2532,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 23,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2576,6 +2608,7 @@
         ]
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2648,6 +2681,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2728,6 +2762,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2801,6 +2836,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2881,6 +2917,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -2953,6 +2990,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3033,6 +3071,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3105,6 +3144,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 24,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3178,6 +3218,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3250,6 +3291,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3330,6 +3372,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3402,6 +3445,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3482,6 +3526,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3554,6 +3599,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3626,6 +3672,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3706,6 +3753,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3778,6 +3826,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3850,6 +3899,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3922,6 +3972,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -3994,6 +4045,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4074,6 +4126,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4154,6 +4207,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -4226,6 +4280,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -4298,6 +4353,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -4370,6 +4426,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4442,6 +4499,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4512,6 +4570,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 21,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4575,6 +4634,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4650,6 +4710,7 @@
         ]
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4722,6 +4783,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4783,6 +4845,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 35,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -4853,6 +4916,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -4914,6 +4978,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -4984,6 +5049,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5054,6 +5120,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5120,6 +5187,7 @@
         ]
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5201,6 +5269,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 29,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5271,6 +5340,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5349,6 +5419,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 26,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5430,6 +5501,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 22,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5508,6 +5580,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5588,6 +5661,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5669,6 +5743,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 32,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5744,6 +5819,7 @@
         ]
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5810,6 +5886,7 @@
         ]
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5895,6 +5972,7 @@
         ]
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -5975,6 +6053,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 40,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6055,6 +6134,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6127,6 +6207,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6207,6 +6288,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 33,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6270,6 +6352,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6350,6 +6433,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6422,6 +6506,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6505,6 +6590,7 @@
         ]
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6577,6 +6663,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6649,6 +6736,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6727,6 +6815,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6807,6 +6896,7 @@
         "alternatives": []
       },
       "difficulty": 4,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6887,6 +6977,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -6967,6 +7058,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7047,6 +7139,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7127,6 +7220,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7197,6 +7291,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7269,6 +7364,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7341,6 +7437,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7413,6 +7510,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7483,6 +7581,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7563,6 +7662,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7635,6 +7735,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7715,6 +7816,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
         "sets": null,
@@ -7787,6 +7889,7 @@
         "alternatives": []
       },
       "difficulty": 3,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7859,6 +7962,7 @@
         "alternatives": []
       },
       "difficulty": 1,
+      "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
         "sets": null,
@@ -7896,6 +8000,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 30,
       "exerciseCatalogKeys": [
         "goblet_squat",
         "dumbbell_bench_press",
@@ -7937,6 +8042,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 29,
       "exerciseCatalogKeys": [
         "dumbbell_bench_press",
         "seated_cable_row",
@@ -7978,6 +8084,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 28,
       "exerciseCatalogKeys": [
         "goblet_squat",
         "leg_press",
@@ -8019,6 +8126,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 27,
       "exerciseCatalogKeys": [
         "hip_thrust",
         "bulgarian_split_squat",
@@ -8060,6 +8168,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 26,
       "exerciseCatalogKeys": [
         "pull_up",
         "barbell_bent_over_row",
@@ -8101,6 +8210,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 25,
       "exerciseCatalogKeys": [
         "barbell_bench_press",
         "incline_dumbbell_press",
@@ -8142,6 +8252,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 24,
       "exerciseCatalogKeys": [
         "dumbbell_shoulder_press",
         "dumbbell_lateral_raise",
@@ -8183,6 +8294,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 23,
       "exerciseCatalogKeys": [
         "barbell_back_squat",
         "barbell_bench_press",
@@ -8224,6 +8336,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 22,
       "exerciseCatalogKeys": [
         "front_plank",
         "side_plank",
@@ -8265,6 +8378,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 21,
       "exerciseCatalogKeys": [
         "barbell_back_squat",
         "hack_squat",
@@ -8306,6 +8420,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 20,
       "exerciseCatalogKeys": [
         "romanian_deadlift",
         "lying_leg_curl",
@@ -8347,6 +8462,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 19,
       "exerciseCatalogKeys": [
         "barbell_curl",
         "hammer_curl",
@@ -8388,6 +8504,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 18,
       "exerciseCatalogKeys": [
         "dumbbell_bench_press",
         "seated_cable_row",
@@ -8429,6 +8546,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 17,
       "exerciseCatalogKeys": [
         "goblet_squat",
         "kettlebell_swing",
@@ -8470,6 +8588,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 16,
       "exerciseCatalogKeys": [
         "barbell_back_squat",
         "barbell_bench_press",
@@ -8511,6 +8630,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 15,
       "exerciseCatalogKeys": [
         "barbell_bench_press",
         "lat_pulldown",
@@ -8552,6 +8672,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 14,
       "exerciseCatalogKeys": [
         "hip_thrust",
         "bulgarian_split_squat",
@@ -8593,6 +8714,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 13,
       "exerciseCatalogKeys": [
         "pull_up",
         "t_bar_row",
@@ -8634,6 +8756,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 12,
       "exerciseCatalogKeys": [
         "cable_triceps_pushdown",
         "rope_triceps_pushdown",
@@ -8675,6 +8798,7 @@
       },
       "official": true,
       "active": true,
+      "initialLikes": 11,
       "exerciseCatalogKeys": [
         "barbell_curl",
         "hammer_curl",

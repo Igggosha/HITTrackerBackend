@@ -18,7 +18,7 @@ export function validateCatalog(source: any, catalog: any): void {
     if (!text(e.description?.en) || !text(e.description?.uk) || e.description.en === e.description.uk) fail(`invalid exercise descriptions: ${e.catalogKey}`);
     if (!Array.isArray(e.aliases?.en) || !Array.isArray(e.aliases?.uk) || !text(e.muscles?.primary?.en) || !text(e.muscles?.primary?.uk) || !Array.isArray(e.muscles?.secondary)) fail(`invalid muscles: ${e.catalogKey}`);
     if (e.muscles.primary.en === 'Other' || e.muscles.secondary.some((m:any) => m.en === 'Other')) fail(`unmapped muscle: ${e.catalogKey}`);
-    if (!Array.isArray(e.equipment?.required) || !Array.isArray(e.equipment?.alternatives) || ![1,2,3,4,5].includes(e.difficulty) || !['reps','duration'].includes(e.measurementType)) fail(`invalid exercise invariants: ${e.catalogKey}`);
+    if (!Array.isArray(e.equipment?.required) || !Array.isArray(e.equipment?.alternatives) || ![1,2,3,4,5].includes(e.difficulty) || !Number.isInteger(e.initialLikes) || e.initialLikes < 0 || e.initialLikes > 40 || !['reps','duration'].includes(e.measurementType)) fail(`invalid exercise invariants: ${e.catalogKey}`);
     if (!mediaOk(e.media)) fail(`media must be explicit missing placeholder: ${e.catalogKey}`);
     if (e.muscles.secondary.some((m:any) => m.en === e.muscles.primary.en || m.uk === e.muscles.primary.uk)) fail(`primary muscle repeated as secondary: ${e.catalogKey}`);
     if (/\p{Script=Cyrillic}/u.test(e.description.en)) fail(`English description contains non-English text: ${e.catalogKey}`);
@@ -40,7 +40,7 @@ export function validateCatalog(source: any, catalog: any): void {
   }
   const refs = new Set(catalog.exercises.map((e:any) => e.catalogKey));
   for (const p of catalog.programs) {
-    if (!key(p.catalogKey) || !text(p.name?.en) || !text(p.name?.uk) || !text(p.description?.en) || !text(p.description?.uk) || p.official !== true || p.active !== true || p.exerciseCatalogKeys?.length !== 5 || p.exerciseCatalogKeys.some((k:string) => !refs.has(k)) || !mediaOk(p.media)) fail(`invalid program: ${p.catalogKey}`);
+    if (!key(p.catalogKey) || !text(p.name?.en) || !text(p.name?.uk) || !text(p.description?.en) || !text(p.description?.uk) || p.official !== true || p.active !== true || !Number.isInteger(p.initialLikes) || p.initialLikes < 0 || p.initialLikes > 40 || p.exerciseCatalogKeys?.length !== 5 || p.exerciseCatalogKeys.some((k:string) => !refs.has(k)) || !mediaOk(p.media)) fail(`invalid program: ${p.catalogKey}`);
   }
   if (new Set(catalog.programs.map((p:any) => p.description.en)).size !== 20 || new Set(catalog.programs.map((p:any) => p.description.uk)).size !== 20) fail('program descriptions must be unique');
   if (new Set(catalog.programs.map((p:any) => p.catalogKey)).size !== 20) fail('program keys are not unique');

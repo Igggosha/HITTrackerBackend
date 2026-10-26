@@ -13,3 +13,8 @@ export function assertMediaReady(items:{media:{status:string}}[],apply:boolean,a
 }
 
 export const sameCatalogShape=(left:unknown,right:unknown)=>JSON.stringify(left)===JSON.stringify(right);
+
+export const initialLikesAdjustment = (initial: number, actual: number) => initial - actual;
+
+export const preservedLikesAdjustment = (actual: number, adjustment: number) =>
+  Math.max(0, actual + adjustment) - actual;

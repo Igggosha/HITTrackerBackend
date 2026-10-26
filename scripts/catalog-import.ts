@@ -5,7 +5,9 @@ import { Client, type PoolClient, type QueryResultRow } from 'pg';
 import { validateCatalog } from './catalog-validate';
 import {
   assertMediaReady,
+  initialLikesAdjustment,
   parseCatalogImportArgs,
+  preservedLikesAdjustment,
   sameCatalogShape,
 } from './catalog-import.logic';
 
@@ -19,6 +21,7 @@ type Exercise = {
   muscles: { primary: { en: string }; secondary: { en: string }[] };
   equipment: { required: string[]; alternatives: string[][] };
   difficulty: number;
+  initialLikes: number;
   measurementType: 'reps' | 'duration';
   recommendations: {
     sets: number | null;
@@ -35,6 +38,7 @@ type Program = {
   catalogKey: string;
   name: { en: string; uk: string };
   description: { en: string; uk: string };
+  initialLikes: number;
   exerciseCatalogKeys: string[];
   media: { status: string; videos: { en: string | null; uk: string | null } };
 };
@@ -238,6 +242,18 @@ async function run() {
           );
         current = legacy[0] ?? null;
       }
+      const adoptedLegacy = Boolean(current && !current.catalog_key);
+      const actualLikes = adoptedLegacy
+        ? Number(
+            (
+              await queryOne<{ count: string }>(
+                client,
+                'select count(*)::text as count from exercise_likes where exercise_id=$1',
+                [current.id],
+              )
+            )?.count ?? 0,
+          )
+        : 0;
       const legacyEquipment = [
         ...item.equipment.required,
         ...item.equipment.alternatives.flat(),
@@ -259,13 +275,16 @@ async function run() {
         image?.attribution ?? null,
         image?.license ?? null,
         image?.licenseUrl ?? null,
+        !current || adoptedLegacy
+          ? initialLikesAdjustment(item.initialLikes, actualLikes)
+          : current.likes_adjustment,
       ];
       let id: number;
       let coreChanged = !current;
       if (!current) {
         id = (await queryOne<{ id: number }>(
           client,
-          `insert into exercises (name,catalog_key,description,equipment,equipment_structured,video_url,difficulty,measurement_type,recommended_duration_seconds,recommended_sets,recommended_reps,demonstration_image_key,demonstration_image_source_url,demonstration_image_author,demonstration_image_license,demonstration_image_license_url) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) returning id`,
+          `insert into exercises (name,catalog_key,description,equipment,equipment_structured,video_url,difficulty,measurement_type,recommended_duration_seconds,recommended_sets,recommended_reps,demonstration_image_key,demonstration_image_source_url,demonstration_image_author,demonstration_image_license,demonstration_image_license_url,likes_adjustment) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) returning id`,
           values,
         ))!.id;
       } else {
@@ -287,13 +306,14 @@ async function run() {
           demonstration_image_author: values[13],
           demonstration_image_license: values[14],
           demonstration_image_license_url: values[15],
+          likes_adjustment: values[16],
         };
         coreChanged = Object.entries(desired).some(
           ([key, value]) => !same(current[key], value),
         );
         if (coreChanged)
           await client.query(
-            `update exercises set name=$1,catalog_key=$2,description=$3,equipment=$4,equipment_structured=$5,video_url=$6,difficulty=$7,measurement_type=$8,recommended_duration_seconds=$9,recommended_sets=$10,recommended_reps=$11,demonstration_image_key=$12,demonstration_image_source_url=$13,demonstration_image_author=$14,demonstration_image_license=$15,demonstration_image_license_url=$16 where id=$17`,
+            `update exercises set name=$1,catalog_key=$2,description=$3,equipment=$4,equipment_structured=$5,video_url=$6,difficulty=$7,measurement_type=$8,recommended_duration_seconds=$9,recommended_sets=$10,recommended_reps=$11,demonstration_image_key=$12,demonstration_image_source_url=$13,demonstration_image_author=$14,demonstration_image_license=$15,demonstration_image_license_url=$16,likes_adjustment=$17 where id=$18`,
             [...values, id],
           );
       }
@@ -463,17 +483,38 @@ async function run() {
         await enqueue(client, 'program', current.id, 'retire');
         counts.programsRevised++;
       } else counts.programsCreated++;
+      const actualLikes = current
+        ? Number(
+            (
+              await queryOne<{ count: string }>(
+                client,
+                'select count(*)::text as count from program_likes where program_id=$1',
+                [current.id],
+              )
+            )?.count ?? 0,
+          )
+        : 0;
+      const likesAdjustment = current
+        ? preservedLikesAdjustment(actualLikes, current.likes_adjustment)
+        : initialLikesAdjustment(item.initialLikes, 0);
       const program = (await queryOne<{ id: number }>(
         client,
-        `insert into workout_programs (name,description,catalog_key,video_url,is_personal,is_active,source_program_id) values ($1,$2,$3,$4,false,true,$5) returning id`,
+        `insert into workout_programs (name,description,catalog_key,video_url,is_personal,is_active,source_program_id,likes_adjustment) values ($1,$2,$3,$4,false,true,$5,$6) returning id`,
         [
           item.name.en,
           item.description.en,
           item.catalogKey,
           item.media.videos.en,
           current?.id ?? null,
+          likesAdjustment,
         ],
       ))!;
+      if (current) {
+        await client.query(
+          'update program_likes set program_id=$1 where program_id=$2',
+          [program.id, current.id],
+        );
+      }
       await upsertTranslation(
         client,
         'workout_program_translations',
