@@ -58,6 +58,7 @@ describe('Workout program media', () => {
       imageKey: 'uploads/programs/4/file.webp',
     });
     jest.spyOn(service as any, 'getSchedule').mockResolvedValue([]);
+    jest.mocked(db.select).mockReturnValue(query([]));
 
     await expect(service.getSharedProgram('token')).resolves.toMatchObject({
       id: 4,
