@@ -13,6 +13,32 @@ const equipmentAliases:Record<string,string[]>={
   'cable machine':['cable'],kettlebell:['kettlebell'],'resistance band':['band'],
   'pull-up bar':['pull up bar'], 'parallel bars':['parallel bars'], platform:['bench','step'],
 };
+const freeExerciseOverrides: Record<string, string> = {
+  barbell_bench_press: 'Barbell_Bench_Press_-_Medium_Grip',
+  incline_barbell_press: 'Barbell_Incline_Bench_Press_-_Medium_Grip',
+  chest_dip: 'Dips_-_Chest_Version',
+  dumbbell_fly: 'Dumbbell_Flyes',
+  dumbbell_pullover: 'Bent-Arm_Dumbbell_Pullover',
+  pull_up: 'Pullups',
+  single_arm_dumbbell_row: 'One-Arm_Dumbbell_Row',
+  conventional_deadlift: 'Barbell_Deadlift',
+  arnold_press: 'Arnold_Dumbbell_Press',
+  machine_shoulder_press: 'Machine_Shoulder_Military_Press',
+  dumbbell_lateral_raise: 'Side_Lateral_Raise',
+  reverse_pec_deck: 'Reverse_Machine_Flyes',
+  dumbbell_curl: 'Dumbbell_Bicep_Curl',
+  reverse_curl: 'Reverse_Barbell_Curl',
+  triceps_dip: 'Dips_-_Triceps_Version',
+  farmers_carry: 'Farmers_Walk',
+  barbell_wrist_curl: 'Palms-Up_Barbell_Wrist_Curl_Over_A_Bench',
+  barbell_reverse_wrist_curl: 'Palms-Down_Wrist_Curl_Over_A_Bench',
+  dumbbell_wrist_curl: 'Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench',
+  reverse_wrist_curl: 'Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench',
+  hip_thrust: 'Barbell_Hip_Thrust',
+  barbell_back_squat: 'Barbell_Full_Squat',
+  back_extension: 'Hyperextensions_Back_Extensions',
+  dumbbell_calf_raise: 'Standing_Dumbbell_Calf_Raise',
+};
 const equipmentScore=(catalog:CatalogExercise,wger:WgerExercise)=>{
   const available=wger.equipment.map((item)=>normalize(item.name));
   const wanted=[...catalog.equipment.required,...catalog.equipment.alternatives.flat()];
@@ -40,7 +66,12 @@ async function main(){
     const match=selected?.candidate;
     const image=match?.images.find((item)=>item.is_main)??match?.images[0];
     const license=image?licenseById.get(image.license):undefined;
-    const freeMatch=!image?freeExercises.map((candidate)=>({candidate,score:Math.max(...names.map((name)=>exerciseNameSimilarity(name,candidate.name)))})).filter((item)=>item.candidate.images.length&&item.score>=SAFE_MEDIA_NAME_SCORE).sort((a,b)=>b.score-a.score)[0]:undefined;
+    const overriddenFreeExercise = freeExercises.find(
+      (candidate) => candidate.id === freeExerciseOverrides[exercise.catalogKey],
+    );
+    const freeMatch=!image?(overriddenFreeExercise
+      ? { candidate: overriddenFreeExercise, score: 1 }
+      : freeExercises.map((candidate)=>({candidate,score:Math.max(...names.map((name)=>exerciseNameSimilarity(name,candidate.name)))})).filter((item)=>item.candidate.images.length&&item.score>=SAFE_MEDIA_NAME_SCORE).sort((a,b)=>b.score-a.score)[0]):undefined;
     const freeImage=freeMatch?.candidate.images[0];
     return {
       catalogKey:exercise.catalogKey,
