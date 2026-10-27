@@ -1,7 +1,7 @@
 # EN: Builds a minimal production image for the NestJS API using separate dependency, compilation, and runtime stages.
 # UK: Створює мінімальний робочий образ NestJS API за допомогою окремих етапів залежностей, компіляції та виконання.
 
-FROM node:24 AS dependencies
+FROM node:25 AS dependencies
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ FROM dependencies AS search-tools
 COPY . .
 CMD ["npm", "run", "search:rebuild"]
 
-FROM node:24 AS production
+FROM node:25 AS production
 
 WORKDIR /app
 ENV NODE_ENV=production
