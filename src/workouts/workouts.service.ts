@@ -24,12 +24,14 @@ import { db } from '../db/db';
 import { readerFor, recordWrite } from '../db/read-consistency';
 import {
   exercises,
+  exerciseTranslations,
   exercisesTrainMuscles,
   muscles,
   sets,
   userProgramSchedule,
   workouts,
   workoutPrograms,
+  workoutProgramTranslations,
   type UserRole,
   type WorkoutHistorySnapshot,
 } from '../db/schema';
@@ -744,10 +746,39 @@ export class WorkoutsService {
           lower(${workouts.type}) like ${pattern}
           or lower(coalesce(${workouts.historySnapshot}->>'programName', '')) like ${pattern}
           or exists (
+            select 1
+            from jsonb_array_elements(coalesce(${workouts.historySnapshot}->'plan', '[]'::jsonb)) as history_item
+            where lower(coalesce(history_item->>'name', '')) like ${pattern}
+          )
+          or exists (
+            select 1 from ${workoutProgramTranslations}
+            where ${workoutProgramTranslations.workoutProgramId} = nullif(${workouts.historySnapshot}->>'programId', '')::int
+              and (
+                lower(${workoutProgramTranslations.name}) like ${pattern}
+                or exists (
+                  select 1 from unnest(${workoutProgramTranslations.aliases}) as program_alias
+                  where lower(program_alias) like ${pattern}
+                )
+              )
+          )
+          or exists (
             select 1 from ${sets}
             inner join ${exercises} on ${exercises.id} = ${sets.exerciseId}
             where ${sets.workoutId} = ${workouts.id}
-              and lower(${exercises.name}) like ${pattern}
+              and (
+                lower(${exercises.name}) like ${pattern}
+                or exists (
+                  select 1 from ${exerciseTranslations}
+                  where ${exerciseTranslations.exerciseId} = ${exercises.id}
+                    and (
+                      lower(${exerciseTranslations.name}) like ${pattern}
+                      or exists (
+                        select 1 from unnest(${exerciseTranslations.aliases}) as exercise_alias
+                        where lower(exercise_alias) like ${pattern}
+                      )
+                    )
+                )
+              )
           )
         )`);
       }
