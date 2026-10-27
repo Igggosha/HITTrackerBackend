@@ -33,6 +33,38 @@ const equipment = (raw:string, exerciseName:string) => { const required:string[]
 const desc = (en:string, uk:string, cue:string, equipmentData:{required:string[]; alternatives:string[][]}, unilateral:boolean) => { const gear=equipmentData.required.length ? equipmentData.required.join(', ') : equipmentData.alternatives.length ? equipmentData.alternatives[0].join(' or ') : 'no equipment'; const both=unilateral ? ' Perform the same controlled work on both sides.' : ''; return { en:`Set up for ${en.toLowerCase()} with ${gear}. ${cueToEnglish(cue)} Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum.${both}`, uk:`Підготуйся до вправи «${uk}» ${gear === 'no equipment' ? 'без додаткового спорядження' : 'з потрібним спорядженням'}. ${cue} Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію.${unilateral ? ' Виконай однакову контрольовану роботу на обидві сторони.' : ''}` }; };
 const media = { demonstrationImage:{localFile:null,source:null,license:null,attribution:null}, videos:{en:null,uk:null}, status:'missing' };
 const durationExerciseKeys = new Set(['farmers_carry','barbell_static_hold','dead_hang','front_plank','side_plank','farmer_calf_walk']);
+const fourSetExerciseKeys = new Set([
+  'barbell_bench_press','incline_barbell_press','pull_up','chin_up','barbell_bent_over_row',
+  'conventional_deadlift','barbell_overhead_press','close_grip_bench_press','barbell_back_squat',
+  'front_squat','hack_squat','leg_press','romanian_deadlift','nordic_hamstring_curl',
+]);
+const highRepExerciseKeys = new Set([
+  'dumbbell_lateral_raise','dumbbell_front_raise','bent_over_dumbbell_reverse_fly','reverse_pec_deck',
+  'face_pull','barbell_wrist_curl','barbell_reverse_wrist_curl','dumbbell_wrist_curl','reverse_wrist_curl',
+  'cable_wrist_curl','cable_reverse_wrist_curl','crunch','incline_crunch','leg_raise','bicycle_crunch',
+  'donkey_kick','side_lying_leg_raise','band_leg_curl','standing_calf_raise','seated_calf_raise',
+  'machine_calf_raise','leg_press_calf_raise','single_leg_calf_raise','barbell_calf_raise',
+  'dumbbell_calf_raise','smith_machine_calf_raise','step_calf_raise',
+]);
+const durationTargets: Record<string, number> = {
+  farmers_carry: 40,
+  barbell_static_hold: 30,
+  dead_hang: 30,
+  front_plank: 45,
+  side_plank: 30,
+  farmer_calf_walk: 40,
+};
+const recommendationFor = (catalogKey: string, measurementType: 'reps' | 'duration') => {
+  if (measurementType === 'duration') {
+    return { sets: 3, reps: null, weight: null, duration: durationTargets[catalogKey] ?? 30 };
+  }
+  return {
+    sets: fourSetExerciseKeys.has(catalogKey) ? 4 : 3,
+    reps: fourSetExerciseKeys.has(catalogKey) ? 8 : highRepExerciseKeys.has(catalogKey) ? 15 : 12,
+    weight: null,
+    duration: null,
+  };
+};
 const popularExerciseLikes: Record<string, number> = {
   barbell_back_squat: 40, barbell_bench_press: 39, push_up: 38,
   conventional_deadlift: 37, pull_up: 36, front_plank: 35,
@@ -88,7 +120,8 @@ async function main(){
    if(!e){
      const equip=equipment(row.values[3],en);
      const unilateral=/one|single|lunge|split|step-up|side plank|dead bug|pallof|concentration/i.test(en)||/однією|одну|випад|болгар|сторону|бічна планка/i.test(uk);
-     e={catalogKey:key,sourceNodeIds:[],sourceNames:[row.values[0]],name:{en,uk},description:desc(en,uk,row.values[5],equip,unilateral),aliases:{en:[en],uk:[uk]},muscles:parsed,equipment:equip,difficulty:/початк|🟢/.test(row.values[4])?1:/просун|🔴/.test(row.values[4])?4:3,initialLikes:initialExerciseLikes(key),measurementType:durationExerciseKeys.has(key)?'duration':'reps',recommendations:{sets:null,reps:null,weight:null,duration:null},media};
+     const measurementType = durationExerciseKeys.has(key) ? 'duration' : 'reps';
+     e={catalogKey:key,sourceNodeIds:[],sourceNames:[row.values[0]],name:{en,uk},description:desc(en,uk,row.values[5],equip,unilateral),aliases:{en:[en],uk:[uk]},muscles:parsed,equipment:equip,difficulty:/початк|🟢/.test(row.values[4])?1:/просун|🔴/.test(row.values[4])?4:3,initialLikes:initialExerciseLikes(key),measurementType,recommendations:recommendationFor(key, measurementType),media};
      if(row.values[0]!==en) e.aliases.en.push(row.values[0]);
      if(row.values[0]!==uk) e.aliases.uk.push(row.values[0]);
      entities.push(e);

@@ -24,7 +24,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Bench Press"
+          "Barbell Bench Press",
+          "Жим штанги лежачи"
         ],
         "uk": [
           "Жим штанги лежачи"
@@ -69,8 +70,8 @@
       "initialLikes": 39,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -106,7 +107,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Bench Press"
+          "Dumbbell Bench Press",
+          "Жим гантелей лежачи"
         ],
         "uk": [
           "Жим гантелей лежачи"
@@ -151,8 +153,8 @@
       "initialLikes": 31,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -188,7 +190,8 @@
       },
       "aliases": {
         "en": [
-          "Incline Barbell Press"
+          "Incline Barbell Press",
+          "Жим штанги на похилій лаві"
         ],
         "uk": [
           "Жим штанги на похилій лаві"
@@ -233,8 +236,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -270,7 +273,8 @@
       },
       "aliases": {
         "en": [
-          "Incline Dumbbell Press"
+          "Incline Dumbbell Press",
+          "Жим гантелей на похилій лаві"
         ],
         "uk": [
           "Жим гантелей на похилій лаві"
@@ -315,8 +319,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -352,7 +356,8 @@
       },
       "aliases": {
         "en": [
-          "Push-Up"
+          "Push-Up",
+          "Віджимання від підлоги"
         ],
         "uk": [
           "Віджимання від підлоги"
@@ -402,8 +407,8 @@
       "initialLikes": 38,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -439,7 +444,8 @@
       },
       "aliases": {
         "en": [
-          "Chest Dip"
+          "Chest Dip",
+          "Віджимання на брусах"
         ],
         "uk": [
           "Віджимання на брусах"
@@ -483,8 +489,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -520,7 +526,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Fly"
+          "Dumbbell Fly",
+          "Розведення гантелей лежачи"
         ],
         "uk": [
           "Розведення гантелей лежачи"
@@ -557,8 +564,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -594,7 +601,8 @@
       },
       "aliases": {
         "en": [
-          "Cable Crossover"
+          "Cable Crossover",
+          "Кросовер"
         ],
         "uk": [
           "Кросовер"
@@ -630,8 +638,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -667,10 +675,12 @@
       },
       "aliases": {
         "en": [
-          "Machine Chest Press"
+          "Machine Chest Press",
+          "Жим у тренажері"
         ],
         "uk": [
-          "Жим від грудей у тренажері"
+          "Жим від грудей у тренажері",
+          "Жим у тренажері"
         ]
       },
       "muscles": {
@@ -711,8 +721,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -748,7 +758,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Pullover"
+          "Dumbbell Pullover",
+          "Пуловер з гантеллю"
         ],
         "uk": [
           "Пуловер з гантеллю"
@@ -793,8 +804,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -830,7 +841,8 @@
       },
       "aliases": {
         "en": [
-          "Pull-Up"
+          "Pull-Up",
+          "Підтягування"
         ],
         "uk": [
           "Підтягування"
@@ -882,8 +894,8 @@
       "initialLikes": 36,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -919,7 +931,8 @@
       },
       "aliases": {
         "en": [
-          "Chin-Up"
+          "Chin-Up",
+          "Підтягування зворотним хватом"
         ],
         "uk": [
           "Підтягування зворотним хватом"
@@ -963,8 +976,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -1000,7 +1013,8 @@
       },
       "aliases": {
         "en": [
-          "Lat Pulldown"
+          "Lat Pulldown",
+          "Тяга верхнього блока"
         ],
         "uk": [
           "Тяга верхнього блока"
@@ -1044,8 +1058,8 @@
       "initialLikes": 34,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1081,7 +1095,8 @@
       },
       "aliases": {
         "en": [
-          "Seated Cable Row"
+          "Seated Cable Row",
+          "Тяга горизонтального блока"
         ],
         "uk": [
           "Тяга горизонтального блока"
@@ -1117,8 +1132,8 @@
       "initialLikes": 27,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1154,7 +1169,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Bent-Over Row"
+          "Barbell Bent-Over Row",
+          "Тяга штанги в нахилі"
         ],
         "uk": [
           "Тяга штанги в нахилі"
@@ -1206,8 +1222,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -1243,7 +1259,8 @@
       },
       "aliases": {
         "en": [
-          "Single-Arm Dumbbell Row"
+          "Single-Arm Dumbbell Row",
+          "Тяга гантелі однією рукою"
         ],
         "uk": [
           "Тяга гантелі однією рукою"
@@ -1288,8 +1305,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1325,7 +1342,8 @@
       },
       "aliases": {
         "en": [
-          "T-Bar Row"
+          "T-Bar Row",
+          "Тяга Т-грифа"
         ],
         "uk": [
           "Тяга Т-грифа"
@@ -1361,8 +1379,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1399,7 +1417,8 @@
       },
       "aliases": {
         "en": [
-          "Conventional Deadlift"
+          "Conventional Deadlift",
+          "Станова тяга"
         ],
         "uk": [
           "Станова тяга"
@@ -1451,8 +1470,8 @@
       "initialLikes": 37,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -1488,7 +1507,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Shrug"
+          "Barbell Shrug",
+          "Шраги"
         ],
         "uk": [
           "Шраги"
@@ -1527,8 +1547,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1610,8 +1630,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -1647,7 +1667,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Shoulder Press"
+          "Dumbbell Shoulder Press",
+          "Жим гантелей над головою"
         ],
         "uk": [
           "Жим гантелей над головою"
@@ -1683,8 +1704,8 @@
       "initialLikes": 28,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1720,7 +1741,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Overhead Press"
+          "Barbell Overhead Press",
+          "Жим штанги над головою"
         ],
         "uk": [
           "Жим штанги над головою"
@@ -1756,8 +1778,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -1793,7 +1815,8 @@
       },
       "aliases": {
         "en": [
-          "Arnold Press"
+          "Arnold Press",
+          "Арнольд-жим"
         ],
         "uk": [
           "Арнольд-жим"
@@ -1829,8 +1852,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1866,10 +1889,12 @@
       },
       "aliases": {
         "en": [
-          "Machine Shoulder Press"
+          "Machine Shoulder Press",
+          "Жим у тренажері"
         ],
         "uk": [
-          "Жим над головою у тренажері"
+          "Жим над головою у тренажері",
+          "Жим у тренажері"
         ]
       },
       "muscles": {
@@ -1910,8 +1935,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -1947,7 +1972,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Lateral Raise"
+          "Dumbbell Lateral Raise",
+          "Розведення гантелей через сторони"
         ],
         "uk": [
           "Розведення гантелей через сторони"
@@ -1983,8 +2009,8 @@
       "initialLikes": 25,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -2020,7 +2046,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Front Raise"
+          "Dumbbell Front Raise",
+          "Підйом гантелей перед собою"
         ],
         "uk": [
           "Підйом гантелей перед собою"
@@ -2056,8 +2083,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -2093,7 +2120,8 @@
       },
       "aliases": {
         "en": [
-          "Bent-Over Dumbbell Reverse Fly"
+          "Bent-Over Dumbbell Reverse Fly",
+          "Розведення гантелей у нахилі"
         ],
         "uk": [
           "Розведення гантелей у нахилі"
@@ -2137,8 +2165,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -2174,7 +2202,8 @@
       },
       "aliases": {
         "en": [
-          "Reverse Pec Deck"
+          "Reverse Pec Deck",
+          "Зворотна розводка в тренажері"
         ],
         "uk": [
           "Зворотна розводка в тренажері"
@@ -2218,8 +2247,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -2255,7 +2284,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Upright Row"
+          "Barbell Upright Row",
+          "Тяга штанги до підборіддя"
         ],
         "uk": [
           "Тяга штанги до підборіддя"
@@ -2291,8 +2321,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2328,7 +2358,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Curl"
+          "Barbell Curl",
+          "Підйом штанги на біцепс"
         ],
         "uk": [
           "Підйом штанги на біцепс"
@@ -2372,8 +2403,8 @@
       "initialLikes": 30,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2409,7 +2440,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Curl"
+          "Dumbbell Curl",
+          "Підйом гантелей"
         ],
         "uk": [
           "Підйом гантелей"
@@ -2453,8 +2485,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2491,7 +2523,8 @@
       },
       "aliases": {
         "en": [
-          "Hammer Curl"
+          "Hammer Curl",
+          "Молоткові згинання"
         ],
         "uk": [
           "Молоткові згинання"
@@ -2535,8 +2568,8 @@
       "initialLikes": 23,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2572,10 +2605,12 @@
       },
       "aliases": {
         "en": [
-          "Preacher Curl"
+          "Preacher Curl",
+          "Лава Скотта"
         ],
         "uk": [
-          "Згинання рук на лаві Скотта"
+          "Згинання рук на лаві Скотта",
+          "Лава Скотта"
         ]
       },
       "muscles": {
@@ -2611,8 +2646,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2648,7 +2683,8 @@
       },
       "aliases": {
         "en": [
-          "Concentration Curl"
+          "Concentration Curl",
+          "Концентровані згинання"
         ],
         "uk": [
           "Концентровані згинання"
@@ -2684,8 +2720,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2721,7 +2757,8 @@
       },
       "aliases": {
         "en": [
-          "Cable Curl"
+          "Cable Curl",
+          "Згинання на нижньому блоці"
         ],
         "uk": [
           "Згинання на нижньому блоці"
@@ -2765,8 +2802,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2802,7 +2839,8 @@
       },
       "aliases": {
         "en": [
-          "Incline Dumbbell Curl"
+          "Incline Dumbbell Curl",
+          "Згинання на похилій лаві"
         ],
         "uk": [
           "Згинання на похилій лаві"
@@ -2839,8 +2877,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2876,7 +2914,8 @@
       },
       "aliases": {
         "en": [
-          "EZ-Bar Curl"
+          "EZ-Bar Curl",
+          "Підйом EZ-штанги"
         ],
         "uk": [
           "Підйом EZ-штанги"
@@ -2920,8 +2959,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -2957,7 +2996,8 @@
       },
       "aliases": {
         "en": [
-          "Machine Biceps Curl"
+          "Machine Biceps Curl",
+          "Згинання в тренажері"
         ],
         "uk": [
           "Згинання в тренажері"
@@ -2993,8 +3033,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3030,7 +3070,8 @@
       },
       "aliases": {
         "en": [
-          "Reverse Curl"
+          "Reverse Curl",
+          "Зворотні згинання"
         ],
         "uk": [
           "Зворотні згинання"
@@ -3074,8 +3115,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3111,7 +3152,8 @@
       },
       "aliases": {
         "en": [
-          "Cable Triceps Pushdown"
+          "Cable Triceps Pushdown",
+          "Розгинання на верхньому блоці"
         ],
         "uk": [
           "Розгинання на верхньому блоці"
@@ -3147,8 +3189,8 @@
       "initialLikes": 24,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3184,7 +3226,8 @@
       },
       "aliases": {
         "en": [
-          "Rope Triceps Pushdown"
+          "Rope Triceps Pushdown",
+          "Розгинання з канатом"
         ],
         "uk": [
           "Розгинання з канатом"
@@ -3221,8 +3264,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3258,7 +3301,8 @@
       },
       "aliases": {
         "en": [
-          "Skull Crusher"
+          "Skull Crusher",
+          "Французький жим"
         ],
         "uk": [
           "Французький жим"
@@ -3294,8 +3338,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3331,7 +3375,8 @@
       },
       "aliases": {
         "en": [
-          "Close-Grip Bench Press"
+          "Close-Grip Bench Press",
+          "Жим вузьким хватом"
         ],
         "uk": [
           "Жим вузьким хватом"
@@ -3375,8 +3420,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -3412,7 +3457,8 @@
       },
       "aliases": {
         "en": [
-          "Overhead Dumbbell Triceps Extension"
+          "Overhead Dumbbell Triceps Extension",
+          "Розгинання гантелі над головою"
         ],
         "uk": [
           "Розгинання гантелі над головою"
@@ -3448,8 +3494,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3485,7 +3531,8 @@
       },
       "aliases": {
         "en": [
-          "Triceps Dip"
+          "Triceps Dip",
+          "Віджимання на брусах"
         ],
         "uk": [
           "Віджимання на брусах"
@@ -3529,8 +3576,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3566,7 +3613,8 @@
       },
       "aliases": {
         "en": [
-          "Single-Arm Triceps Extension"
+          "Single-Arm Triceps Extension",
+          "Розгинання однієї руки"
         ],
         "uk": [
           "Розгинання однієї руки"
@@ -3602,8 +3650,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3639,7 +3687,8 @@
       },
       "aliases": {
         "en": [
-          "Machine Triceps Extension"
+          "Machine Triceps Extension",
+          "Розгинання в тренажері"
         ],
         "uk": [
           "Розгинання в тренажері"
@@ -3675,8 +3724,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3712,7 +3761,8 @@
       },
       "aliases": {
         "en": [
-          "Bench Dip"
+          "Bench Dip",
+          "Віджимання від лави"
         ],
         "uk": [
           "Віджимання від лави"
@@ -3756,8 +3806,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3793,7 +3843,8 @@
       },
       "aliases": {
         "en": [
-          "Reverse-Grip Triceps Pushdown"
+          "Reverse-Grip Triceps Pushdown",
+          "Розгинання зворотним хватом"
         ],
         "uk": [
           "Розгинання зворотним хватом"
@@ -3829,8 +3880,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -3866,7 +3917,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Wrist Curl"
+          "Barbell Wrist Curl",
+          "Згинання кистей зі штангою"
         ],
         "uk": [
           "Згинання кистей зі штангою"
@@ -3902,8 +3954,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -3939,7 +3991,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Reverse Wrist Curl"
+          "Barbell Reverse Wrist Curl",
+          "Розгинання кистей зі штангою"
         ],
         "uk": [
           "Розгинання кистей зі штангою"
@@ -3975,8 +4028,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4012,7 +4065,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Wrist Curl"
+          "Dumbbell Wrist Curl",
+          "Згинання кистей з гантелями"
         ],
         "uk": [
           "Згинання кистей з гантелями"
@@ -4048,8 +4102,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4085,7 +4139,8 @@
       },
       "aliases": {
         "en": [
-          "Reverse Wrist Curl"
+          "Reverse Wrist Curl",
+          "Зворотні згинання рук"
         ],
         "uk": [
           "Зворотні згинання рук"
@@ -4129,8 +4184,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4166,7 +4221,8 @@
       },
       "aliases": {
         "en": [
-          "Farmer's Carry"
+          "Farmer's Carry",
+          "Фермерська хода"
         ],
         "uk": [
           "Фермерська хода"
@@ -4210,10 +4266,10 @@
       "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 40
       },
       "media": {
         "demonstrationImage": {
@@ -4247,7 +4303,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Static Hold"
+          "Barbell Static Hold",
+          "Утримання штанги"
         ],
         "uk": [
           "Утримання штанги"
@@ -4283,10 +4340,10 @@
       "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 30
       },
       "media": {
         "demonstrationImage": {
@@ -4320,7 +4377,8 @@
       },
       "aliases": {
         "en": [
-          "Dead Hang"
+          "Dead Hang",
+          "Вис на перекладині"
         ],
         "uk": [
           "Вис на перекладині"
@@ -4356,10 +4414,10 @@
       "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 30
       },
       "media": {
         "demonstrationImage": {
@@ -4393,7 +4451,8 @@
       },
       "aliases": {
         "en": [
-          "Cable Wrist Curl"
+          "Cable Wrist Curl",
+          "Згинання кистей на блоці"
         ],
         "uk": [
           "Згинання кистей на блоці"
@@ -4429,8 +4488,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4466,7 +4525,8 @@
       },
       "aliases": {
         "en": [
-          "Cable Reverse Wrist Curl"
+          "Cable Reverse Wrist Curl",
+          "Розгинання кистей на блоці"
         ],
         "uk": [
           "Розгинання кистей на блоці"
@@ -4502,8 +4562,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4539,7 +4599,8 @@
       },
       "aliases": {
         "en": [
-          "Crunch"
+          "Crunch",
+          "Скручування"
         ],
         "uk": [
           "Скручування"
@@ -4573,8 +4634,8 @@
       "initialLikes": 21,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4610,7 +4671,8 @@
       },
       "aliases": {
         "en": [
-          "Incline Crunch"
+          "Incline Crunch",
+          "Скручування на похилій лаві"
         ],
         "uk": [
           "Скручування на похилій лаві"
@@ -4637,8 +4699,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4674,7 +4736,8 @@
       },
       "aliases": {
         "en": [
-          "Leg Raise"
+          "Leg Raise",
+          "Підйом ніг"
         ],
         "uk": [
           "Підйом ніг"
@@ -4713,8 +4776,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -4750,7 +4813,8 @@
       },
       "aliases": {
         "en": [
-          "Hanging Knee Raise"
+          "Hanging Knee Raise",
+          "Підйом колін у висі"
         ],
         "uk": [
           "Підйом колін у висі"
@@ -4786,8 +4850,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -4823,7 +4887,8 @@
       },
       "aliases": {
         "en": [
-          "Front Plank"
+          "Front Plank",
+          "Планка"
         ],
         "uk": [
           "Планка"
@@ -4848,10 +4913,10 @@
       "initialLikes": 35,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 45
       },
       "media": {
         "demonstrationImage": {
@@ -4885,7 +4950,8 @@
       },
       "aliases": {
         "en": [
-          "Side Plank"
+          "Side Plank",
+          "Бічна планка"
         ],
         "uk": [
           "Бічна планка"
@@ -4919,10 +4985,10 @@
       "initialLikes": 16,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 30
       },
       "media": {
         "demonstrationImage": {
@@ -4951,8 +5017,8 @@
         "uk": "Повороти тулуба сидя"
       },
       "description": {
-        "en": "Set up seated with the torso slightly reclined and the core braced. Rotate the rib cage from side to side under control while keeping the spine long and the hips steady. Breathe out into each turn and in through the centre; avoid swinging the arms or rushing the range.",
-        "uk": "Сядь, злегка відхили тулуб назад і напруж м’язи кора. Контрольовано повертай грудну клітку з боку в бік, тримаючи спину витягнутою, а таз стабільним. Видихай під час повороту, вдихай у центрі; не розгойдуй руки й не поспішай."
+        "en": "Set up for seated torso twist with no equipment. Rotate with control. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum.",
+        "uk": "Підготуйся до вправи «Повороти тулуба сидя» без додаткового спорядження. Виконуй повороти контрольовано. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію."
       },
       "aliases": {
         "en": [
@@ -4983,8 +5049,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5020,7 +5086,8 @@
       },
       "aliases": {
         "en": [
-          "Bicycle Crunch"
+          "Bicycle Crunch",
+          "Велосипед"
         ],
         "uk": [
           "Велосипед"
@@ -5054,8 +5121,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -5125,8 +5192,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5192,8 +5259,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5274,8 +5341,8 @@
       "initialLikes": 29,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5311,7 +5378,8 @@
       },
       "aliases": {
         "en": [
-          "Glute Bridge"
+          "Glute Bridge",
+          "Ягодичний міст"
         ],
         "uk": [
           "Ягодичний міст"
@@ -5345,8 +5413,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5382,7 +5450,8 @@
       },
       "aliases": {
         "en": [
-          "Bodyweight Squat"
+          "Bodyweight Squat",
+          "Присідання"
         ],
         "uk": [
           "Присідання"
@@ -5424,8 +5493,8 @@
       "initialLikes": 26,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5462,7 +5531,8 @@
       },
       "aliases": {
         "en": [
-          "Bulgarian Split Squat"
+          "Bulgarian Split Squat",
+          "Болгарські присідання"
         ],
         "uk": [
           "Болгарські присідання"
@@ -5506,8 +5576,8 @@
       "initialLikes": 22,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5543,10 +5613,12 @@
       },
       "aliases": {
         "en": [
-          "Bodyweight Forward Lunge"
+          "Bodyweight Forward Lunge",
+          "Випади"
         ],
         "uk": [
-          "Випади вперед із власною вагою"
+          "Випади вперед із власною вагою",
+          "Випади"
         ]
       },
       "muscles": {
@@ -5585,8 +5657,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5622,10 +5694,12 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Reverse Lunge — Glute Emphasis"
+          "Dumbbell Reverse Lunge — Glute Emphasis",
+          "Зворотні випади"
         ],
         "uk": [
-          "Зворотні випади з гантелями з акцентом на сідниці"
+          "Зворотні випади з гантелями з акцентом на сідниці",
+          "Зворотні випади"
         ]
       },
       "muscles": {
@@ -5666,8 +5740,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -5704,7 +5778,8 @@
       },
       "aliases": {
         "en": [
-          "Romanian Deadlift"
+          "Romanian Deadlift",
+          "Румунська тяга"
         ],
         "uk": [
           "Румунська тяга"
@@ -5748,8 +5823,8 @@
       "initialLikes": 32,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -5785,7 +5860,8 @@
       },
       "aliases": {
         "en": [
-          "Donkey Kick"
+          "Donkey Kick",
+          "Махи ногою назад"
         ],
         "uk": [
           "Махи ногою назад"
@@ -5824,8 +5900,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -5861,7 +5937,8 @@
       },
       "aliases": {
         "en": [
-          "Side-Lying Leg Raise"
+          "Side-Lying Leg Raise",
+          "Відведення ноги в сторону"
         ],
         "uk": [
           "Відведення ноги в сторону"
@@ -5891,8 +5968,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -5977,8 +6054,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6014,7 +6091,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Back Squat"
+          "Barbell Back Squat",
+          "Присідання зі штангою"
         ],
         "uk": [
           "Присідання зі штангою"
@@ -6058,8 +6136,8 @@
       "initialLikes": 40,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -6095,7 +6173,8 @@
       },
       "aliases": {
         "en": [
-          "Front Squat"
+          "Front Squat",
+          "Фронтальні присідання"
         ],
         "uk": [
           "Фронтальні присідання"
@@ -6139,8 +6218,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -6176,7 +6255,8 @@
       },
       "aliases": {
         "en": [
-          "Hack Squat"
+          "Hack Squat",
+          "Гак-присідання"
         ],
         "uk": [
           "Гак-присідання"
@@ -6212,8 +6292,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -6249,7 +6329,8 @@
       },
       "aliases": {
         "en": [
-          "Leg Press"
+          "Leg Press",
+          "Жим ногами"
         ],
         "uk": [
           "Жим ногами"
@@ -6293,8 +6374,8 @@
       "initialLikes": 33,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -6330,7 +6411,8 @@
       },
       "aliases": {
         "en": [
-          "Leg Extension"
+          "Leg Extension",
+          "Розгинання ніг"
         ],
         "uk": [
           "Розгинання ніг"
@@ -6357,8 +6439,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6394,10 +6476,12 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Forward Lunge"
+          "Dumbbell Forward Lunge",
+          "Випади вперед"
         ],
         "uk": [
-          "Випади вперед із гантелями"
+          "Випади вперед із гантелями",
+          "Випади вперед"
         ]
       },
       "muscles": {
@@ -6438,8 +6522,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6475,10 +6559,12 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Reverse Lunge — Quadriceps Emphasis"
+          "Dumbbell Reverse Lunge — Quadriceps Emphasis",
+          "Випади назад"
         ],
         "uk": [
-          "Випади назад із гантелями з акцентом на квадрицепси"
+          "Випади назад із гантелями з акцентом на квадрицепси",
+          "Випади назад"
         ]
       },
       "muscles": {
@@ -6511,8 +6597,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6595,8 +6681,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6632,7 +6718,8 @@
       },
       "aliases": {
         "en": [
-          "Lying Leg Curl"
+          "Lying Leg Curl",
+          "Згинання ніг лежачи"
         ],
         "uk": [
           "Згинання ніг лежачи"
@@ -6668,8 +6755,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6705,7 +6792,8 @@
       },
       "aliases": {
         "en": [
-          "Seated Leg Curl"
+          "Seated Leg Curl",
+          "Згинання ніг сидячи"
         ],
         "uk": [
           "Згинання ніг сидячи"
@@ -6741,8 +6829,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6820,8 +6908,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 4,
+        "reps": 8,
         "weight": null,
         "duration": null
       },
@@ -6901,8 +6989,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -6938,7 +7026,8 @@
       },
       "aliases": {
         "en": [
-          "Back Extension"
+          "Back Extension",
+          "Гіперекстензія"
         ],
         "uk": [
           "Гіперекстензія"
@@ -6982,8 +7071,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -7063,8 +7152,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -7100,7 +7189,8 @@
       },
       "aliases": {
         "en": [
-          "Kettlebell Swing"
+          "Kettlebell Swing",
+          "Махи гирею"
         ],
         "uk": [
           "Махи гирею"
@@ -7144,8 +7234,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 12,
         "weight": null,
         "duration": null
       },
@@ -7181,7 +7271,8 @@
       },
       "aliases": {
         "en": [
-          "Band Leg Curl"
+          "Band Leg Curl",
+          "Згинання ніг з фітнес-гумою"
         ],
         "uk": [
           "Згинання ніг з фітнес-гумою"
@@ -7225,8 +7316,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7262,7 +7353,8 @@
       },
       "aliases": {
         "en": [
-          "Standing Calf Raise"
+          "Standing Calf Raise",
+          "Підйом на носки стоячи"
         ],
         "uk": [
           "Підйом на носки стоячи"
@@ -7296,8 +7388,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7333,7 +7425,8 @@
       },
       "aliases": {
         "en": [
-          "Seated Calf Raise"
+          "Seated Calf Raise",
+          "Підйом на носки сидячи"
         ],
         "uk": [
           "Підйом на носки сидячи"
@@ -7369,8 +7462,8 @@
       "initialLikes": 16,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7406,7 +7499,8 @@
       },
       "aliases": {
         "en": [
-          "Machine Calf Raise"
+          "Machine Calf Raise",
+          "Підйом на носки в тренажері"
         ],
         "uk": [
           "Підйом на носки в тренажері"
@@ -7442,8 +7536,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7479,7 +7573,8 @@
       },
       "aliases": {
         "en": [
-          "Leg Press Calf Raise"
+          "Leg Press Calf Raise",
+          "Підйом на носки в жимі ногами"
         ],
         "uk": [
           "Підйом на носки в жимі ногами"
@@ -7515,8 +7610,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7552,7 +7647,8 @@
       },
       "aliases": {
         "en": [
-          "Single-Leg Calf Raise"
+          "Single-Leg Calf Raise",
+          "Підйом на одну ногу"
         ],
         "uk": [
           "Підйом на одну ногу"
@@ -7586,8 +7682,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7623,7 +7719,8 @@
       },
       "aliases": {
         "en": [
-          "Barbell Calf Raise"
+          "Barbell Calf Raise",
+          "Підйом на носки зі штангою"
         ],
         "uk": [
           "Підйом на носки зі штангою"
@@ -7667,8 +7764,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7704,7 +7801,8 @@
       },
       "aliases": {
         "en": [
-          "Dumbbell Calf Raise"
+          "Dumbbell Calf Raise",
+          "Підйом на носки з гантелями"
         ],
         "uk": [
           "Підйом на носки з гантелями"
@@ -7740,8 +7838,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7777,7 +7875,8 @@
       },
       "aliases": {
         "en": [
-          "Farmer Calf Walk"
+          "Farmer Calf Walk",
+          "Farmer Walk на носках"
         ],
         "uk": [
           "Farmer Walk на носках"
@@ -7821,10 +7920,10 @@
       "initialLikes": 8,
       "measurementType": "duration",
       "recommendations": {
-        "sets": null,
+        "sets": 3,
         "reps": null,
         "weight": null,
-        "duration": null
+        "duration": 40
       },
       "media": {
         "demonstrationImage": {
@@ -7858,7 +7957,8 @@
       },
       "aliases": {
         "en": [
-          "Smith Machine Calf Raise"
+          "Smith Machine Calf Raise",
+          "Підйом на носки в Smith Machine"
         ],
         "uk": [
           "Підйом на носки в Smith Machine"
@@ -7894,8 +7994,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },
@@ -7931,7 +8031,8 @@
       },
       "aliases": {
         "en": [
-          "Step Calf Raise"
+          "Step Calf Raise",
+          "Підйом на носки на сходинці"
         ],
         "uk": [
           "Підйом на носки на сходинці"
@@ -7967,8 +8068,8 @@
       "initialLikes": 8,
       "measurementType": "reps",
       "recommendations": {
-        "sets": null,
-        "reps": null,
+        "sets": 3,
+        "reps": 15,
         "weight": null,
         "duration": null
       },

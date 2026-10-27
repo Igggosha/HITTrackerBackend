@@ -19,6 +19,9 @@ export function validateCatalog(source: any, catalog: any): void {
     if (!Array.isArray(e.aliases?.en) || !Array.isArray(e.aliases?.uk) || !text(e.muscles?.primary?.en) || !text(e.muscles?.primary?.uk) || !Array.isArray(e.muscles?.secondary)) fail(`invalid muscles: ${e.catalogKey}`);
     if (e.muscles.primary.en === 'Other' || e.muscles.secondary.some((m:any) => m.en === 'Other')) fail(`unmapped muscle: ${e.catalogKey}`);
     if (!Array.isArray(e.equipment?.required) || !Array.isArray(e.equipment?.alternatives) || ![1,2,3,4,5].includes(e.difficulty) || !Number.isInteger(e.initialLikes) || e.initialLikes < 0 || e.initialLikes > 40 || !['reps','duration'].includes(e.measurementType)) fail(`invalid exercise invariants: ${e.catalogKey}`);
+    if (!Number.isInteger(e.recommendations?.sets) || e.recommendations.sets < 1) fail(`missing recommended sets: ${e.catalogKey}`);
+    if (e.measurementType === 'reps' && (!Number.isInteger(e.recommendations?.reps) || e.recommendations.reps < 1 || e.recommendations.duration !== null)) fail(`invalid repetition recommendation: ${e.catalogKey}`);
+    if (e.measurementType === 'duration' && (!Number.isInteger(e.recommendations?.duration) || e.recommendations.duration < 1 || e.recommendations.reps !== null)) fail(`invalid duration recommendation: ${e.catalogKey}`);
     if (!mediaOk(e.media)) fail(`media must be explicit missing placeholder: ${e.catalogKey}`);
     if (e.muscles.secondary.some((m:any) => m.en === e.muscles.primary.en || m.uk === e.muscles.primary.uk)) fail(`primary muscle repeated as secondary: ${e.catalogKey}`);
     if (/\p{Script=Cyrillic}/u.test(e.description.en)) fail(`English description contains non-English text: ${e.catalogKey}`);

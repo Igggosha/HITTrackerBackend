@@ -463,13 +463,19 @@ async function run() {
         },
       ];
       const desiredExercises = item.exerciseCatalogKeys.map(
-        (catalogKey, position) => ({
-          catalogKey,
-          position: position + 1,
-          sets: null,
-          reps: null,
-          duration: null,
-        }),
+        (catalogKey, position) => {
+          const exercise = catalog.exercises.find(
+            (candidate) => candidate.catalogKey === catalogKey,
+          );
+          if (!exercise) throw new Error(`program exercise not found: ${catalogKey}`);
+          return {
+            catalogKey,
+            position: position + 1,
+            sets: exercise.recommendations.sets,
+            reps: exercise.recommendations.reps,
+            duration: exercise.recommendations.duration,
+          };
+        },
       );
       let changed = true;
       if (current) {
