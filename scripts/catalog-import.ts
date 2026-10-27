@@ -569,13 +569,27 @@ async function run() {
       ))!;
       for (const [index, key] of item.exerciseCatalogKeys.entries()) {
         const exerciseId = exerciseIds.get(key);
+        const exercise = catalog.exercises.find(
+          (candidate) => candidate.catalogKey === key,
+        );
         if (!exerciseId)
           throw new Error(
             `Program ${item.catalogKey} references missing ${key}`,
           );
+        if (!exercise)
+          throw new Error(
+            `Program ${item.catalogKey} references unknown catalog exercise ${key}`,
+          );
         await client.query(
-          'insert into exercises_in_programs (program_content_id,exercise_id,position,week_day) values ($1,$2,$3,0)',
-          [content.id, exerciseId, index + 1],
+          'insert into exercises_in_programs (program_content_id,exercise_id,position,week_day,sets,first_set_rep_count,target_duration_seconds) values ($1,$2,$3,0,$4,$5,$6)',
+          [
+            content.id,
+            exerciseId,
+            index + 1,
+            exercise.recommendations.sets,
+            exercise.recommendations.reps,
+            exercise.recommendations.duration,
+          ],
         );
       }
       await enqueue(client, 'program', program.id, 'upsert');
