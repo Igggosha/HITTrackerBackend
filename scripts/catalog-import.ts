@@ -244,7 +244,7 @@ async function run() {
       if (!current) {
         const legacy = (
           await client.query<any>(
-            'select * from exercises where lower(name)=any($1::text[]) for update',
+            'select * from exercises where catalog_key is null and lower(name)=any($1::text[]) for update',
             [[item.name.en, ...item.sourceNames].map(normalize)],
           )
         ).rows;

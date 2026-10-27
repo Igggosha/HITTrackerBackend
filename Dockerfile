@@ -16,9 +16,11 @@ RUN npm run build
 FROM dependencies AS migration
 
 COPY drizzle.config.ts ./
+COPY tsconfig.json ./
 COPY drizzle ./drizzle
 COPY scripts ./scripts
 COPY src/db ./src/db
+COPY src/storage ./src/storage
 
 FROM dependencies AS search-tools
 
