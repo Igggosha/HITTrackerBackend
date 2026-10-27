@@ -10,9 +10,9 @@
     {
       "catalogKey": "barbell_bench_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1/89faac46-6e70-4cc7-85dc-7a11c0750b77.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Bench_Press_-_Medium_Grip",
         "sourceExerciseId": "Barbell_Bench_Press_-_Medium_Grip",
@@ -45,9 +45,9 @@
     {
       "catalogKey": "dumbbell_bench_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1211/b57185ae-f1fe-491c-af1a-f776f55441a8.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_Bench_Press",
         "sourceExerciseId": "Dumbbell_Bench_Press",
@@ -80,9 +80,9 @@
     {
       "catalogKey": "incline_barbell_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1212/473961f7-ad50-43a8-8303-9190437d70af.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip",
         "sourceExerciseId": "Barbell_Incline_Bench_Press_-_Medium_Grip",
@@ -115,9 +115,9 @@
     {
       "catalogKey": "incline_dumbbell_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/2/5370dc16-87cf-4a07-9c0b-1116e6c340fe.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Incline_Dumbbell_Press",
         "sourceExerciseId": "Incline_Dumbbell_Press",
@@ -150,9 +150,9 @@
     {
       "catalogKey": "push_up",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1213/fa18d4c6-de02-4e3c-919c-79c881eb46c6.webp",
         "source": "https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png",
         "sourcePage": "https://wger.de/en/exercise/1551/view",
         "sourceExerciseId": 1551,
@@ -185,9 +185,9 @@
     {
       "catalogKey": "chest_dip",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1214/b88e09a5-3ed8-42a0-b33c-93337dd5ebc9.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Chest_Version/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dips_-_Chest_Version",
         "sourceExerciseId": "Dips_-_Chest_Version",
@@ -220,9 +220,9 @@
     {
       "catalogKey": "dumbbell_fly",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1215/f015ad48-a5f7-4ac5-b495-da39ea4d2957.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_Flyes",
         "sourceExerciseId": "Dumbbell_Flyes",
@@ -255,9 +255,9 @@
     {
       "catalogKey": "cable_crossover",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1216/34ac8b41-15e4-4fcc-bf0f-e5a244cdcb88.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Cable_Crossover",
         "sourceExerciseId": "Cable_Crossover",
@@ -290,9 +290,9 @@
     {
       "catalogKey": "machine_chest_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1217/b2c5395b-e1b5-4205-98ed-91c5b6241783.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Chest_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Leverage_Chest_Press",
         "sourceExerciseId": "Leverage_Chest_Press",
@@ -325,9 +325,9 @@
     {
       "catalogKey": "dumbbell_pullover",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1218/f605ab8e-3b9c-4fe1-bdd5-d3f30c1277b0.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent-Arm_Dumbbell_Pullover/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bent-Arm_Dumbbell_Pullover",
         "sourceExerciseId": "Bent-Arm_Dumbbell_Pullover",
@@ -360,9 +360,9 @@
     {
       "catalogKey": "pull_up",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1219/d0bb06e0-3b93-49e0-863e-86dfc99797f5.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullups/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Pullups",
         "sourceExerciseId": "Pullups",
@@ -395,9 +395,9 @@
     {
       "catalogKey": "chin_up",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1220/ba0cc727-6723-4e21-94c8-3dd5d86effbf.webp",
         "source": "https://wger.de/media/exercise-images/152/6c1a7459-266d-491a-bd50-7cbaea2bc771.png",
         "sourcePage": "https://wger.de/en/exercise/152/view",
         "sourceExerciseId": 152,
@@ -430,9 +430,9 @@
     {
       "catalogKey": "lat_pulldown",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/4/5180dcfd-438b-4856-8255-bbd8c30d1d4f.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Full_Range-Of-Motion_Lat_Pulldown/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Full_Range-Of-Motion_Lat_Pulldown",
         "sourceExerciseId": "Full_Range-Of-Motion_Lat_Pulldown",
@@ -465,9 +465,9 @@
     {
       "catalogKey": "seated_cable_row",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1221/eba39937-1f06-4acb-9393-95489e6416db.webp",
         "source": "https://wger.de/media/exercise-images/1117/2555c4c3-a84d-47db-b83b-cbf721f12e45.png",
         "sourcePage": "https://wger.de/en/exercise/1117/view",
         "sourceExerciseId": 1117,
@@ -500,9 +500,9 @@
     {
       "catalogKey": "barbell_bent_over_row",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1222/9a184028-e4b0-4478-87a0-7994c52c50d7.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bent_Over_Barbell_Row",
         "sourceExerciseId": "Bent_Over_Barbell_Row",
@@ -535,9 +535,9 @@
     {
       "catalogKey": "single_arm_dumbbell_row",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1223/d32bde4b-1bfe-466c-8c71-83a25dd107c8.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/One-Arm_Dumbbell_Row",
         "sourceExerciseId": "One-Arm_Dumbbell_Row",
@@ -570,9 +570,9 @@
     {
       "catalogKey": "t_bar_row",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1224/1d25e0e6-8439-4c91-aeca-39761c4609fc.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/T-Bar_Row_with_Handle/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/T-Bar_Row_with_Handle",
         "sourceExerciseId": "T-Bar_Row_with_Handle",
@@ -605,9 +605,9 @@
     {
       "catalogKey": "conventional_deadlift",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/8/3d419bdc-fa23-4e9e-ab85-9455aaa826cd.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Deadlift",
         "sourceExerciseId": "Barbell_Deadlift",
@@ -640,9 +640,9 @@
     {
       "catalogKey": "barbell_shrug",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1225/69427de5-44bd-4ebd-986d-b67761f4a6f3.webp",
         "source": "https://wger.de/media/exercise-images/150/Barbell-shrugs-1.png",
         "sourcePage": "https://wger.de/en/exercise/571/view",
         "sourceExerciseId": 571,
@@ -675,9 +675,9 @@
     {
       "catalogKey": "face_pull",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1226/8a3d2fc0-ba8a-4dbc-9a91-cd9efc62859f.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Face_Pull",
         "sourceExerciseId": "Face_Pull",
@@ -710,9 +710,9 @@
     {
       "catalogKey": "dumbbell_shoulder_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1227/8aa9671e-1402-4293-af72-5f81ed672560.webp",
         "source": "https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png",
         "sourcePage": "https://wger.de/en/exercise/567/view",
         "sourceExerciseId": 567,
@@ -745,9 +745,9 @@
     {
       "catalogKey": "barbell_overhead_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1228/48f8f704-3000-49cf-bf35-71966b30d9ca.webp",
         "source": "https://wger.de/media/exercise-images/1893/7dbad19e-0616-41fd-9d7d-3e21649c0eea.png",
         "sourcePage": "https://wger.de/en/exercise/1893/view",
         "sourceExerciseId": 1893,
@@ -780,9 +780,9 @@
     {
       "catalogKey": "arnold_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1229/3801ba80-2269-42e6-a9c9-7c0f7f662baa.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Arnold_Dumbbell_Press",
         "sourceExerciseId": "Arnold_Dumbbell_Press",
@@ -815,9 +815,9 @@
     {
       "catalogKey": "machine_shoulder_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1230/0a848660-6537-4ddd-8a5d-94f03fe28f0e.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Shoulder_Military_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Machine_Shoulder_Military_Press",
         "sourceExerciseId": "Machine_Shoulder_Military_Press",
@@ -850,9 +850,9 @@
     {
       "catalogKey": "dumbbell_lateral_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1231/5394b5d0-96a9-4102-9f4b-cfaa59bb8a8e.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Side_Lateral_Raise",
         "sourceExerciseId": "Side_Lateral_Raise",
@@ -885,9 +885,9 @@
     {
       "catalogKey": "dumbbell_front_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1232/594e64d4-fd31-4a47-a1c9-cc1d4f166e92.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Front_Dumbbell_Raise",
         "sourceExerciseId": "Front_Dumbbell_Raise",
@@ -920,9 +920,9 @@
     {
       "catalogKey": "bent_over_dumbbell_reverse_fly",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1233/f4a32df9-efe6-4634-b900-0f71c18fc967.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Flyes/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Reverse_Flyes",
         "sourceExerciseId": "Reverse_Flyes",
@@ -955,9 +955,9 @@
     {
       "catalogKey": "reverse_pec_deck",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1234/d7b48b98-639a-4f6e-8b5f-80370e602cb0.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Machine_Flyes/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Reverse_Machine_Flyes",
         "sourceExerciseId": "Reverse_Machine_Flyes",
@@ -990,9 +990,9 @@
     {
       "catalogKey": "barbell_upright_row",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1235/ec717509-4126-49f1-83f0-53b8374f313b.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Upright_Barbell_Row/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Upright_Barbell_Row",
         "sourceExerciseId": "Upright_Barbell_Row",
@@ -1025,9 +1025,9 @@
     {
       "catalogKey": "barbell_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1236/5e99a1cb-a464-4b0c-b9f3-43ed97f42911.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Curl",
         "sourceExerciseId": "Barbell_Curl",
@@ -1060,9 +1060,9 @@
     {
       "catalogKey": "dumbbell_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1237/13ccf2d3-f5f4-4cdc-b717-34e552f1480f.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bicep_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_Bicep_Curl",
         "sourceExerciseId": "Dumbbell_Bicep_Curl",
@@ -1095,9 +1095,9 @@
     {
       "catalogKey": "hammer_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1238/3c66ceee-ced9-4832-b050-11c9bd5e77ad.webp",
         "source": "https://wger.de/media/exercise-images/86/Bicep-hammer-curl-1.png",
         "sourcePage": "https://wger.de/en/exercise/272/view",
         "sourceExerciseId": 272,
@@ -1130,9 +1130,9 @@
     {
       "catalogKey": "preacher_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1239/fbb77a9e-981f-4ec7-8287-82cbf4a1d9d1.webp",
         "source": "https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png",
         "sourcePage": "https://wger.de/en/exercise/465/view",
         "sourceExerciseId": 465,
@@ -1165,9 +1165,9 @@
     {
       "catalogKey": "concentration_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1240/0d9b4b3e-b398-47d2-8ab5-534eb12d2902.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Concentration_Curls/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Concentration_Curls",
         "sourceExerciseId": "Concentration_Curls",
@@ -1200,9 +1200,9 @@
     {
       "catalogKey": "cable_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1241/575dfa4f-26bb-4183-a2c2-ab9eb1c76c12.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Biceps_Cable_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Standing_Biceps_Cable_Curl",
         "sourceExerciseId": "Standing_Biceps_Cable_Curl",
@@ -1235,9 +1235,9 @@
     {
       "catalogKey": "incline_dumbbell_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1242/a91db215-7878-4673-b152-65d819f1f2bf.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Incline_Dumbbell_Curl",
         "sourceExerciseId": "Incline_Dumbbell_Curl",
@@ -1270,9 +1270,9 @@
     {
       "catalogKey": "ez_bar_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1243/d31c5740-77dd-44c6-843f-6933383d9b8e.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/EZ-Bar_Curl",
         "sourceExerciseId": "EZ-Bar_Curl",
@@ -1305,9 +1305,9 @@
     {
       "catalogKey": "machine_biceps_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1244/6deddefe-5ae4-457d-887e-3bb95afde231.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Bicep_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Machine_Bicep_Curl",
         "sourceExerciseId": "Machine_Bicep_Curl",
@@ -1340,9 +1340,9 @@
     {
       "catalogKey": "reverse_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1245/1771aeff-863f-4bd3-9630-7f2b2b0d940a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Barbell_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Reverse_Barbell_Curl",
         "sourceExerciseId": "Reverse_Barbell_Curl",
@@ -1375,9 +1375,9 @@
     {
       "catalogKey": "cable_triceps_pushdown",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1246/340e6c99-8cb2-4797-bef6-3e61d8826a33.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Triceps_Pushdown",
         "sourceExerciseId": "Triceps_Pushdown",
@@ -1410,9 +1410,9 @@
     {
       "catalogKey": "rope_triceps_pushdown",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1247/15195e01-2b46-48db-8488-cf9b17f87a5d.webp",
         "source": "https://wger.de/media/exercise-images/1900/a8243245-8f8f-4e2b-93ca-694d416cb11d.png",
         "sourcePage": "https://wger.de/en/exercise/1900/view",
         "sourceExerciseId": 1900,
@@ -1445,9 +1445,9 @@
     {
       "catalogKey": "skull_crusher",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1248/c67f4f28-eb31-4cfb-83f3-1e48b5f70da2.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/EZ-Bar_Skullcrusher",
         "sourceExerciseId": "EZ-Bar_Skullcrusher",
@@ -1480,9 +1480,9 @@
     {
       "catalogKey": "close_grip_bench_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1249/428fc577-cd33-4a5e-a5b9-05a7ce2030c9.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Close-Grip_Barbell_Bench_Press",
         "sourceExerciseId": "Close-Grip_Barbell_Bench_Press",
@@ -1515,9 +1515,9 @@
     {
       "catalogKey": "overhead_dumbbell_triceps_extension",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1250/ffed8c31-eec8-4205-8f39-d52ff19fee5c.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Triceps_Press/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Seated_Triceps_Press",
         "sourceExerciseId": "Seated_Triceps_Press",
@@ -1550,9 +1550,9 @@
     {
       "catalogKey": "triceps_dip",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1251/3be6a5c5-3be7-465b-ad5d-fbf65ce414b8.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dips_-_Triceps_Version",
         "sourceExerciseId": "Dips_-_Triceps_Version",
@@ -1585,9 +1585,9 @@
     {
       "catalogKey": "single_arm_triceps_extension",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1252/ebfde6a4-05fa-46b7-9f9e-9b40f14b90ca.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_One-Arm_Triceps_Extension/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_One-Arm_Triceps_Extension",
         "sourceExerciseId": "Dumbbell_One-Arm_Triceps_Extension",
@@ -1620,9 +1620,9 @@
     {
       "catalogKey": "machine_triceps_extension",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1253/e3aa86a9-389e-463d-aba4-de06149dff2d.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Triceps_Extension/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Machine_Triceps_Extension",
         "sourceExerciseId": "Machine_Triceps_Extension",
@@ -1655,9 +1655,9 @@
     {
       "catalogKey": "bench_dip",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1254/caf5e346-019b-4d29-a961-d07ceac2912c.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bench_Dips",
         "sourceExerciseId": "Bench_Dips",
@@ -1690,9 +1690,9 @@
     {
       "catalogKey": "reverse_grip_triceps_pushdown",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1255/2a22f26a-7896-4188-a5e1-423c34326579.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Grip_Triceps_Pushdown/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Reverse_Grip_Triceps_Pushdown",
         "sourceExerciseId": "Reverse_Grip_Triceps_Pushdown",
@@ -1725,9 +1725,9 @@
     {
       "catalogKey": "barbell_wrist_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1256/d268ac8b-33b5-4128-835f-94df2ae15604.webp",
         "source": "https://wger.de/media/exercise-images/51/f1730f56-7aca-4566-8338-3e42b1bee6e1.webp",
         "sourcePage": "https://wger.de/en/exercise/51/view",
         "sourceExerciseId": 51,
@@ -1760,9 +1760,9 @@
     {
       "catalogKey": "barbell_reverse_wrist_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1257/55a6933b-62c4-45ee-8896-a741e3ba52f6.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Down_Wrist_Curl_Over_A_Bench/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Palms-Down_Wrist_Curl_Over_A_Bench",
         "sourceExerciseId": "Palms-Down_Wrist_Curl_Over_A_Bench",
@@ -1795,9 +1795,9 @@
     {
       "catalogKey": "dumbbell_wrist_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1258/69600363-6c8a-4eec-9a67-d90caae89d4a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench",
         "sourceExerciseId": "Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench",
@@ -1830,9 +1830,9 @@
     {
       "catalogKey": "reverse_wrist_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1259/64af2eed-295e-433a-90f0-f8a12dfcaef5.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench",
         "sourceExerciseId": "Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench",
@@ -1865,9 +1865,9 @@
     {
       "catalogKey": "farmers_carry",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1260/4642a478-7c1c-4bfa-8c4b-a1f1e16eb78f.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Farmers_Walk/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Farmers_Walk",
         "sourceExerciseId": "Farmers_Walk",
@@ -1970,9 +1970,9 @@
     {
       "catalogKey": "cable_wrist_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1263/fa6c66bd-2c1e-46a3-b95b-00b1d9809a66.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Wrist_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Cable_Wrist_Curl",
         "sourceExerciseId": "Cable_Wrist_Curl",
@@ -2040,9 +2040,9 @@
     {
       "catalogKey": "crunch",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1265/7dabe309-28a5-4ea2-92f0-925f64ffdd42.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Crunches",
         "sourceExerciseId": "Crunches",
@@ -2075,9 +2075,9 @@
     {
       "catalogKey": "incline_crunch",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1266/812a65d0-87a7-46d3-9214-8fc9515d132a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Crunch/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Decline_Crunch",
         "sourceExerciseId": "Decline_Crunch",
@@ -2110,9 +2110,9 @@
     {
       "catalogKey": "leg_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1267/34fa11d5-17af-4c39-a3c7-77fe99e72597.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flat_Bench_Lying_Leg_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Flat_Bench_Lying_Leg_Raise",
         "sourceExerciseId": "Flat_Bench_Lying_Leg_Raise",
@@ -2145,9 +2145,9 @@
     {
       "catalogKey": "hanging_knee_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1268/98ab0a96-8835-4c18-a43d-e11537f38554.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Hanging_Leg_Raise",
         "sourceExerciseId": "Hanging_Leg_Raise",
@@ -2180,9 +2180,9 @@
     {
       "catalogKey": "front_plank",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1269/d09ceccc-1bfb-4bed-9acb-008111559aa7.webp",
         "source": "https://wger.de/media/exercise-images/1307/321d796a-f394-40b8-a1ea-874bbed6ecee.png",
         "sourcePage": "https://wger.de/en/exercise/1307/view",
         "sourceExerciseId": 1307,
@@ -2215,9 +2215,9 @@
     {
       "catalogKey": "side_plank",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1270/f31c8c6f-00fd-4766-a4f2-9fb338e9e9ea.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Bridge/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Side_Bridge",
         "sourceExerciseId": "Side_Bridge",
@@ -2250,9 +2250,9 @@
     {
       "catalogKey": "russian_twist",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1271/90b3d0a0-9400-49b4-8970-2397037a7e95.webp",
         "source": "https://wger.de/media/exercise-images/1193/70ca5d80-3847-4a8c-8882-c6e9e485e29e.png",
         "sourcePage": "https://wger.de/en/exercise/1193/view",
         "sourceExerciseId": 1193,
@@ -2285,9 +2285,9 @@
     {
       "catalogKey": "bicycle_crunch",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1272/ad91697e-b3e2-4715-880b-b638b40b289a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Air_Bike/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Air_Bike",
         "sourceExerciseId": "Air_Bike",
@@ -2320,9 +2320,9 @@
     {
       "catalogKey": "dead_bug",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1273/5d4472c5-0a35-43cf-b3ce-2d748f6f4571.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dead_Bug/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dead_Bug",
         "sourceExerciseId": "Dead_Bug",
@@ -2355,9 +2355,9 @@
     {
       "catalogKey": "pallof_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1274/2f6ba19d-5b9b-4850-990f-3373717ee8ac.webp",
         "source": "https://wger.de/media/exercise-images/1194/34c03421-0803-4859-a2b0-5710f2bd94cd.png",
         "sourcePage": "https://wger.de/en/exercise/1194/view",
         "sourceExerciseId": 1194,
@@ -2390,9 +2390,9 @@
     {
       "catalogKey": "hip_thrust",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1275/fef31297-b3b6-4fe9-8367-3ac48771bc00.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Hip_Thrust",
         "sourceExerciseId": "Barbell_Hip_Thrust",
@@ -2425,9 +2425,9 @@
     {
       "catalogKey": "glute_bridge",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1276/3440ecdc-bfe5-4bf6-8844-e20ba2e3f42c.webp",
         "source": "https://wger.de/media/exercise-images/265/7528acb4-b2cc-4b75-b6ae-d514cbd4f78b.png",
         "sourcePage": "https://wger.de/en/exercise/265/view",
         "sourceExerciseId": 265,
@@ -2460,9 +2460,9 @@
     {
       "catalogKey": "bodyweight_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1277/c8d61529-82a7-479b-a0dc-6c972ad4dc59.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Squat/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bodyweight_Squat",
         "sourceExerciseId": "Bodyweight_Squat",
@@ -2495,9 +2495,9 @@
     {
       "catalogKey": "bulgarian_split_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/9/b28f8900-3d2e-4dc4-b726-e5c985ed9a03.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Split_Squat_with_Dumbbells",
         "sourceExerciseId": "Split_Squat_with_Dumbbells",
@@ -2530,9 +2530,9 @@
     {
       "catalogKey": "forward_lunge_general",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1307/dfc378ee-7f55-4f5d-b5c9-4cb91db7df59.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Walking_Lunge/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Bodyweight_Walking_Lunge",
         "sourceExerciseId": "Bodyweight_Walking_Lunge",
@@ -2565,9 +2565,9 @@
     {
       "catalogKey": "reverse_lunge_general",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1308/8ed4bc83-5cf5-4ce3-acac-d1f2c50a310e.webp",
         "source": "https://wger.de/media/exercise-images/999/d0931eb3-8db0-4049-bb08-aa4036072056.jfif",
         "sourcePage": "https://wger.de/en/exercise/999/view",
         "sourceExerciseId": 999,
@@ -2600,9 +2600,9 @@
     {
       "catalogKey": "romanian_deadlift",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/6/b6a1f395-82af-4deb-bd6b-d6e8d9611832.webp",
         "source": "https://wger.de/media/exercise-images/507/13d526ab-12fc-461e-828a-051dd7c13fb1.png",
         "sourcePage": "https://wger.de/en/exercise/507/view",
         "sourceExerciseId": 507,
@@ -2670,9 +2670,9 @@
     {
       "catalogKey": "side_lying_leg_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1281/80f81729-8b43-4e86-b716-a279492c6735.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Leg_Raises/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Side_Leg_Raises",
         "sourceExerciseId": "Side_Leg_Raises",
@@ -2705,9 +2705,9 @@
     {
       "catalogKey": "step_up",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1282/9a7ab0d7-fa7d-45ef-a0ea-94f68beb9d46.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Step-up_with_Knee_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Step-up_with_Knee_Raise",
         "sourceExerciseId": "Step-up_with_Knee_Raise",
@@ -2740,9 +2740,9 @@
     {
       "catalogKey": "barbell_back_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/5/6a4e1cb0-10c6-448a-83e7-d0f7ee97e8f3.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Barbell_Full_Squat",
         "sourceExerciseId": "Barbell_Full_Squat",
@@ -2775,9 +2775,9 @@
     {
       "catalogKey": "front_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1283/2114a7ec-2de3-4367-9051-29cf4388f84c.webp",
         "source": "https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png",
         "sourcePage": "https://wger.de/en/exercise/257/view",
         "sourceExerciseId": 257,
@@ -2810,9 +2810,9 @@
     {
       "catalogKey": "hack_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1284/3201fe26-f59f-4dff-9ba8-cbb276b2a9e9.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hack_Squat/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Hack_Squat",
         "sourceExerciseId": "Hack_Squat",
@@ -2845,9 +2845,9 @@
     {
       "catalogKey": "leg_press",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1285/ef0c8bcf-cbc0-40b2-8ccb-074ebb89e120.webp",
         "source": "https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp",
         "sourcePage": "https://wger.de/en/exercise/371/view",
         "sourceExerciseId": 371,
@@ -2880,9 +2880,9 @@
     {
       "catalogKey": "leg_extension",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1286/60360765-7192-4ea4-a0a3-3437e4afacf9.webp",
         "source": "https://wger.de/media/exercise-images/369/78c915d1-e46d-4d30-8124-65d68664c3ef.png",
         "sourcePage": "https://wger.de/en/exercise/369/view",
         "sourceExerciseId": 369,
@@ -2915,9 +2915,9 @@
     {
       "catalogKey": "forward_lunge",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1278/4c07a05c-9fa3-4536-b127-c8c76ba45a51.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Dumbbell_Lunges",
         "sourceExerciseId": "Dumbbell_Lunges",
@@ -2950,9 +2950,9 @@
     {
       "catalogKey": "reverse_lunge",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1279/98da46cb-07b8-456f-a034-8696caff808d.webp",
         "source": "https://wger.de/media/exercise-images/999/d0931eb3-8db0-4049-bb08-aa4036072056.jfif",
         "sourcePage": "https://wger.de/en/exercise/999/view",
         "sourceExerciseId": 999,
@@ -2985,9 +2985,9 @@
     {
       "catalogKey": "goblet_squat",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1287/3b40eddb-45aa-48a0-a885-f03b7cd1940c.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Goblet_Squat",
         "sourceExerciseId": "Goblet_Squat",
@@ -3020,9 +3020,9 @@
     {
       "catalogKey": "lying_leg_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1288/6d1717d3-a7eb-40f2-927d-9cd8d88ed613.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Lying_Leg_Curls",
         "sourceExerciseId": "Lying_Leg_Curls",
@@ -3055,9 +3055,9 @@
     {
       "catalogKey": "seated_leg_curl",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1289/c578d3c5-c7e7-4ce8-8369-bac4e20cda63.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Seated_Leg_Curl",
         "sourceExerciseId": "Seated_Leg_Curl",
@@ -3125,9 +3125,9 @@
     {
       "catalogKey": "good_morning",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1291/9ce9d66e-2c6f-4d36-a132-53cbbd6bf1a7.webp",
         "source": "https://wger.de/media/exercise-images/1392/a02c9c7d-f42d-43e0-9946-1b99b014daee.png",
         "sourcePage": "https://wger.de/en/exercise/1392/view",
         "sourceExerciseId": 1392,
@@ -3160,9 +3160,9 @@
     {
       "catalogKey": "back_extension",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1292/ac00ae8f-0a4f-427f-9db8-0b5ec964b10a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hyperextensions_Back_Extensions/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Hyperextensions_Back_Extensions",
         "sourceExerciseId": "Hyperextensions_Back_Extensions",
@@ -3230,9 +3230,9 @@
     {
       "catalogKey": "kettlebell_swing",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1294/fcd2f9c9-ee2c-435b-ad29-d6f9ad13cc63.webp",
         "source": "https://wger.de/media/exercise-images/960/da4d0560-da89-4bb5-b91f-746458fb04ad.png",
         "sourcePage": "https://wger.de/en/exercise/960/view",
         "sourceExerciseId": 960,
@@ -3300,9 +3300,9 @@
     {
       "catalogKey": "standing_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1296/29559ecb-bccf-4755-bc84-f0167659f091.webp",
         "source": "https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg",
         "sourcePage": "https://wger.de/en/exercise/622/view",
         "sourceExerciseId": 622,
@@ -3335,9 +3335,9 @@
     {
       "catalogKey": "seated_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1297/4c267752-c236-4ce8-ac57-46b7bcc2596a.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Seated_Calf_Raise",
         "sourceExerciseId": "Seated_Calf_Raise",
@@ -3370,9 +3370,9 @@
     {
       "catalogKey": "machine_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1298/a4e5710b-ce3b-4b25-bf5e-4e54da2cedbd.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Standing_Calf_Raises",
         "sourceExerciseId": "Standing_Calf_Raises",
@@ -3405,9 +3405,9 @@
     {
       "catalogKey": "leg_press_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1299/8df2ca7d-7a6c-4175-a12a-ec2628447c78.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Calf_Press_On_The_Leg_Press_Machine/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Calf_Press_On_The_Leg_Press_Machine",
         "sourceExerciseId": "Calf_Press_On_The_Leg_Press_Machine",
@@ -3475,9 +3475,9 @@
     {
       "catalogKey": "barbell_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1301/a14ce48c-9cb7-442d-8fcd-26659655013e.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Barbell_Calf_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Standing_Barbell_Calf_Raise",
         "sourceExerciseId": "Standing_Barbell_Calf_Raise",
@@ -3510,9 +3510,9 @@
     {
       "catalogKey": "dumbbell_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1302/8423a616-1690-4983-ab64-622d3bbf5087.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Calf_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Standing_Dumbbell_Calf_Raise",
         "sourceExerciseId": "Standing_Dumbbell_Calf_Raise",
@@ -3580,9 +3580,9 @@
     {
       "catalogKey": "smith_machine_calf_raise",
       "image": {
-        "status": "candidate",
+        "status": "ready",
         "localFile": null,
-        "objectKey": null,
+        "objectKey": "uploads/exercises/1304/5327c322-07e8-49c3-9a82-75ad7ea99a44.webp",
         "source": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Calf_Raise/0.jpg",
         "sourcePage": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Smith_Machine_Calf_Raise",
         "sourceExerciseId": "Smith_Machine_Calf_Raise",
