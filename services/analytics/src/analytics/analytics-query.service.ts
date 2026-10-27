@@ -460,6 +460,7 @@ export class AnalyticsQueryService {
       {
         volumeKg: number;
         completedWorkouts: number;
+        completedPlannedWorkouts: number;
         plannedWorkouts: number;
         missedWorkouts: number;
       }
@@ -468,6 +469,7 @@ export class AnalyticsQueryService {
       activityByDate.set(date, {
         volumeKg: 0,
         completedWorkouts: 0,
+        completedPlannedWorkouts: 0,
         plannedWorkouts: 0,
         missedWorkouts: 0,
       });
@@ -475,7 +477,9 @@ export class AnalyticsQueryService {
       const day = activityByDate.get(assignment.scheduledFor);
       if (day) {
         day.plannedWorkouts += 1;
-        if (
+        if (completions.has(assignment.scheduleId))
+          day.completedPlannedWorkouts += 1;
+        else if (
           assignment.scheduledFor < today &&
           !completions.has(assignment.scheduleId)
         )

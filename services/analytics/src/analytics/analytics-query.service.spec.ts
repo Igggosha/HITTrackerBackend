@@ -109,6 +109,7 @@ describe('AnalyticsQueryService new read models', () => {
         volumeKg: 900,
         plannedWorkouts: 0,
         completedWorkouts: 1,
+        completedPlannedWorkouts: 0,
         missedWorkouts: 0,
       },
       {
@@ -116,6 +117,7 @@ describe('AnalyticsQueryService new read models', () => {
         volumeKg: 500,
         plannedWorkouts: 0,
         completedWorkouts: 1,
+        completedPlannedWorkouts: 0,
         missedWorkouts: 0,
       },
     ]);
@@ -158,6 +160,7 @@ describe('AnalyticsQueryService new read models', () => {
         volumeKg: 0,
         plannedWorkouts: 0,
         completedWorkouts: 0,
+        completedPlannedWorkouts: 0,
         missedWorkouts: 0,
       },
     ]);
@@ -380,7 +383,32 @@ describe('AnalyticsQueryService new read models', () => {
     expect(result.activity[0]).toMatchObject({
       plannedWorkouts: 1,
       completedWorkouts: 1,
+      completedPlannedWorkouts: 0,
       missedWorkouts: 1,
+    });
+  });
+
+  it('reports completed planned slots separately from free workouts', async () => {
+    const { service } = setup(
+      [
+        workout(1, '2026-08-21T10:00:00Z', [], { scheduleId: 8 }),
+        workout(2, '2026-08-21T12:00:00Z', []),
+      ],
+      [
+        [{ scheduleId: 8, scheduledFor: '2026-08-21' }],
+        [{ scheduleId: 8, scheduledFor: '2026-08-21' }],
+        [{ scheduleId: 8, finishedAt: new Date('2026-08-21T10:00:00Z') }],
+      ],
+    );
+    const result = await service.overview(7, {
+      from: '2026-08-21T00:00:00Z',
+      to: '2026-08-21T23:59:59Z',
+    });
+    expect(result.activity[0]).toMatchObject({
+      plannedWorkouts: 1,
+      completedWorkouts: 2,
+      completedPlannedWorkouts: 1,
+      missedWorkouts: 0,
     });
   });
 
