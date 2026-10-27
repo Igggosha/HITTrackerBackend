@@ -5532,19 +5532,19 @@
         "Випади"
       ],
       "name": {
-        "en": "Forward Lunge",
-        "uk": "Випади"
+        "en": "Bodyweight Forward Lunge",
+        "uk": "Випади вперед із власною вагою"
       },
       "description": {
-        "en": "Set up for forward lunge with no equipment. Control the knee position. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
-        "uk": "Підготуйся до вправи «Випади» без додаткового спорядження. Контролюй положення коліна. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
+        "en": "Set up for bodyweight forward lunge with no equipment. Control the knee position. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
+        "uk": "Підготуйся до вправи «Випади вперед із власною вагою» без додаткового спорядження. Контролюй положення коліна. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
       },
       "aliases": {
         "en": [
-          "Forward Lunge"
+          "Bodyweight Forward Lunge"
         ],
         "uk": [
-          "Випади"
+          "Випади вперед із власною вагою"
         ]
       },
       "muscles": {
@@ -5611,19 +5611,19 @@
         "Зворотні випади"
       ],
       "name": {
-        "en": "Reverse Lunge",
-        "uk": "Зворотні випади"
+        "en": "Dumbbell Reverse Lunge — Glute Emphasis",
+        "uk": "Зворотні випади з гантелями з акцентом на сідниці"
       },
       "description": {
-        "en": "Set up for reverse lunge with dumbbells. Move the leg backward with control. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
-        "uk": "Підготуйся до вправи «Зворотні випади» з потрібним спорядженням. Відводь ногу назад контрольовано. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
+        "en": "Set up for dumbbell reverse lunge — glute emphasis with dumbbells. Move the leg backward with control. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
+        "uk": "Підготуйся до вправи «Зворотні випади з гантелями з акцентом на сідниці» з потрібним спорядженням. Відводь ногу назад контрольовано. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
       },
       "aliases": {
         "en": [
-          "Reverse Lunge"
+          "Dumbbell Reverse Lunge — Glute Emphasis"
         ],
         "uk": [
-          "Зворотні випади"
+          "Зворотні випади з гантелями з акцентом на сідниці"
         ]
       },
       "muscles": {
@@ -6383,19 +6383,19 @@
         "Випади вперед"
       ],
       "name": {
-        "en": "Forward Lunge",
-        "uk": "Випади вперед"
+        "en": "Dumbbell Forward Lunge",
+        "uk": "Випади вперед із гантелями"
       },
       "description": {
-        "en": "Set up for forward lunge with dumbbells. Take a stable step forward. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
-        "uk": "Підготуйся до вправи «Випади вперед» з потрібним спорядженням. Робіть стабільний крок вперед. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
+        "en": "Set up for dumbbell forward lunge with dumbbells. Take a stable step forward. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
+        "uk": "Підготуйся до вправи «Випади вперед із гантелями» з потрібним спорядженням. Робіть стабільний крок вперед. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
       },
       "aliases": {
         "en": [
-          "Forward Lunge"
+          "Dumbbell Forward Lunge"
         ],
         "uk": [
-          "Випади вперед"
+          "Випади вперед із гантелями"
         ]
       },
       "muscles": {
@@ -6464,19 +6464,19 @@
         "Випади назад"
       ],
       "name": {
-        "en": "Reverse Lunge",
-        "uk": "Випади назад"
+        "en": "Dumbbell Reverse Lunge — Quadriceps Emphasis",
+        "uk": "Випади назад із гантелями з акцентом на квадрицепси"
       },
       "description": {
-        "en": "Set up for reverse lunge with dumbbells. Do not rush the descent. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
-        "uk": "Підготуйся до вправи «Випади назад» з потрібним спорядженням. Не поспішай під час опускання. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
+        "en": "Set up for dumbbell reverse lunge — quadriceps emphasis with dumbbells. Do not rush the descent. Breathe out during the effort and in during the return. Keep the working joints aligned and the torso controlled; avoid rushing the range or using momentum. Perform the same controlled work on both sides.",
+        "uk": "Підготуйся до вправи «Випади назад із гантелями з акцентом на квадрицепси» з потрібним спорядженням. Не поспішай під час опускання. Видихай під час зусилля та вдихай під час повернення. Контролюй робочі суглоби й тулуб; не поспішай і не використовуй інерцію. Виконай однакову контрольовану роботу на обидві сторони."
       },
       "aliases": {
         "en": [
-          "Reverse Lunge"
+          "Dumbbell Reverse Lunge — Quadriceps Emphasis"
         ],
         "uk": [
-          "Випади назад"
+          "Випади назад із гантелями з акцентом на квадрицепси"
         ]
       },
       "muscles": {

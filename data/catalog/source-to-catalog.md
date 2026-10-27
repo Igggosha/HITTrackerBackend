@@ -76,8 +76,8 @@
 | Ягодичний міст | 3165:8577 | Сідниці | glute_bridge | Glute Bridge | Ягодичний міст |
 | Присідання | 3165:8584 | Сідниці | bodyweight_squat | Bodyweight Squat | Присідання |
 | Болгарські присідання | 3165:8591 | Сідниці | bulgarian_split_squat | Bulgarian Split Squat | Болгарські присідання |
-| Випади | 3165:8598 | Сідниці | forward_lunge_general | Forward Lunge | Випади |
-| Зворотні випади | 3165:8605 | Сідниці | reverse_lunge_general | Reverse Lunge | Зворотні випади |
+| Випади | 3165:8598 | Сідниці | forward_lunge_general | Bodyweight Forward Lunge | Випади вперед із власною вагою |
+| Зворотні випади | 3165:8605 | Сідниці | reverse_lunge_general | Dumbbell Reverse Lunge — Glute Emphasis | Зворотні випади з гантелями з акцентом на сідниці |
 | Румунська тяга | 3165:8612 | Сідниці | romanian_deadlift | Romanian Deadlift | Румунська тяга |
 | Махи ногою назад | 3165:8619 | Сідниці | donkey_kick | Donkey Kick | Махи ногою назад |
 | Відведення ноги в сторону | 3165:8626 | Сідниці | side_lying_leg_raise | Side-Lying Leg Raise | Відведення ноги в сторону |
@@ -88,8 +88,8 @@
 | Жим ногами | 3165:8671 | Квадрицепс | leg_press | Leg Press | Жим ногами |
 | Розгинання ніг | 3165:8678 | Квадрицепс | leg_extension | Leg Extension | Розгинання ніг |
 | Болгарські присідання | 3165:8685 | Квадрицепс | bulgarian_split_squat | Bulgarian Split Squat | Болгарські присідання |
-| Випади вперед | 3165:8692 | Квадрицепс | forward_lunge | Forward Lunge | Випади вперед |
-| Випади назад | 3165:8699 | Квадрицепс | reverse_lunge | Reverse Lunge | Випади назад |
+| Випади вперед | 3165:8692 | Квадрицепс | forward_lunge | Dumbbell Forward Lunge | Випади вперед із гантелями |
+| Випади назад | 3165:8699 | Квадрицепс | reverse_lunge | Dumbbell Reverse Lunge — Quadriceps Emphasis | Випади назад із гантелями з акцентом на квадрицепси |
 | Step-Up | 3165:8706 | Квадрицепс | step_up | Step-Up | Step-Up |
 | Goblet Squat | 3165:8713 | Квадрицепс | goblet_squat | Goblet Squat | Goblet Squat |
 | Румунська тяга | 3165:8730 | Задня поверхня стегна | romanian_deadlift | Romanian Deadlift | Румунська тяга |
