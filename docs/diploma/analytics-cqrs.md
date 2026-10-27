@@ -87,6 +87,11 @@ assignments previously inserted by reminders without outbox events reach
 analytics. It is safe to rerun: deterministic event IDs and `ON CONFLICT DO
 NOTHING` prevent duplicate backfill rows.
 
+If Kafka retention previously removed published historical messages, run the
+same command with `--republish`. It marks only deterministic backfill rows as
+unpublished so the relay sends them again. Existing projections remain safe:
+the consumer deduplicates identical event IDs and workout or schedule facts.
+
 **Observability.** `/metrics` (Bearer `METRICS_TOKEN`):
 `analytics_events_processed_total{type,result}`,
 `analytics_event_processing_seconds`, `analytics_consumer_lag{topic,partition}`

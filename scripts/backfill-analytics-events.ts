@@ -30,7 +30,12 @@ const BATCH = 200;
 const iso = (column: string) =>
   `to_char(${column}, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 
-async function insertRows(client: Client, rows: OutboxRow[], dryRun: boolean) {
+async function insertRows(
+  client: Client,
+  rows: OutboxRow[],
+  dryRun: boolean,
+  republish: boolean,
+) {
   // EN: Deterministic event IDs plus ON CONFLICT make the backfill resumable without duplicating downstream facts.
   // UK: Детерміновані ідентифікатори подій разом з ON CONFLICT дають змогу продовжувати наповнення без дублювання похідних фактів.
   if (!rows.length || dryRun) return rows.length;
@@ -40,7 +45,7 @@ async function insertRows(client: Client, rows: OutboxRow[], dryRun: boolean) {
       `insert into outbox_events
          (id, aggregate_type, aggregate_id, event_type, event_version, payload, occurred_at)
        values ($1, $2, $3, $4, $5, $6, $7)
-       on conflict (id) do nothing`,
+       on conflict (id) do ${republish ? 'update set published_at = null, attempts = 0, last_error = null' : 'nothing'}`,
       [
         row.id,
         row.aggregateType,
@@ -56,7 +61,11 @@ async function insertRows(client: Client, rows: OutboxRow[], dryRun: boolean) {
   return inserted;
 }
 
-async function backfillWorkouts(client: Client, dryRun: boolean) {
+async function backfillWorkouts(
+  client: Client,
+  dryRun: boolean,
+  republish: boolean,
+) {
   let cursor = 0;
   let candidates = 0;
   let inserted = 0;
@@ -141,13 +150,17 @@ async function backfillWorkouts(client: Client, dryRun: boolean) {
       }),
     );
     candidates += rows.length;
-    inserted += await insertRows(client, rows, dryRun);
+    inserted += await insertRows(client, rows, dryRun, republish);
     cursor = ids[ids.length - 1];
   }
   return { candidates, inserted };
 }
 
-async function backfillSchedules(client: Client, dryRun: boolean) {
+async function backfillSchedules(
+  client: Client,
+  dryRun: boolean,
+  republish: boolean,
+) {
   const result = await client.query<{
     user_id: number;
     program_id: number;
@@ -170,12 +183,17 @@ async function backfillSchedules(client: Client, dryRun: boolean) {
         }),
       ],
       dryRun,
+      republish,
     );
   }
   return { candidates: result.rows.length, inserted };
 }
 
-async function backfillBodyMetrics(client: Client, dryRun: boolean) {
+async function backfillBodyMetrics(
+  client: Client,
+  dryRun: boolean,
+  republish: boolean,
+) {
   let cursor = 0;
   let candidates = 0;
   let inserted = 0;
@@ -215,7 +233,7 @@ async function backfillBodyMetrics(client: Client, dryRun: boolean) {
       }),
     );
     candidates += rows.length;
-    inserted += await insertRows(client, rows, dryRun);
+    inserted += await insertRows(client, rows, dryRun, republish);
     cursor = metrics.rows[metrics.rows.length - 1].id;
   }
   return { candidates, inserted };
@@ -225,16 +243,18 @@ async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is required.');
   const dryRun = process.argv.includes('--dry-run');
+  const republish = process.argv.includes('--republish');
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    const workouts = await backfillWorkouts(client, dryRun);
-    const bodyMetrics = await backfillBodyMetrics(client, dryRun);
-    const schedules = await backfillSchedules(client, dryRun);
+    const workouts = await backfillWorkouts(client, dryRun, republish);
+    const bodyMetrics = await backfillBodyMetrics(client, dryRun, republish);
+    const schedules = await backfillSchedules(client, dryRun, republish);
     console.log(
       JSON.stringify({
         msg: 'analytics backfill',
         dryRun,
+        republish,
         workouts,
         bodyMetrics,
         schedules,
