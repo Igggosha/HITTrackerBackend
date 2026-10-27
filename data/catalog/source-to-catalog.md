@@ -68,7 +68,7 @@
 | Підйом колін у висі | 3165:8491 | Кор /Прес | hanging_knee_raise | Hanging Knee Raise | Підйом колін у висі |
 | Планка | 3165:8498 | Кор /Прес | front_plank | Front Plank | Планка |
 | Бічна планка | 3165:8505 | Кор /Прес | side_plank | Side Plank | Бічна планка |
-| Russian Twist | 3165:8512 | Кор /Прес | russian_twist | Russian Twist | Russian Twist |
+| Russian Twist | 3165:8512 | Кор /Прес | russian_twist | Seated Torso Twist | Повороти тулуба сидя |
 | Велосипед | 3165:8519 | Кор /Прес | bicycle_crunch | Bicycle Crunch | Велосипед |
 | Dead Bug | 3165:8526 | Кор /Прес | dead_bug | Dead Bug | Dead Bug |
 | Pallof Press | 3165:8533 | Кор /Прес | pallof_press | Pallof Press | Pallof Press |
